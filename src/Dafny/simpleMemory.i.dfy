@@ -23,15 +23,24 @@ module simple_memory {
         (forall m:addr :: m in TheValidAddresses() <==> m in s)    
     }
     
-    // predicate alloca(m:memmap,m':memmap)
-    // {
-
-    // }
+    predicate alloca(m:memmap,m':memmap)
+    {
+        |m| + 1 == |m'|
+        && forall adr:addr :: adr in m ==> adr in m'
+    }
     
-    // predicate load(m:memmap,m':memmap)
-    // {
 
-    // }
+    predicate load(m:memmap,m':memmap)
+    {
+        m == m'
+    }
+
+    method loadMem(m:memmap,adr:addr) returns (mc:memoryCell)
+        requires adr in m;
+    {
+        mc := m[adr];
+    }
+
     
     predicate store(m:memmap, adr:addr, mc:memoryCell ,m':memmap)
     {

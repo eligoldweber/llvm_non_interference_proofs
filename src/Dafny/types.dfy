@@ -3,7 +3,7 @@ module types {
 /////////////////
 // Native types
 /////////////////
-
+// newtype{:nativeType "bit"} bit = i:int | 0 <= i < 1
 newtype{:nativeType "byte"} byte = i:int | 0 <= i < 0x100
 newtype{:nativeType "uint"} uint = i:int | 0 <= i < 0x1_0000_0000
 newtype{:nativeType "ulong"} ulong = i:int | 0 <= i < 0x1_0000_0000_0000_0000
