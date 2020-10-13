@@ -46,7 +46,7 @@ module LLVM_def {
     | SUB(t:Value, src1ADD:operand, src2ADD:operand)
     | BR(cond:bool, labelTrue:string,labelFalse:string)
     | CALL() //needs work
-    | GETELEMENTPTR(t:Value,p:ptr,) //needs work
+    | GETELEMENTPTR(t:Value,p:ptr) //needs work VV
     | ICMP()
     | RET()
     | SEXT()
@@ -64,7 +64,7 @@ module LLVM_def {
         && ValidMemState(s.m)    
     }
 
-    predicate ValidRegState(lvs:map<LocalVar, Value>,gvs:map<GlobalVar, Value>)
+    predicate{:opaque} ValidRegState(lvs:map<LocalVar, Value>,gvs:map<GlobalVar, Value>)
     {
         forall l:LocalVar :: l in lvs && forall g:GlobalVar :: g in gvs
     }
@@ -75,9 +75,47 @@ module LLVM_def {
         ValidRegState(s.lvs,s.gvs) && ValidMemState(s.m)
     }
 
+    predicate ValidOperand(o:operand)
+    {
+        match o
+            case Value => true
+            case LocalVar => true
+            case GlobalVar => true
+    }
     predicate ValidInstruction(s:state, ins:ins)
     {
-        true
+        ValidState(s) && match ins
+            case ADD(t,src1,src2) => ValidOperand(src1) && ValidOperand(src2)
+            case SUB(t,src1,src2) => true
+            case BR(cond, labelTrue,labelFalse) => true
+            case CALL() => true
+            case GETELEMENTPTR(t,p) => true
+            case ICMP() => true
+            case RET() => true
+            case SEXT() => true
+            case SHL() => true
+            case TRUN() => true
+            case ZEXT() => true
+                 
+    }
+
+    //EVAL//
+    predicate ValidRegOperand(o:operand)
+    { 
+        // !o.OConst? && !o.OShift? && ValidOperand(o) 
+        ValidOperand(o)
+    }
+
+    predicate evalUpdate(s:state, o:operand, v:uint32, r:state)
+        requires ValidState(s)
+        requires ValidRegOperand(o)
+        ensures evalUpdate(s, o, v, r) ==> ValidState(r)
+    {
+        reveal_ValidRegState();
+        match o
+            case Value => r == s 
+            case LocalVar => r == s 
+            case GlobalVar => r == s 
     }
 
 }
