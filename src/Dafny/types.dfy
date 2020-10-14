@@ -18,6 +18,9 @@ type uint32  = i:int | 0 <= i < 0x1_0000_0000
 type uint64  = i:int | 0 <= i < 0x1_0000_0000_0000_0000
 type uint128 = i:int | 0 <= i < 0x1_00000000_00000000_00000000_00000000
 
+datatype Value = Val8(v8:uint8) | Val16(v16:uint16) | Val32(v32:uint32) | Val64(v64:uint64) | Val128(v128:uint128)
+
+
 /////////////////
 // Quadword
 /////////////////

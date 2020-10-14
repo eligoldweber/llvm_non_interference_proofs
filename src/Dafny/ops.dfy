@@ -138,6 +138,16 @@ function LeftShift(x:uint32, amount:uint32) : uint32
     BitsToWord(BitShiftLeft(WordToBits(x), amount))
 }
 
+function {:opaque} BitwiseAdd8(x:uint8, y:uint8):uint8
+{
+    (x + y) % 0x100
+}
+
+function {:opaque} BitwiseAdd16(x:uint16, y:uint16):uint16
+{
+    (x + y) % 0x1000
+}
+
 function {:opaque} BitwiseAdd32(x:uint32, y:uint32):uint32
 {
     (x + y) % 0x1_0000_0000
@@ -146,6 +156,11 @@ function {:opaque} BitwiseAdd32(x:uint32, y:uint32):uint32
 function {:opaque} BitwiseAdd64(x:uint64, y:uint64):uint64
 {
     (x + y) % 0x1_0000_0000_0000_0000
+}
+
+function {:opaque} BitwiseAdd128(x:uint128, y:uint128):uint128
+{
+    (x + y) % 0x1_00000000_00000000_00000000_00000000
 }
 
 function BitwiseSub32(x:uint32, y:uint32):uint32
@@ -249,5 +264,37 @@ function BitwiseShr64(x:uint64, y:uint64):uint64
 {
     BitwiseShr64_opaque(x, y)
 }
+//added
+
+    function ValueContents8Bit(v:Value): uint8
+        requires v.Val8?
+    {
+        v.v8
+    }
+
+    function ValueContents16Bit(v:Value): uint16
+        requires v.Val16?
+    {
+        v.v16
+    }
+
+    function ValueContents32Bit(v:Value): uint32
+        requires v.Val32?
+    {
+        v.v32
+    }
+
+    function ValueContents64Bit(v:Value): uint64
+        requires v.Val64?
+    {
+        v.v64
+    }
+
+    function ValueContents128Bit(v:Value): uint128
+        requires v.Val128?
+    {
+        v.v128
+    }
+    
 
 } // end module ops
