@@ -163,6 +163,25 @@ function {:opaque} BitwiseAdd128(x:uint128, y:uint128):uint128
     (x + y) % 0x1_00000000_00000000_00000000_00000000
 }
 
+function BitwiseSub8(x:uint8, y:uint8):uint8
+{
+     (x - y) % 0x100
+}
+
+function BitwiseSub16(x:uint16, y:uint16):uint16
+{
+     (x - y) % 0x1000
+}
+function BitwiseSub64(x:uint64, y:uint64):uint64
+{
+     (x - y) % 0x1_0000_0000_0000_0000
+}
+function BitwiseSub128(x:uint128, y:uint128):uint128
+{
+     (x - y) % 0x1_00000000_00000000_00000000_00000000
+}
+
+
 function BitwiseSub32(x:uint32, y:uint32):uint32
 {
     BitsToWord(BitSub(WordToBits(x), WordToBits(y)))
@@ -295,6 +314,6 @@ function BitwiseShr64(x:uint64, y:uint64):uint64
     {
         v.v128
     }
-    
+
 
 } // end module ops

@@ -34,7 +34,7 @@ module LLVM_def {
 
     datatype ins =
     | ADD(dst:operand, src1ADD:operand, src2ADD:operand)
-    | SUB(t:Value, src1ADD:operand, src2ADD:operand)
+    | SUB(dst:operand, src1ADD:operand, src2ADD:operand)
     | BR(cond:bool, labelTrue:string,labelFalse:string)
     | CALL() //needs work
     | GETELEMENTPTR(t:Value,p:ptr) //needs work VV
@@ -79,7 +79,8 @@ module LLVM_def {
         ValidState(s) && match ins
             case ADD(t,src1,src2) => ValidOperand(s,t) && ValidOperand(s,src1) && ValidOperand(s,src2) 
                                     && matchOps(OperandContents(s,t),OperandContents(s,src1),OperandContents(s,src2))
-            case SUB(t,src1,src2) => true
+            case SUB(t,src1,src2) => ValidOperand(s,t) && ValidOperand(s,src1) && ValidOperand(s,src2) 
+                                    && matchOps(OperandContents(s,t),OperandContents(s,src1),OperandContents(s,src2))
             case BR(cond, labelTrue,labelFalse) => true
             case CALL() => true
             case GETELEMENTPTR(t,p) => true
@@ -140,7 +141,8 @@ module LLVM_def {
         else match ins
             case ADD(t,src1,src2) => evalUpdate(s, t, 
                                 evalADD(OperandContents(s,t),OperandContents(s,src1),OperandContents(s,src2)),r)
-            case SUB(t,src1,src2) => true
+            case SUB(t,src1,src2) => evalUpdate(s, t, 
+                                evalSUB(OperandContents(s,t),OperandContents(s,src1),OperandContents(s,src2)),r)
             case BR(cond, labelTrue,labelFalse) => true
             case CALL() => true
             case GETELEMENTPTR(t,p) => true
@@ -164,5 +166,16 @@ module LLVM_def {
        if v0.Val64? then Val64(BitwiseAdd64(ValueContents64Bit(v1),ValueContents64Bit(v2))) else
                         Val128(BitwiseAdd128(ValueContents128Bit(v1),ValueContents128Bit(v2)))
     }
+
+    function evalSUB(v0:Value,v1:Value,v2:Value): Value
+        requires matchOps(v0,v1,v2)
+    {
+       if v0.Val8? then Val8(BitwiseSub8(ValueContents8Bit(v1),ValueContents8Bit(v2))) else 
+       if v0.Val16? then Val16(BitwiseSub16(ValueContents16Bit(v1),ValueContents16Bit(v2))) else
+       if v0.Val32? then Val32(BitwiseSub32(ValueContents32Bit(v1),ValueContents32Bit(v2))) else
+       if v0.Val64? then Val64(BitwiseSub64(ValueContents64Bit(v1),ValueContents64Bit(v2))) else
+                        Val128(BitwiseSub128(ValueContents128Bit(v1),ValueContents128Bit(v2)))
+    }
+
 
 }
