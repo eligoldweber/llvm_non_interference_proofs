@@ -5,6 +5,7 @@ include "Maps.i.dfy"
 module simple_memory {
     import opened ops
     import opened Collections__Maps_i
+    import opened types
 
     type ptr = uint32
     datatype addr = ptr | NULL

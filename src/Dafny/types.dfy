@@ -18,6 +18,14 @@ type uint32  = i:int | 0 <= i < 0x1_0000_0000
 type uint64  = i:int | 0 <= i < 0x1_0000_0000_0000_0000
 type uint128 = i:int | 0 <= i < 0x1_00000000_00000000_00000000_00000000
 
+type int8    = i:int | -0x80 <= i < 0x80
+type int16   = i:int | -0x8000 <= i < 0x8000
+type int32   = i:int | -0x8000_0000 <= i < 0x8000_0000
+type int64   = i:int | -0x8000_0000_0000_0000 <= i < 0x8000_0000_0000_0000
+type int128  = i:int | -0x8000_0000_0000_0000_0000_0000_0000_0000 <= i < 0x8000_0000_0000_0000_0000_0000_0000_0000
+
+datatype ptr = ptr(bid:nat, offset:nat)
+
 datatype Value = Val8(v8:uint8) | Val16(v16:uint16) | Val32(v32:uint32) | Val64(v64:uint64) | Val128(v128:uint128)
 
 
@@ -31,7 +39,7 @@ datatype Quadword = Quadword(lo:uint32, mid_lo:uint32, mid_hi:uint32, hi:uint32)
 // BitsOfByte
 /////////////////
 
-newtype twobits = i:int | 0 <= i < 4
+newtype{:nativeType "byte"} twobits = i:int | 0 <= i < 4
 datatype BitsOfByte = BitsOfByte(lo:twobits,
                                  mid_lo:twobits,
                                  mid_hi:twobits,
