@@ -26,6 +26,7 @@ module LLVM_def {
 
 
     datatype operand = Val(v:Value) | LV(l:LocalVar) | GV(g:GlobalVar)
+    datatype condition = eq | ne | ugt | uge | ult | ule | sgt | sge | slt | sle
 
     //---
     //-----------------------------------------------------------------------------
@@ -35,10 +36,10 @@ module LLVM_def {
     datatype ins =
     | ADD(dst:operand, src1ADD:operand, src2ADD:operand)
     | SUB(dst:operand, src1ADD:operand, src2ADD:operand)
-    | BR(cond:bool, labelTrue:string,labelFalse:string)
+    | BR(falg:bool, labelTrue:string,labelFalse:string)
     | CALL() //needs work
-    | GETELEMENTPTR(t:Value,p:ptr) //needs work VV
-    | ICMP()
+    | GETELEMENTPTR(t:operand,p:ptr) //needs work VV
+    | ICMP(cond:condition,t:operand,src1:operand,src2:operand)
     | RET()
     | SEXT()
     | SHL()
@@ -77,14 +78,16 @@ module LLVM_def {
     predicate ValidInstruction(s:state, ins:ins)
     {
         ValidState(s) && match ins
-            case ADD(t,src1,src2) => ValidOperand(s,t) && ValidOperand(s,src1) && ValidOperand(s,src2) 
+            case ADD(t,src1,src2) => ValidOperand(s,t) && ValidOperand(s,src1) && ValidOperand(s,src2)
+                                    && numericalValue(OperandContents(s,t)) &&  numericalValue(OperandContents(s,src1)) && numericalValue(OperandContents(s,src2))
                                     && matchOps(OperandContents(s,t),OperandContents(s,src1),OperandContents(s,src2))
             case SUB(t,src1,src2) => ValidOperand(s,t) && ValidOperand(s,src1) && ValidOperand(s,src2) 
+                                    && numericalValue(OperandContents(s,t)) &&  numericalValue(OperandContents(s,src1)) && numericalValue(OperandContents(s,src2))
                                     && matchOps(OperandContents(s,t),OperandContents(s,src1),OperandContents(s,src2))
             case BR(cond, labelTrue,labelFalse) => true
             case CALL() => true
             case GETELEMENTPTR(t,p) => true
-            case ICMP() => true
+            case ICMP(cond,dst,src1,src2) => ValidOperand(s,dst) && ValidOperand(s,src1) && ValidOperand(s,src2) 
             case RET() => true
             case SEXT() => true
             case SHL() => true
@@ -100,7 +103,13 @@ module LLVM_def {
         && (v0.Val32? ==> v1.Val32? && v2.Val32?)
         && (v0.Val64? ==> v1.Val64? && v2.Val64?)
         && (v0.Val128? ==> v1.Val128? && v2.Val128?)
+        && (v0.ValBool? ==> !v1.ValBool? && !v2.ValBool?)
     }
+     predicate numericalValue(v:Value)
+    {
+        v.Val8? || v.Val16? || v.Val32? || v.Val64? || v.Val128? 
+    }
+
     //EVAL//
     predicate ValidRegOperand(s:state, o:operand)
     { 
@@ -111,7 +120,6 @@ module LLVM_def {
         requires ValidOperand(s,o)
         requires ValidState(s)
     {
-        // let x:Value | 0;
 
         reveal_ValidRegState();
         match o
@@ -146,7 +154,8 @@ module LLVM_def {
             case BR(cond, labelTrue,labelFalse) => true
             case CALL() => true
             case GETELEMENTPTR(t,p) => true
-            case ICMP() => true
+            case ICMP(cond,dst,src1,src2) => evalUpdate(s, dst, 
+                                ValBool(evalICMP(cond,OperandContents(s,dst),OperandContents(s,src1),OperandContents(s,src2))),r)
             case RET() => true
             case SEXT() => true
             case SHL() => true
@@ -158,6 +167,9 @@ module LLVM_def {
 
 
     function evalADD(v0:Value,v1:Value,v2:Value): Value
+        requires numericalValue(v0);
+        requires numericalValue(v1);
+        requires numericalValue(v2);
         requires matchOps(v0,v1,v2)
     {
        if v0.Val8? then Val8(BitwiseAdd8(ValueContents8Bit(v1),ValueContents8Bit(v2))) else 
@@ -168,13 +180,35 @@ module LLVM_def {
     }
 
     function evalSUB(v0:Value,v1:Value,v2:Value): Value
+        requires numericalValue(v0);
+        requires numericalValue(v1);
+        requires numericalValue(v2);
         requires matchOps(v0,v1,v2)
+        
     {
        if v0.Val8? then Val8(BitwiseSub8(ValueContents8Bit(v1),ValueContents8Bit(v2))) else 
        if v0.Val16? then Val16(BitwiseSub16(ValueContents16Bit(v1),ValueContents16Bit(v2))) else
        if v0.Val32? then Val32(BitwiseSub32(ValueContents32Bit(v1),ValueContents32Bit(v2))) else
        if v0.Val64? then Val64(BitwiseSub64(ValueContents64Bit(v1),ValueContents64Bit(v2))) else
                         Val128(BitwiseSub128(ValueContents128Bit(v1),ValueContents128Bit(v2)))
+    }
+
+// eq | ne | ugt | uge | ult | ule | sgt | sge | slt | sle
+
+    function evalICMP(c:condition,t:Value,v0:Value,v1:Value): bool
+        // requires matchOps(t,v0,v1)
+    {
+        match c
+            case eq => v0 == v1
+            case ne => v0 != v1
+            case ugt => v0 > v1
+            case uge => v0 > v1 || v0 == v1
+            case ult => v0 < v1
+            case ule => v0 < v1 || v0 == v1
+            case sgt => true // signed 
+            case sge => true // signed 
+            case slt => true // signed 
+            case sle => true // signed 
     }
 
 
