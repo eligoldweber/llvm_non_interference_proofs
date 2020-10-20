@@ -1,11 +1,13 @@
 include "ops.dfy"
 include "types.dfy"
 include "simpleMemory.i.dfy"
+include "typeConversions.i.dfy"
 
 module LLVM_def {
 
     import opened ops
     import opened simple_memory
+    import opened type_conversion
 
     type addr = int
     type LocalVar = string
@@ -41,7 +43,7 @@ module LLVM_def {
     | GETELEMENTPTR(t:operand,p:ptr) //needs work VV
     | ICMP(cond:condition,t:operand,src1:operand,src2:operand)
     | RET()
-    | SEXT()
+    | SEXT(dst:operand,t0:Value,src:operand,t1:Value)
     | SHL()
     | TRUN()
     | ZEXT()
@@ -89,7 +91,7 @@ module LLVM_def {
             case GETELEMENTPTR(t,p) => true
             case ICMP(cond,dst,src1,src2) => ValidOperand(s,dst) && ValidOperand(s,src1) && ValidOperand(s,src2) 
             case RET() => true
-            case SEXT() => true
+            case SEXT(dst,t0,src,t1) => ValidOperand(s,dst) && ValidOperand(s,src) && typesMatch(t0,OperandContents(s,src))
             case SHL() => true
             case TRUN() => true
             case ZEXT() => true
@@ -105,6 +107,7 @@ module LLVM_def {
         && (v0.Val128? ==> v1.Val128? && v2.Val128?)
         && (v0.ValBool? ==> !v1.ValBool? && !v2.ValBool?)
     }
+
      predicate numericalValue(v:Value)
     {
         v.Val8? || v.Val16? || v.Val32? || v.Val64? || v.Val128? 
@@ -157,7 +160,8 @@ module LLVM_def {
             case ICMP(cond,dst,src1,src2) => evalUpdate(s, dst, 
                                 ValBool(evalICMP(cond,OperandContents(s,dst),OperandContents(s,src1),OperandContents(s,src2))),r)
             case RET() => true
-            case SEXT() => true
+            case SEXT(dst,t0,src,t1) => evalUpdate(s, dst, 
+                                  evalSEXT(t0,OperandContents(s,src),t1),r)
             case SHL() => true
             case TRUN() => true
             case ZEXT() => true
@@ -211,5 +215,7 @@ module LLVM_def {
             case sle => true // signed 
     }
 
+
+    
 
 }

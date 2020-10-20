@@ -69,4 +69,14 @@ lemma {:axiom} lemma_BitsToWordToBits64(b:bv64)
 lemma {:axiom} lemma_WordToBitsToWord64(w:uint64)
     ensures BitsToWord64(WordToBits64(w)) == w;
 
+    predicate typesMatch(v0:Value,v1:Value)
+    {
+        (v0.Val8? ==> v1.Val8? )
+        && (v0.Val16? ==> v1.Val16?)
+        && (v0.Val32? ==> v1.Val32? )
+        && (v0.Val64? ==> v1.Val64? )
+        && (v0.Val128? ==> v1.Val128? )
+        && (v0.ValBool? ==> !v1.ValBool? )
+    }
+
 } // end module types
