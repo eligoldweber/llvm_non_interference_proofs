@@ -158,11 +158,6 @@ function {:opaque} BitwiseAdd64(x:uint64, y:uint64):uint64
     (x + y) % 0x1_0000_0000_0000_0000
 }
 
-function {:opaque} BitwiseAdd128(x:uint128, y:uint128):uint128
-{
-    (x + y) % 0x1_00000000_00000000_00000000_00000000
-}
-
 function BitwiseSub8(x:uint8, y:uint8):uint8
 {
      (x - y) % 0x100
@@ -175,10 +170,6 @@ function BitwiseSub16(x:uint16, y:uint16):uint16
 function BitwiseSub64(x:uint64, y:uint64):uint64
 {
      (x - y) % 0x1_0000_0000_0000_0000
-}
-function BitwiseSub128(x:uint128, y:uint128):uint128
-{
-     (x - y) % 0x1_00000000_00000000_00000000_00000000
 }
 
 
@@ -211,6 +202,7 @@ function QuadwordXor(a:Quadword, b:Quadword) : Quadword
              BitwiseXor(a.mid_hi, b.mid_hi),
              BitwiseXor(a.hi, b.hi))
 }
+
 
 lemma {:axiom} lemma_BitMulEquiv(x:uint32, y:uint32)
     requires 0 <= x * y < 0x1_0000_0000;
@@ -307,12 +299,6 @@ function BitwiseShr64(x:uint64, y:uint64):uint64
         requires v.Val64?
     {
         v.v64
-    }
-
-    function ValueContents128Bit(v:Value): uint128
-        requires v.Val128?
-    {
-        v.v128
     }
 
 

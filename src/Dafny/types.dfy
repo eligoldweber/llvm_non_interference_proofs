@@ -17,12 +17,14 @@ type uint8   = i:int | 0 <= i < 0x100
 type uint16  = i:int | 0 <= i < 0x10000
 type uint32  = i:int | 0 <= i < 0x1_0000_0000
 type uint64  = i:int | 0 <= i < 0x1_0000_0000_0000_0000
-type uint128 = i:int | 0 <= i < 0x1_00000000_00000000_00000000_00000000
 type int8    = i:int | -0x80 <= i < 0x80
 type int16   = i:int | -0x8000 <= i < 0x8000
 type int32   = i:int | -0x8000_0000 <= i < 0x8000_0000
 type int64   = i:int | -0x8000_0000_0000_0000 <= i < 0x8000_0000_0000_0000
-type int128  = i:int | -0x8000_0000_0000_0000_0000_0000_0000_0000 <= i < 0x8000_0000_0000_0000_0000_0000_0000_0000
+type sint8   = i:int | -0x80 <= i < 0x80 
+type sint16  = i:int | -0x8000 <= i < 0x8000
+type sint32  = i:int | -0x80000000 <= i < 0x80000000
+type sint64  = i:int | -0x8000000000000000 <= i < 0x8000000000000000
 
 // A pointer is a block/index, not an absolute value, based on our specification
 // Each Data holds a piece of information that can be loaded/stored from/to memory
@@ -81,13 +83,6 @@ function UInt64(val:uint64) : (data:Data)
     Int(val, 8, false)
 }
 
-function UInt128(val:uint128) : (data:Data)
-    ensures ValidData(data)
-{
-    reveal_ValidData();
-    Int(val, 16, false)
-}
-
 function Int8(val:int8) : (data:Data)
     ensures ValidData(data)
 {
@@ -114,13 +109,6 @@ function Int64(val:int64) : (data:Data)
 {
     reveal_ValidData();
     Int(val, 8, true)
-}
-
-function Int128(val:int128) : (data:Data)
-    ensures ValidData(data)
-{
-    reveal_ValidData();
-    Int(val, 16, true)
 }
 
 // Converts a signed integer to its unsigned representation in two's complement
@@ -242,9 +230,32 @@ lemma {:opaque} {:induction val, size} UIntBytesIdentity(val:nat, size:nat)
 //     }
 // }
 
-datatype Value = Val8(v8:uint8) | Val16(v16:uint16) | Val32(v32:uint32) | Val64(v64:uint64) | Val128(v128:uint128)
+datatype Value = Val8(v8:uint8) | Val16(v16:uint16) | Val32(v32:uint32) | Val64(v64:uint64) | ValBool(vBool:bool)
+                | SVal8(sv8:sint8) | SVal16(sv16:sint16) | SVal32(sv32:sint32) | SVal64(sv64:sint64) 
 
 
+predicate unsignedVal(v:Value)
+{
+    v.Val8? || v.Val16? || v.Val32? || v.Val64?
+}
+predicate signedVal(v:Value)
+{
+    v.SVal8? || v.SVal16? || v.SVal32? || v.SVal64? 
+}
+predicate boolVal(v:Value)
+{
+    v.ValBool? 
+}
+
+predicate unsignedValLT(v0:Value,v1:Value)
+    requires unsignedVal(v0)
+    requires unsignedVal(v1)
+{
+    &&(v0.Val8?   ==>  v1.Val8? || v1.Val16? || v1.Val32? || v1.Val64?)
+    &&(v0.Val16?  ==> v1.Val16? || v1.Val32? || v1.Val64?)
+    &&(v0.Val32?  ==> v1.Val32? || v1.Val64?)
+    &&(v0.Val64?  ==> v1.Val64?)
+}
 /////////////////
 // Quadword
 /////////////////
@@ -292,5 +303,14 @@ lemma {:axiom} lemma_BitsToWordToBits64(b:bv64)
 
 lemma {:axiom} lemma_WordToBitsToWord64(w:uint64)
     ensures BitsToWord64(WordToBits64(w)) == w;
+
+    predicate typesMatch(v0:Value,v1:Value)
+    {
+        (v0.Val8? ==> v1.Val8? )
+        && (v0.Val16? ==> v1.Val16?)
+        && (v0.Val32? ==> v1.Val32? )
+        && (v0.Val64? ==> v1.Val64? )
+        && (v0.ValBool? ==> !v1.ValBool? )
+    }
 
 } // end module types
