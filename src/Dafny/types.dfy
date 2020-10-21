@@ -16,11 +16,43 @@ type uint8   = i:int | 0 <= i < 0x100
 type uint16  = i:int | 0 <= i < 0x10000
 type uint32  = i:int | 0 <= i < 0x1_0000_0000
 type uint64  = i:int | 0 <= i < 0x1_0000_0000_0000_0000
-type uint128 = i:int | 0 <= i < 0x1_00000000_00000000_00000000_00000000
+type uint128 = i:int | 0 <= i < 0x1_00000000_00000000_00000000_00000000 // Can get rid of? 
+
+type sint8   = i:int | -0x80 <= i < 0x80 
+type sint16  = i:int | -0x8000 <= i < 0x8000
+type sint32  = i:int | -0x80000000 <= i < 0x80000000
+type sint64  = i:int | -0x8000000000000000 <= i < 0x8000000000000000
+
+//-32,768 to 32,767
+
 
 datatype Value = Val8(v8:uint8) | Val16(v16:uint16) | Val32(v32:uint32) | Val64(v64:uint64) | Val128(v128:uint128) | ValBool(vBool:bool)
+                | SVal8(sv8:sint8) | SVal16(sv16:sint16) | SVal32(sv32:sint32) | SVal64(sv64:sint64) 
 
 
+predicate unsignedVal(v:Value)
+{
+    v.Val8? || v.Val16? || v.Val32? || v.Val64? || v.Val128?
+}
+predicate signedVal(v:Value)
+{
+    v.SVal8? || v.SVal16? || v.SVal32? || v.SVal64? 
+}
+predicate boolVal(v:Value)
+{
+    v.ValBool? 
+}
+
+predicate unsignedValLT(v0:Value,v1:Value)
+    requires unsignedVal(v0)
+    requires unsignedVal(v1)
+{
+    &&(v0.Val8?   ==>  v1.Val8? || v1.Val16? || v1.Val32? || v1.Val64? || v1.Val128?)
+    &&(v0.Val16?  ==> v1.Val16? || v1.Val32? || v1.Val64? || v1.Val128?)
+    &&(v0.Val32?  ==> v1.Val32? || v1.Val64? || v1.Val128?)
+    &&(v0.Val64?  ==> v1.Val64? || v1.Val128?)
+    &&(v0.Val128? ==> v1.Val128?)
+}
 /////////////////
 // Quadword
 /////////////////

@@ -43,10 +43,10 @@ module LLVM_def {
     | GETELEMENTPTR(t:operand,p:ptr) //needs work VV
     | ICMP(cond:condition,t:operand,src1:operand,src2:operand)
     | RET()
-    | SEXT(dst:operand,t0:Value,src:operand,t1:Value)
+    | ZEXT(dst:operand,t0:Value,src:operand,t1:Value)
     | SHL()
     | TRUN()
-    | ZEXT()
+    | SEXT()
     
 
 
@@ -91,10 +91,11 @@ module LLVM_def {
             case GETELEMENTPTR(t,p) => true
             case ICMP(cond,dst,src1,src2) => ValidOperand(s,dst) && ValidOperand(s,src1) && ValidOperand(s,src2) 
             case RET() => true
-            case SEXT(dst,t0,src,t1) => ValidOperand(s,dst) && ValidOperand(s,src) && typesMatch(t0,OperandContents(s,src))
+            case ZEXT(dst,t0,src,t1) => ValidOperand(s,dst) && ValidOperand(s,src) && typesMatch(t0,OperandContents(s,src)) 
+                                        && unsignedVal(t0) && unsignedVal(t1) && unsignedValLT(t0,t1) 
             case SHL() => true
             case TRUN() => true
-            case ZEXT() => true
+            case SEXT() => true
                  
     }
 
@@ -160,11 +161,11 @@ module LLVM_def {
             case ICMP(cond,dst,src1,src2) => evalUpdate(s, dst, 
                                 ValBool(evalICMP(cond,OperandContents(s,dst),OperandContents(s,src1),OperandContents(s,src2))),r)
             case RET() => true
-            case SEXT(dst,t0,src,t1) => evalUpdate(s, dst, 
-                                  evalSEXT(t0,OperandContents(s,src),t1),r)
+            case ZEXT(dst,t0,src,t1) => evalUpdate(s, dst, 
+                                  evalZEXT(t0,OperandContents(s,src),t1),r)
             case SHL() => true
             case TRUN() => true
-            case ZEXT() => true
+            case SEXT() => true
     }
 
 
