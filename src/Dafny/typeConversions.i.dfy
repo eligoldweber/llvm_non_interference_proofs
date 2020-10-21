@@ -16,8 +16,7 @@ module type_conversion {
         if t1.Val8? then evalZEXT8Helper(src) else 
         if t1.Val16? then evalZEXT16Helper(src) else 
         if t1.Val32? then evalZEXT32Helper(src) else 
-        if t1.Val64? then evalZEXT64Helper(src) else 
-        src
+        if t1.Val64? then evalZEXT64Helper(src) else src
     }
 
     function evalSEXT(t0:Value,src:Value,t1:Value): Value
@@ -56,13 +55,6 @@ module type_conversion {
         if src.Val32? then Val64(Bitwise32CastTo64(src.v32)) else src
     }
 
-    function evalZEXT128Helper(src:Value) : Value
-    {
-        if src.Val8? then Val128(Bitwise8CastTo128(src.v8)) else 
-        if src.Val16? then Val128(Bitwise16CastTo128(src.v16)) else
-        if src.Val32? then Val128(Bitwise32CastTo128(src.v32)) else
-        if src.Val64? then Val128(Bitwise64CastTo128(src.v64)) else src
-    }
     
     function evalSEXT8Helper(src:Value) : Value
     {
