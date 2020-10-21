@@ -256,6 +256,18 @@ predicate unsignedValLT(v0:Value,v1:Value)
     &&(v0.Val32?  ==> v1.Val32? || v1.Val64?)
     &&(v0.Val64?  ==> v1.Val64?)
 }
+
+predicate signedValLT(v0:Value,v1:Value)
+    requires signedVal(v0)
+    requires signedVal(v1)
+{
+    &&(v0.SVal8?   ==> v1.SVal8? || v1.SVal16? || v1.SVal32? || v1.SVal64? )
+    &&(v0.SVal16?  ==> v1.SVal16? || v1.SVal32? || v1.SVal64? )
+    &&(v0.SVal32?  ==> v1.SVal32? || v1.SVal64? )
+    &&(v0.SVal64?  ==> v1.SVal64?)
+
+}
+
 /////////////////
 // Quadword
 /////////////////
