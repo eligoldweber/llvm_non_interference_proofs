@@ -4,6 +4,7 @@ include "simpleMemory.i.dfy"
 
 module LLVM_def {
 
+    import opened types
     import opened ops
     import opened simple_memory
 

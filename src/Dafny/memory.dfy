@@ -4,6 +4,9 @@ module memory {
 
 import opened types
 
+// TEMPORARY
+datatype ptr = ptr(bid:nat, offset:nat)
+
 // Each cell of memory is occupied by either data, a pointer, or uninitialized
 // data
 datatype MemCell = mb(size:nat, data:byte) |
