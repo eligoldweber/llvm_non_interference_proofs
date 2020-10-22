@@ -8,227 +8,183 @@ newtype{:nativeType "byte"} byte = i:int | 0 <= i < 0x100
 newtype{:nativeType "uint"} uint = i:int | 0 <= i < 0x1_0000_0000
 newtype{:nativeType "ulong"} ulong = i:int | 0 <= i < 0x1_0000_0000_0000_0000
 
-/////////////////
-// Subset types
-/////////////////
+
+////////////////////////////////////////////////////////////////
+// Primitive data types
+////////////////////////////////////////////////////////////////
 
 // The integer types as normally defined
 type uint8   = i:int | 0 <= i < 0x100
 type uint16  = i:int | 0 <= i < 0x10000
 type uint32  = i:int | 0 <= i < 0x1_0000_0000
 type uint64  = i:int | 0 <= i < 0x1_0000_0000_0000_0000
-type int8    = i:int | -0x80 <= i < 0x80
-type int16   = i:int | -0x8000 <= i < 0x8000
-type int32   = i:int | -0x8000_0000 <= i < 0x8000_0000
-type int64   = i:int | -0x8000_0000_0000_0000 <= i < 0x8000_0000_0000_0000
 type sint8   = i:int | -0x80 <= i < 0x80 
 type sint16  = i:int | -0x8000 <= i < 0x8000
-type sint32  = i:int | -0x80000000 <= i < 0x80000000
-type sint64  = i:int | -0x8000000000000000 <= i < 0x8000000000000000
+type sint32  = i:int | -0x8000_0000 <= i < 0x8000_0000
+type sint64  = i:int | -0x8000_0000_0000_0000 <= i < 0x8000_0000_0000_0000
 
-// A pointer is a block/index, not an absolute value, based on our specification
-// Each Data holds a piece of information that can be loaded/stored from/to memory
-datatype Data = Bytes(bytes:seq<uint8>) |
-                Ptr(block:nat, offset:nat) |
-                Int(val:int, size:nat, signed:bool)
+// Our integers have a type associated with them that stores their size and whether
+// they're signed/unsigned
+datatype IntType_ = IntType(size:nat, signed:bool)
+type IntType = t:IntType_ | t.size > 0 ghost witness IntType(1, false)
+
+// Bytes is just that; a list of bytes
+type Byte = b:int | 0 <= b < 0x100
+type Bytes = b:seq<Byte> | |b| > 0 ghost witness [0]
+
+// A point of data is a primitive in our program. It could either be a sequence of bytes,
+// a pointer (in block/index form), or an integer. The validity of these is built into
+// the "Data" type
+datatype Data_ = Bytes(bytes:Bytes) |
+                 Ptr(block:nat, offset:nat) |
+                 Int(val:int, itype:IntType)
+type Data = d:Data_ | (d.Int? ==> IntFits(d.val, d.itype)) ghost witness Bytes([0])
+
+// Specifies whether the given integer value fits in the given IntType; used for the
+// validity specification of Data
+predicate {:opaque} IntFits(val:int, itype:IntType) {
+    var bound := Pow256(itype.size);
+    if itype.signed then (-bound/2 <= val < bound/2)
+    else (0 <= val < bound)
+}
 
 // For aiding in converting between the size of a number in bytes and its bounds
-function Pow256(n:nat) : (ret:nat)
-    ensures ret > 0
+function Pow256(n:nat) : int
     decreases n
 {
     if n == 0 then 1
     else 0x100 * Pow256(n-1)
 }
 
-// In order to be valid, integer types need to be within the bounds of their size
-// Also, cannot have bytes that are empty
-predicate {:opaque} ValidData(data:Data) {
-    match data
-        case Bytes(bytes) => |bytes| > 0
-        case Ptr(block, offset) => true
-        case Int(val, size, signed) =>
-            var bound := Pow256(size) as int;
-            if size == 0 then false
-            else if signed then (-bound/2 <= val < bound/2)
-            else (0 <= val < bound)
-}
+// Functions to return a Data of the given integer type given the appropriate integer
+// value
+function UInt8(val:uint8) : Data { reveal_IntFits(); Int(val, IntType(1, false)) }
+function UInt16(val:uint16) : Data { reveal_IntFits(); Int(val, IntType(2, false)) }
+function UInt32(val:uint32) : Data { reveal_IntFits(); Int(val, IntType(4, false)) }
+function UInt64(val:uint64) : Data { reveal_IntFits(); Int(val, IntType(8, false)) }
+function SInt8(val:sint8) : Data { reveal_IntFits(); Int(val, IntType(1, true)) }
+function SInt16(val:sint16) : Data { reveal_IntFits(); Int(val, IntType(2, true)) }
+function SInt32(val:sint32) : Data { reveal_IntFits(); Int(val, IntType(4, true)) }
+function SInt64(val:sint64) : Data { reveal_IntFits(); Int(val, IntType(8, true)) }
 
-// Getters for the common integer types
-function UInt8(val:uint8) : (data:Data)
-    ensures ValidData(data)
-{
-    reveal_ValidData();
-    Int(val, 1, false)
-}
 
-function UInt16(val:uint16) : (data:Data)
-    ensures ValidData(data)
-{
-    reveal_ValidData();
-    Int(val, 2, false)
-}
+////////////////////////////////////////////////////////////////
+// Primitive data operations
+////////////////////////////////////////////////////////////////
 
-function UInt32(val:uint32) : (data:Data)
-    ensures ValidData(data)
-{
-    reveal_ValidData();
-    Int(val, 4, false)
-}
-
-function UInt64(val:uint64) : (data:Data)
-    ensures ValidData(data)
-{
-    reveal_ValidData();
-    Int(val, 8, false)
-}
-
-function Int8(val:int8) : (data:Data)
-    ensures ValidData(data)
-{
-    reveal_ValidData();
-    Int(val, 1, true)
-}
-
-function Int16(val:int16) : (data:Data)
-    ensures ValidData(data)
-{
-    reveal_ValidData();
-    Int(val, 2, true)
-}
-
-function Int32(val:int32) : (data:Data)
-    ensures ValidData(data)
-{
-    reveal_ValidData();
-    Int(val, 4, true)
-}
-
-function Int64(val:int64) : (data:Data)
-    ensures ValidData(data)
-{
-    reveal_ValidData();
-    Int(val, 8, true)
-}
-
-// Converts a signed integer to its unsigned representation in two's complement
+// Converts a signed integer to its unsigned representation in two's complement so it
+// can be converted into bytes and stored in memory
 function {:opaque} ToTwosComp(data:Data) : (out:Data)
-    requires data.Int? && data.signed && ValidData(data)
-    ensures out.Int? && !out.signed && ValidData(out)
-    ensures out.size == data.size
+    requires data.Int? && data.itype.signed
+    ensures out.Int? && !out.itype.signed
+    ensures out.itype.size == data.itype.size
 {
-    reveal_ValidData();
-    var newval := (if data.val >= 0 then data.val else data.val + Pow256(data.size));
-    Int(newval, data.size, false)
+    reveal_IntFits();
+    var newval := (if data.val >= 0 then data.val else data.val + Pow256(data.itype.size));
+    Int(newval, IntType(data.itype.size, false))
 }
 
-// Converts an unsigned two's complement back to its signed integer counterpart
+// Converts an unsigned two's complement number back to its signed representation for
+// returning from a sequence of bytes back to a normal integer
 function {:opaque} FromTwosComp(data:Data) : (out:Data)
-    requires data.Int? && !data.signed && ValidData(data)
-    ensures out.Int? && out.signed && ValidData(out)
-    ensures out.size == data.size
+    requires data.Int? && !data.itype.signed
+    ensures out.Int? && out.itype.signed
+    ensures out.itype.size == data.itype.size
 {
-    reveal_ValidData();
-    var bound := Pow256(data.size) as int;
+    reveal_IntFits();
+    var bound := Pow256(data.itype.size);
     var newval := (if data.val < bound/2 then data.val else data.val - bound);
-    Int(newval, data.size, true)
+    Int(newval, IntType(data.itype.size, true))
 }
 
-// // Makes sure that sending numbers through two's complement and back doesn't change them
+// Makes sure that sending numbers through two's complement and back doesn't change them
 lemma {:opaque} TwosCompIdentity(data:Data)
-    requires data.Int? && data.signed && ValidData(data)
+    requires data.Int? && data.itype.signed
     ensures FromTwosComp(ToTwosComp(data)) == data
 {
     reveal_ToTwosComp();
     reveal_FromTwosComp();
 }
 
-// Transforms data that is in some arbitrary form into byte form
-function ToBytes(data:Data) : (bytes:seq<uint8>)
-    requires !data.Ptr?
-    requires ValidData(data)
-    ensures data.Int? ==> |bytes| == data.size
+// Transforms data that is in some arbitrary int form into a sequence of bytes
+function {:opaque} IntToBytes(data:Data) : (bytes:Bytes)
+    requires data.Int?
+    ensures |bytes| == data.itype.size
 {
-    reveal_ValidData();
-    if data.Bytes? then data.bytes
-    else
-        var val := if data.signed then ToTwosComp(data).val else data.val;
-        UIntToBytes(val, data.size)
+    reveal_IntFits();
+    var val := if data.itype.signed then ToTwosComp(data).val else data.val;
+    RecurseIntToBytes(val, data.itype.size)
 }
 
-// Recursive helper function for ToBytes() for handling the integer case
-function UIntToBytes(val:nat, size:nat) : (bytes:seq<uint8>)
+// Helper function for IntToBytes() that performs the operation on specifically unsigned
+// integers recursively
+function {:opaque} RecurseIntToBytes(val:nat, size:nat) : (bytes:Bytes)
+    requires size > 0
     requires val < Pow256(size)
     ensures |bytes| == size
     decreases size
 {
-    if size == 0 then []
-    else [val % 0x100] + UIntToBytes(val / 0x100, size - 1)
+    if size == 1 then [val]
+    else [val % 0x100] + RecurseIntToBytes(val / 0x100, size - 1)
 }
 
-// Going the other way, we transform data that is in byte form back into some
-// other format
-function FromBytes(bytes:seq<uint8>, form:Data) : (data:Data)
-    requires |bytes| > 0
-    requires !form.Ptr?
-    requires form.Int? ==> form.size == |bytes|
-    ensures form.Bytes? ==> data.Bytes?
-    ensures form.Int? ==> data.Int?
-    ensures form.Int? ==> data.size == form.size
-    ensures form.Int? ==> data.signed == form.signed
-    ensures ValidData(data)
+// Transforms a list of bytes back into the given integer format
+function {:opaque} IntFromBytes(bytes:Bytes, itype:IntType) : (data:Data)
+    requires |bytes| == itype.size
+    ensures data.Int?
+    ensures data.itype == itype
 {
-    reveal_ValidData();
-    if form.Bytes? then Bytes(bytes)
-    else
-        var val := UIntFromBytes(bytes);
-        var udata := Int(val, form.size, false);
-        if form.signed then FromTwosComp(udata)
-        else udata
+    reveal_IntFits();
+    var udata := Int(RecurseIntFromBytes(bytes), IntType(itype.size, false));
+    if itype.signed then FromTwosComp(udata)
+    else udata
 }
 
-// Recursive helper function for FromBytes() for handling the integer case
-function UIntFromBytes(bytes:seq<uint8>) : (val:nat)
+// Helper function for IntFromBytes that performs the operation for specifically unsigned
+// integers recursively
+function {:opaque} RecurseIntFromBytes(bytes:Bytes) : (val:nat)
     ensures val < Pow256(|bytes|)
     decreases bytes
 {
-    if |bytes| == 0 then 0
-    else bytes[0] + (0x100 * UIntFromBytes(bytes[1..]))
+    if |bytes| == 1 then bytes[0]
+    else (bytes[0] as nat) + (0x100 * RecurseIntFromBytes(bytes[1..]))
 }
 
-// First, let's just make sure that the uint conversions preserve information
-lemma {:opaque} {:induction val, size} UIntBytesIdentity(val:nat, size:nat)
+// Starting small, we'll do the recursive identity
+lemma {:opaque} {:induction val, size} RecursiveIdentity(val:nat, size:nat)
+    requires size > 0
     requires val < Pow256(size)
-    ensures UIntFromBytes(UIntToBytes(val, size)) == val
+    ensures RecurseIntFromBytes(RecurseIntToBytes(val, size)) == val
 {
+    reveal_IntToBytes();
+    reveal_IntFromBytes();
+    reveal_RecurseIntToBytes();
+    reveal_RecurseIntFromBytes();
 }
 
-// Finally, need to verify that converting data to bytes and back again doesn't change
-// it whatsoever
-// lemma {:opaque} ToBytesIdentity(data:Data)
-//     requires !data.Ptr?
-//     requires ValidData(data)
-//     ensures FromBytes(ToBytes(data), data) == data
-// {
-//     if (data.Bytes?) {
-//         assert FromBytes(ToBytes(data), data) == data;
-//     } else {
-//         assert data.Int?;
-//         if (data.signed) {
-//             if (data.size == 1) {
-//                 assert FromBytes(ToBytes(data), data) == data;
-//             } else {
-//                 assert FromBytes(ToBytes(data), data) == data;
-//             }
-//         } else {
-//             if (data.size == 1) {
-//                 assert FromBytes(ToBytes(data), data) == data;
-//             } else {
-//                 assert FromBytes(ToBytes(data), data) == data;
-//             }
-//         }
-//     }
-// }
+// Now, we make sure that converting data to/from bytes doesn't change it
+lemma {:opaque} IntBytesIdentity(data:Data)
+    requires data.Int?
+    ensures IntFromBytes(IntToBytes(data), data.itype) == data
+{
+    reveal_IntFits();
+    reveal_IntToBytes();
+    reveal_IntFromBytes();
+    reveal_RecurseIntToBytes();
+    reveal_RecurseIntFromBytes();
+    if (data.itype.signed) {
+        var udata := ToTwosComp(data);
+        TwosCompIdentity(data);
+        RecursiveIdentity(udata.val, udata.itype.size);
+    } else {
+        RecursiveIdentity(data.val, data.itype.size);
+    }
+}
+
+
+////////////////////////////////////////////////////////////////
+// Old stuff
+////////////////////////////////////////////////////////////////
 
 datatype Value = Val8(v8:uint8) | Val16(v16:uint16) | Val32(v32:uint32) | Val64(v64:uint64) | ValBool(vBool:bool)
                 | SVal8(sv8:sint8) | SVal16(sv16:sint16) | SVal32(sv32:sint32) | SVal64(sv64:sint64) 

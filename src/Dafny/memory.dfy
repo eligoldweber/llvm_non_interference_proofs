@@ -50,6 +50,11 @@ predicate MemInit(s:MemState) {
 	&& s.nextBlock == 0
 }
 
+// Need to check every step to make sure memory is still valid
+predicate MemValid(s:MemState) {
+	forall bid | bid in s.mem :: bid < s.nextBlock
+}
+
 // When a new block is allocated, all the previous blocks should remain the same,
 // and an unininitialized block of the appropriate size should be added with block
 // nextBlock
