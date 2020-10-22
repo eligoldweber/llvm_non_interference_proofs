@@ -67,6 +67,54 @@ function SInt16(val:sint16) : Data { reveal_IntFits(); Int(val, IntType(2, true)
 function SInt32(val:sint32) : Data { reveal_IntFits(); Int(val, IntType(4, true)) }
 function SInt64(val:sint64) : Data { reveal_IntFits(); Int(val, IntType(8, true)) }
 
+predicate isInt(data:Data)
+{
+    data.Int?
+}
+
+function DataToUInt8(data:Data) : uint8 
+    requires isInt(data)
+    requires data.itype.size == 1 && !data.itype.signed  
+    {data.val % 0x100}
+function DataToUInt16(data:Data) : uint16 
+    requires isInt(data)
+    requires data.itype.size == 2 && !data.itype.signed  
+    {data.val % 0x10000}
+function DataToUInt32(data:Data) : uint32 
+    requires isInt(data)
+    requires data.itype.size == 4 && !data.itype.signed  
+    {data.val % 0x1_0000_0000}
+function DataToUInt64(data:Data) : uint64 
+    requires isInt(data)
+    requires data.itype.size == 8 && !data.itype.signed  
+    {data.val % 0x1_0000_0000_0000_0000}
+
+
+ function DataToSInt8(data:Data) : sint8 
+    requires isInt(data)
+    requires data.itype.size == 1 && data.itype.signed  
+    {data.val % 0x80}
+function DataToSInt16(data:Data) : sint16 
+    requires isInt(data)
+    requires data.itype.size == 2 && data.itype.signed  
+    {data.val % 0x8000}
+function DataToSInt32(data:Data) : sint32 
+    requires isInt(data)
+    requires data.itype.size == 4 && data.itype.signed  
+    {data.val % 0x8000_0000}
+function DataToSInt64(data:Data) : sint64 
+    requires isInt(data)
+    requires data.itype.size == 8 && data.itype.signed  
+    {data.val % 0x8000_0000_0000_0000}   
+
+
+
+predicate intTypesMatch(x:Data, y:Data)
+    requires isInt(x)
+    requires isInt(y)
+{
+    x.itype == y.itype
+}
 
 ////////////////////////////////////////////////////////////////
 // Primitive data operations
@@ -186,43 +234,43 @@ lemma {:opaque} IntBytesIdentity(data:Data)
 // Old stuff
 ////////////////////////////////////////////////////////////////
 
-datatype Value = Val8(v8:uint8) | Val16(v16:uint16) | Val32(v32:uint32) | Val64(v64:uint64) | ValBool(vBool:bool)
-                | SVal8(sv8:sint8) | SVal16(sv16:sint16) | SVal32(sv32:sint32) | SVal64(sv64:sint64) 
+// datatype Value = Val8(v8:uint8) | Val16(v16:uint16) | Val32(v32:uint32) | Val64(v64:uint64) | ValBool(vBool:bool)
+//                 | SVal8(sv8:sint8) | SVal16(sv16:sint16) | SVal32(sv32:sint32) | SVal64(sv64:sint64) 
 
 
-predicate unsignedVal(v:Value)
-{
-    v.Val8? || v.Val16? || v.Val32? || v.Val64?
-}
-predicate signedVal(v:Value)
-{
-    v.SVal8? || v.SVal16? || v.SVal32? || v.SVal64? 
-}
-predicate boolVal(v:Value)
-{
-    v.ValBool? 
-}
+// predicate unsignedVal(v:Value)
+// {
+//     v.Val8? || v.Val16? || v.Val32? || v.Val64?
+// }
+// predicate signedVal(v:Value)
+// {
+//     v.SVal8? || v.SVal16? || v.SVal32? || v.SVal64? 
+// }
+// predicate boolVal(v:Value)
+// {
+//     v.ValBool? 
+// }
 
-predicate unsignedValLT(v0:Value,v1:Value)
-    requires unsignedVal(v0)
-    requires unsignedVal(v1)
-{
-    &&(v0.Val8?   ==>  v1.Val8? || v1.Val16? || v1.Val32? || v1.Val64?)
-    &&(v0.Val16?  ==> v1.Val16? || v1.Val32? || v1.Val64?)
-    &&(v0.Val32?  ==> v1.Val32? || v1.Val64?)
-    &&(v0.Val64?  ==> v1.Val64?)
-}
+// predicate unsignedValLT(v0:Value,v1:Value)
+//     requires unsignedVal(v0)
+//     requires unsignedVal(v1)
+// {
+//     &&(v0.Val8?   ==>  v1.Val8? || v1.Val16? || v1.Val32? || v1.Val64?)
+//     &&(v0.Val16?  ==> v1.Val16? || v1.Val32? || v1.Val64?)
+//     &&(v0.Val32?  ==> v1.Val32? || v1.Val64?)
+//     &&(v0.Val64?  ==> v1.Val64?)
+// }
 
-predicate signedValLT(v0:Value,v1:Value)
-    requires signedVal(v0)
-    requires signedVal(v1)
-{
-    &&(v0.SVal8?   ==> v1.SVal8? || v1.SVal16? || v1.SVal32? || v1.SVal64? )
-    &&(v0.SVal16?  ==> v1.SVal16? || v1.SVal32? || v1.SVal64? )
-    &&(v0.SVal32?  ==> v1.SVal32? || v1.SVal64? )
-    &&(v0.SVal64?  ==> v1.SVal64?)
+// predicate signedValLT(v0:Value,v1:Value)
+//     requires signedVal(v0)
+//     requires signedVal(v1)
+// {
+//     &&(v0.SVal8?   ==> v1.SVal8? || v1.SVal16? || v1.SVal32? || v1.SVal64? )
+//     &&(v0.SVal16?  ==> v1.SVal16? || v1.SVal32? || v1.SVal64? )
+//     &&(v0.SVal32?  ==> v1.SVal32? || v1.SVal64? )
+//     &&(v0.SVal64?  ==> v1.SVal64?)
 
-}
+// }
 
 /////////////////
 // Quadword
@@ -272,13 +320,13 @@ lemma {:axiom} lemma_BitsToWordToBits64(b:bv64)
 lemma {:axiom} lemma_WordToBitsToWord64(w:uint64)
     ensures BitsToWord64(WordToBits64(w)) == w;
 
-    predicate typesMatch(v0:Value,v1:Value)
-    {
-        (v0.Val8? ==> v1.Val8? )
-        && (v0.Val16? ==> v1.Val16?)
-        && (v0.Val32? ==> v1.Val32? )
-        && (v0.Val64? ==> v1.Val64? )
-        && (v0.ValBool? ==> !v1.ValBool? )
-    }
+    // predicate typesMatch(v0:Value,v1:Value)
+    // {
+    //     (v0.Val8? ==> v1.Val8? )
+    //     && (v0.Val16? ==> v1.Val16?)
+    //     && (v0.Val32? ==> v1.Val32? )
+    //     && (v0.Val64? ==> v1.Val64? )
+    //     && (v0.ValBool? ==> !v1.ValBool? )
+    // }
 
 } // end module types

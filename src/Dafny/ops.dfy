@@ -158,6 +158,26 @@ function {:opaque} BitwiseAdd64(x:uint64, y:uint64):uint64
     (x + y) % 0x1_0000_0000_0000_0000
 }
 
+function {:opaque} BitwiseSAdd8(x:sint8, y:sint8):sint8
+{
+    (x + y) % 0x80
+}
+
+function {:opaque} BitwiseSAdd16(x:sint16, y:sint16):sint16
+{
+    (x + y) % 0x8000
+}
+
+function {:opaque} BitwiseSAdd32(x:sint32, y:sint32):sint32
+{
+    (x + y) % 0x8000_0000
+}
+
+function {:opaque} BitwiseSAdd64(x:sint64, y:sint64):sint64
+{
+    (x + y) % 0x8000_0000_0000_0000
+}
+
 function BitwiseSub8(x:uint8, y:uint8):uint8
 {
      (x - y) % 0x100
@@ -177,6 +197,27 @@ function BitwiseSub32(x:uint32, y:uint32):uint32
 {
     BitsToWord(BitSub(WordToBits(x), WordToBits(y)))
 }
+
+function {:opaque} BitwiseSSub8(x:sint8, y:sint8):sint8
+{
+    (x - y) % 0x80
+}
+
+function {:opaque} BitwiseSSub16(x:sint16, y:sint16):sint16
+{
+    (x - y) % 0x8000
+}
+
+function {:opaque} BitwiseSSub32(x:sint32, y:sint32):sint32
+{
+    (x - y) % 0x8000_0000
+}
+
+function {:opaque} BitwiseSSub64(x:sint64, y:sint64):sint64
+{
+    (x - y) % 0x8000_0000_0000_0000
+}
+
 
 function BitwiseMul32(x:uint32, y:uint32):uint32
 {
@@ -277,29 +318,29 @@ function BitwiseShr64(x:uint64, y:uint64):uint64
 }
 //added
 
-    function ValueContents8Bit(v:Value): uint8
-        requires v.Val8?
-    {
-        v.v8
-    }
+    // function ValueContents8Bit(v:Value): uint8
+    //     requires v.Val8?
+    // {
+    //     v.v8
+    // }
 
-    function ValueContents16Bit(v:Value): uint16
-        requires v.Val16?
-    {
-        v.v16
-    }
+    // function ValueContents16Bit(v:Value): uint16
+    //     requires v.Val16?
+    // {
+    //     v.v16
+    // }
 
-    function ValueContents32Bit(v:Value): uint32
-        requires v.Val32?
-    {
-        v.v32
-    }
+    // function ValueContents32Bit(v:Value): uint32
+    //     requires v.Val32?
+    // {
+    //     v.v32
+    // }
 
-    function ValueContents64Bit(v:Value): uint64
-        requires v.Val64?
-    {
-        v.v64
-    }
+    // function ValueContents64Bit(v:Value): uint64
+    //     requires v.Val64?
+    // {
+    //     v.v64
+    // }
 
 
 } // end module ops
