@@ -39,7 +39,7 @@ module LLVM_def {
     datatype ins =
     | ADD(dst:operand, src1ADD:operand, src2ADD:operand)
     | SUB(dst:operand, src1ADD:operand, src2ADD:operand)
-    | BR(falg:bool, labelTrue:string,labelFalse:string)
+    | BR(flag:bool, labelTrue:string,labelFalse:string)
     | CALL() //needs work
     | GETELEMENTPTR(t:operand,p:ptr) //needs work VV
     | ICMP(cond:condition,t:operand,src1:operand,src2:operand)
@@ -47,7 +47,7 @@ module LLVM_def {
     | ZEXT(dst:operand,t0:Value,src:operand,t1:Value)
     | SHL()
     | TRUN()
-    | SEXT()
+    | SEXT(dst:operand,t0:Value,src:operand,t1:Value)
     
 
 
@@ -96,7 +96,8 @@ module LLVM_def {
                                         && unsignedVal(t0) && unsignedVal(t1) && unsignedValLT(t0,t1) 
             case SHL() => true
             case TRUN() => true
-            case SEXT() => true
+            case SEXT(dst,t0,src,t1) => ValidOperand(s,dst) && ValidOperand(s,src) && typesMatch(t0,OperandContents(s,src)) 
+                                        && signedVal(t0) && signedVal(t1) && signedValLT(t0,t1) 
                  
     }
 
@@ -165,7 +166,7 @@ module LLVM_def {
                                   evalZEXT(t0,OperandContents(s,src),t1),r)
             case SHL() => true
             case TRUN() => true
-            case SEXT() => true
+            case SEXT(dst,t0,src,t1) => true
     }
 
 

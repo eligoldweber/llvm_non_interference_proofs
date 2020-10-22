@@ -16,9 +16,21 @@ module type_conversion {
         if t1.Val8? then evalZEXT8Helper(src) else 
         if t1.Val16? then evalZEXT16Helper(src) else 
         if t1.Val32? then evalZEXT32Helper(src) else 
-        if t1.Val64? then evalZEXT64Helper(src) else 
-        src
+        if t1.Val64? then evalZEXT64Helper(src) else src
     }
+
+    function evalSEXT(t0:Value,src:Value,t1:Value): Value
+        requires typesMatch(t0,src)
+        requires signedVal(src)
+        requires signedVal(t1)
+        requires signedValLT(src,t1)
+    {
+        if t1.SVal8? then evalSEXT8Helper(src) else 
+        if t1.SVal16? then evalSEXT16Helper(src) else 
+        if t1.SVal32? then evalSEXT32Helper(src) else 
+        if t1.SVal64? then evalSEXT64Helper(src) else src
+    }
+
 
     function evalZEXT8Helper(src:Value) : Value
     {
@@ -43,6 +55,29 @@ module type_conversion {
         if src.Val32? then Val64(Bitwise32CastTo64(src.v32)) else src
     }
 
+    
+    function evalSEXT8Helper(src:Value) : Value
+    {
+       src
+    }
+
+    function evalSEXT16Helper(src:Value) : Value
+    {
+        if src.SVal8? then SVal16(SignedBitwise8CastTo16(src.sv8)) else src
+    }
+
+    function evalSEXT32Helper(src:Value) : Value
+    {
+        if src.SVal8? then SVal32(SignedBitwise8CastTo32(src.sv8)) else 
+        if src.SVal16? then SVal32(SignedBitwise16CastTo32(src.sv16)) else src 
+    }
+
+    function evalSEXT64Helper(src:Value) : Value
+    {
+        if src.SVal8? then SVal64(SignedBitwise8CastTo64(src.sv8)) else 
+        if src.SVal16? then SVal64(SignedBitwise16CastTo64(src.sv16)) else
+        if src.SVal32? then SVal64(SignedBitwise32CastTo64(src.sv32)) else src
+    }
 
 
 ///// Cast functions /////
@@ -83,7 +118,26 @@ function {:opaque} SignedBitwise8CastTo16(x:sint8):sint16
 {
     x  % 0x8000
 }
-
+function {:opaque} SignedBitwise8CastTo32(x:sint8):sint32
+{
+    x  % 0x80000000
+}
+function {:opaque} SignedBitwise16CastTo32(x:sint16):sint32
+{
+    x  % 0x80000000
+}
+function {:opaque} SignedBitwise8CastTo64(x:sint8):sint64
+{
+    x  % 0x8000000000000000
+}
+function {:opaque} SignedBitwise16CastTo64(x:sint16):sint64
+{
+    x  % 0x8000000000000000
+}
+function {:opaque} SignedBitwise32CastTo64(x:sint32):sint64
+{
+    x  % 0x8000000000000000
+}
 
 
 }
