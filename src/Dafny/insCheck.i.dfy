@@ -100,27 +100,22 @@ lemma evalSUB64check_unsigned()
         assert forall d0,d1:Data :: isInt(d0) && isInt(d1) && typesMatch(d0,d1) && d0.itype == IntType(8, false) 
                                     ==> evalSUB(8,d0,d1).val == (d0.val-d1.val) % Pow256(8);   
     }
-// lemma evalSUB8check_signed()
-//     {
-//         reveal_BitwiseSub8();
-//         reveal_ToTwosComp();
-//         reveal_FromTwosComp();
+lemma evalSUB8check_signed()
+    {
+        reveal_BitwiseSub8();
+        reveal_ToTwosComp();
+        reveal_FromTwosComp();
       
-//         var v2:sint8 := 2;
-//         var v3:sint8 := -50;
-//         assert SInt8(v2).itype.size == 1 && SInt8(v2).itype.signed;
-//         assert FromTwosComp(UInt8(BitwiseSub8(DataToUInt8(ToTwosComp(SInt8(v2))),DataToUInt8(ToTwosComp(SInt8(v3)))))).itype.signed;
-//         assert FromTwosComp(UInt8(BitwiseSub8(DataToUInt8(ToTwosComp(SInt8(v2))),DataToUInt8(ToTwosComp(SInt8(v3)))))).itype.size == 1;
-//         assert FromTwosComp(UInt8(BitwiseSub8(DataToUInt8(ToTwosComp(SInt8(v2))),DataToUInt8(ToTwosComp(SInt8(v3)))))).val == 52;
-//         // assert FromTwosComp(UInt8(BitwiseSub8(DataToUInt8(ToTwosComp(SInt8(v2))),DataToUInt8(ToTwosComp(SInt8(v3)))))) == evalSUB(1,SInt8(v2),SInt8(v3));
-//         assert (UInt8(BitwiseSub8(DataToUInt8(ToTwosComp(SInt8(v3))),DataToUInt8(ToTwosComp(SInt8(v2)))))).val == 204;
-//         assert UInt8(BitwiseSub8(DataToUInt8(ToTwosComp(SInt8(v2))),DataToUInt8(ToTwosComp(SInt8(v3))))).val == 52;
-//         var t:uint8 := 204;
-//         assert FromTwosComp(UInt8(t)).val == -52;
-//         // assert SInt8(v3).itype.size == 1 && SInt8(v3).itype.signed && evalSUB(1,SInt8(v3),SInt8(v2)) == FromTwosComp(UInt8(BitwiseSub8(DataToUInt8(ToTwosComp(SInt8(v3))),DataToUInt8(ToTwosComp(SInt8(v2))))));
-//         // assert forall d0,d1:Data :: isInt(d0) && isInt(d1) && typesMatch(d0,d1) && d0.itype == IntType(1, true) 
-//                                     // ==> evalSUB(1,d0,d1).val == FromTwosComp(evalSUB(1,ToTwosComp(d0),ToTwosComp(d1))).val;   
-//     }    
+        var v2:sint8 := 2;
+        var v3:sint8 := -50;
+        assert SInt8(v2).itype.size == 1 && SInt8(v2).itype.signed;
+        assert FromTwosComp(UInt8(BitwiseSub8(DataToUInt8(ToTwosComp(SInt8(v2))),DataToUInt8(ToTwosComp(SInt8(v3)))))).val == 52;
+        assert evalSUB(1,SInt8(v2),SInt8(v3)).val == -52;
+        
+        assert -evalSUB(1,SInt8(v2),SInt8(v3)).val == FromTwosComp(UInt8(BitwiseSub8(DataToUInt8(ToTwosComp(SInt8(v2))),DataToUInt8(ToTwosComp(SInt8(v3)))))).val;
+        // assert forall d0,d1:Data :: isInt(d0) && isInt(d1) && typesMatch(d0,d1) && d0.itype == IntType(1, true) 
+                                    // ==> evalSUB(1,d0,d1).val == FromTwosComp(evalSUB(1,ToTwosComp(d0),ToTwosComp(d1))).val;   
+    }    
 
 
 // -- ICMP -- // 
