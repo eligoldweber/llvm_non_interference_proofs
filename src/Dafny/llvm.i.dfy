@@ -30,8 +30,8 @@ module LLVM_def {
     //-----------------------------------------------------------------------------
 
     datatype ins =
-    | ADD(dst:operand, t:IntType, src1ADD:operand, src2ADD:operand)
-    | SUB(dst:operand, t:IntType, src1SUB:operand, src2SUB:operand)
+    | ADD(dst:operand, size:nat, src1ADD:operand, src2ADD:operand)
+    | SUB(dst:operand, size:nat, src1SUB:operand, src2SUB:operand)
     | BR(flag:bool, labelTrue:string,labelFalse:string)
     | CALL() //needs work
     | GETELEMENTPTR() //needs work VV
@@ -76,10 +76,10 @@ module LLVM_def {
         ValidState(s) && match ins
             case ADD(dst,t,src1,src2) => && ValidOperand(s,dst) && ValidOperand(s,src1) && ValidOperand(s,src2)
                                          && isInt(OperandContents(s,src1)) && isInt(OperandContents(s,src2))
-                                         && intTypesMatch(OperandContents(s,src1),OperandContents(s,src2))
+                                         && typesMatch(OperandContents(s,src1),OperandContents(s,src2))
             case SUB(dst,t,src1,src2) => && ValidOperand(s,dst) && ValidOperand(s,src1) && ValidOperand(s,src2) 
                                          && isInt(OperandContents(s,src1)) && isInt(OperandContents(s,src2))
-                                         && intTypesMatch(OperandContents(s,src1),OperandContents(s,src2))
+                                         && typesMatch(OperandContents(s,src1),OperandContents(s,src2))
             case BR(cond, labelTrue,labelFalse) => true
             case CALL() => true
             case GETELEMENTPTR() => true
@@ -169,76 +169,80 @@ module LLVM_def {
     }
 
 
-
-
-    function evalADD(t:IntType_,v0:Data,v1:Data): Data
+        function evalADD(size:nat,v0:Data,v1:Data):  (out:Data) // doesnt support nsw/nuw
         requires isInt(v0)
         requires isInt(v1)
-        requires intTypesMatch(v0,v1)
+        requires typesMatch(v0,v1)
+        // ensures out.itype.size == size
     { 
+        reveal_ToTwosComp();
+        reveal_FromTwosComp();
+        if (v0.itype.size == 1 && !v0.itype.signed) then UInt8(BitwiseAdd8(DataToUInt8(ToTwosComp(v0)),DataToUInt8(ToTwosComp(v1)))) else 
+        if (v0.itype.size == 1 && v0.itype.signed) then FromTwosComp(UInt8(BitwiseAdd8(DataToUInt8(ToTwosComp(v1)),DataToUInt8(ToTwosComp(v0))))) else 
+        if (v0.itype.size == 2 && !v0.itype.signed) then UInt16(BitwiseAdd16(DataToUInt16(ToTwosComp(v0)),DataToUInt16(ToTwosComp(v1)))) else 
+        if (v0.itype.size == 2 && v0.itype.signed) then FromTwosComp(UInt16(BitwiseAdd16(DataToUInt16(ToTwosComp(v1)),DataToUInt16(ToTwosComp(v0))))) else 
+        if (v0.itype.size == 4 && !v0.itype.signed) then UInt32(BitwiseAdd32(DataToUInt32(ToTwosComp(v0)),DataToUInt32(ToTwosComp(v1)))) else 
+        if (v0.itype.size == 4 && v0.itype.signed) then FromTwosComp(UInt32(BitwiseAdd32(DataToUInt32(ToTwosComp(v1)),DataToUInt32(ToTwosComp(v0))))) else 
+        if (v0.itype.size == 8 && !v0.itype.signed) then UInt64(BitwiseAdd64(DataToUInt64(ToTwosComp(v0)),DataToUInt64(ToTwosComp(v1)))) else 
+        if (v0.itype.size == 8 && v0.itype.signed) then FromTwosComp(UInt64(BitwiseAdd64(DataToUInt64(ToTwosComp(v1)),DataToUInt64(ToTwosComp(v0))))) else v0
 
-        if v0.itype == IntType(1, false) then UInt8(BitwiseAdd8(DataToUInt8(v0),DataToUInt8(v1))) else 
-        if v0.itype == IntType(2, false) then UInt16(BitwiseAdd16(DataToUInt16(v0),DataToUInt16(v1))) else 
-        if v0.itype == IntType(4, false) then UInt32(BitwiseAdd32(DataToUInt32(v0),DataToUInt32(v1))) else 
-        if v0.itype == IntType(8, false) then UInt64(BitwiseAdd64(DataToUInt64(v0),DataToUInt64(v1))) else
-        if v0.itype == IntType(1, true) then SInt8(BitwiseSAdd8(DataToSInt8(v0),DataToSInt8(v1))) else 
-        if v0.itype == IntType(2, true) then SInt16(BitwiseSAdd16(DataToSInt16(v0),DataToSInt16(v1))) else 
-        if v0.itype == IntType(4, true) then SInt32(BitwiseSAdd32(DataToSInt32(v0),DataToSInt32(v1))) else 
-        if v0.itype == IntType(8, true) then SInt64(BitwiseSAdd64(DataToSInt64(v0),DataToSInt64(v1))) else v0
-       
     }
 
 
-
-
-    function evalSUB(t:IntType_,v0:Data,v1:Data): Data
+    function evalSUB(size:nat,v0:Data,v1:Data):  (out:Data) // doesnt support nsw/nuw
         requires isInt(v0)
         requires isInt(v1)
-        requires intTypesMatch(v0,v1)
-    {
-        if v0.itype == IntType(1, false) then UInt8(BitwiseSub8(DataToUInt8(v0),DataToUInt8(v1))) else 
-        if v0.itype == IntType(2, false) then UInt16(BitwiseSub16(DataToUInt16(v0),DataToUInt16(v1))) else 
-        if v0.itype == IntType(4, false) then UInt32(BitwiseSub32(DataToUInt32(v0),DataToUInt32(v1))) else 
-        if v0.itype == IntType(8, false) then UInt64(BitwiseSub64(DataToUInt64(v0),DataToUInt64(v1))) else
-        if v0.itype == IntType(1, true) then SInt8(BitwiseSSub8(DataToSInt8(v0),DataToSInt8(v1))) else 
-        if v0.itype == IntType(2, true) then SInt16(BitwiseSSub16(DataToSInt16(v0),DataToSInt16(v1))) else 
-        if v0.itype == IntType(4, true) then SInt32(BitwiseSSub32(DataToSInt32(v0),DataToSInt32(v1))) else 
-        if v0.itype == IntType(8, true) then SInt64(BitwiseSSub64(DataToSInt64(v0),DataToSInt64(v1))) else v0
+        requires typesMatch(v0,v1)
+        // ensures out.itype.size == size
+        ensures (v0.itype.size == 1 && v0.itype.signed) ==> evalSUB(size,v0,v1)== FromTwosComp(UInt8(BitwiseSub8(DataToUInt8(ToTwosComp(v1)),DataToUInt8(ToTwosComp(v0)))))
+    { 
+        reveal_ToTwosComp();
+        reveal_FromTwosComp();
+        if (v0.itype.size == 1 && !v0.itype.signed) then UInt8(BitwiseSub8(DataToUInt8(ToTwosComp(v0)),DataToUInt8(ToTwosComp(v1)))) else 
+        if (v0.itype.size == 1 && v0.itype.signed) then FromTwosComp(UInt8(BitwiseSub8(DataToUInt8(ToTwosComp(v1)),DataToUInt8(ToTwosComp(v0))))) else 
+        if (v0.itype.size == 2 && !v0.itype.signed) then UInt16(BitwiseSub16(DataToUInt16(ToTwosComp(v0)),DataToUInt16(ToTwosComp(v1)))) else 
+        if (v0.itype.size == 2 && v0.itype.signed) then FromTwosComp(UInt16(BitwiseSub16(DataToUInt16(ToTwosComp(v1)),DataToUInt16(ToTwosComp(v0))))) else 
+        if (v0.itype.size == 4 && !v0.itype.signed) then UInt32(BitwiseSub32(DataToUInt32(ToTwosComp(v0)),DataToUInt32(ToTwosComp(v1)))) else 
+        if (v0.itype.size == 4 && v0.itype.signed) then FromTwosComp(UInt32(BitwiseSub32(DataToUInt32(ToTwosComp(v1)),DataToUInt32(ToTwosComp(v0))))) else 
+        if (v0.itype.size == 8 && !v0.itype.signed) then UInt64(BitwiseSub64(DataToUInt64(ToTwosComp(v0)),DataToUInt64(ToTwosComp(v1)))) else 
+        if (v0.itype.size == 8 && v0.itype.signed) then FromTwosComp(UInt64(BitwiseSub64(DataToUInt64(ToTwosComp(v1)),DataToUInt64(ToTwosComp(v0))))) else v0
+
     }
 
-    // function evalSUB(v0:Value,v1:Value,v2:Value): Value
-    //     requires numericalVisIntalue(v0);
-    //     requires isInt(v1);
-    //     requires isInt(v2);
-    //     requires matchOps(v0,v1,v2)
-        
+    // function evalSUB(t:IntType_,v0:Data,v1:Data): Data
+    //     requires isInt(v0)
+    //     requires isInt(v1)
+    //     requires typesMatch(v0,v1)
     // {
-    //    if v0.Val8? then Val8(BitwiseSub8(ValueContents8Bit(v1),ValueContents8Bit(v2))) else 
-    //    if v0.Val16? then Val16(BitwiseSub16(ValueContents16Bit(v1),ValueContents16Bit(v2))) else
-    //    if v0.Val32? then Val32(BitwiseSub32(ValueContents32Bit(v1),ValueContents32Bit(v2))) else
-    //    if v0.Val64? then Val64(BitwiseSub64(ValueContents64Bit(v1),ValueContents64Bit(v2))) else
-    //                     Val8(0)
+    //     if v0.itype == IntType(1, false) then UInt8(BitwiseSub8(DataToUInt8(v0),DataToUInt8(v1))) else 
+    //     if v0.itype == IntType(2, false) then UInt16(BitwiseSub16(DataToUInt16(v0),DataToUInt16(v1))) else 
+    //     if v0.itype == IntType(4, false) then UInt32(BitwiseSub32(DataToUInt32(v0),DataToUInt32(v1))) else 
+    //     if v0.itype == IntType(8, false) then UInt64(BitwiseSub64(DataToUInt64(v0),DataToUInt64(v1))) else
+    //     if v0.itype == IntType(1, true) then SInt8(BitwiseSSub8(DataToSInt8(v0),DataToSInt8(v1))) else 
+    //     if v0.itype == IntType(2, true) then SInt16(BitwiseSSub16(DataToSInt16(v0),DataToSInt16(v1))) else 
+    //     if v0.itype == IntType(4, true) then SInt32(BitwiseSSub32(DataToSInt32(v0),DataToSInt32(v1))) else 
+    //     if v0.itype == IntType(8, true) then SInt64(BitwiseSSub64(DataToSInt64(v0),DataToSInt64(v1))) else v0
     // }
+
 
 // eq | ne | ugt | uge | ult | ule | sgt | sge | slt | sle
 
-    // function evalICMP(c:condition,t:Value,v0:Value,v1:Value): bool
-    //     // requires matchOps(t,v0,v1)
-    // {
-    //     match c
-    //         case eq => v0 == v1
-    //         case ne => v0 != v1
-    //         case ugt => v0 > v1
-    //         case uge => v0 > v1 || v0 == v1
-    //         case ult => v0 < v1
-    //         case ule => v0 < v1 || v0 == v1
-    //         case sgt => true // signed 
-    //         case sge => true // signed 
-    //         case slt => true // signed 
-    //         case sle => true // signed 
-    // }
-
-
-    
+    function evalICMP(c:condition,size:nat,v0:Data,v1:Data): Data
+        requires isInt(v0)
+        requires isInt(v1)
+        requires typesMatch(v0,v1)
+    {
+        match c
+            case eq => boolToData(v0.val == v1.val)
+            case ne => boolToData(v0.val != v1.val)
+            case ugt => boolToData(ToTwosComp(v0).val > ToTwosComp(v1).val)
+            case uge => boolToData(ToTwosComp(v0).val >= ToTwosComp(v1).val) 
+            case ult => boolToData(ToTwosComp(v0).val < ToTwosComp(v1).val)
+            case ule => boolToData(ToTwosComp(v0).val <= ToTwosComp(v1).val) 
+            case sgt => boolToData(FromTwosComp(v0).val > FromTwosComp(v1).val)             
+            case sge => boolToData(FromTwosComp(v0).val >= FromTwosComp(v1).val) 
+            case slt => boolToData(FromTwosComp(v0).val < FromTwosComp(v1).val)             
+            case sle => boolToData(FromTwosComp(v0).val <= FromTwosComp(v1).val)
+    }
 
 }

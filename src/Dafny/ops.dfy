@@ -145,7 +145,7 @@ function {:opaque} BitwiseAdd8(x:uint8, y:uint8):uint8
 
 function {:opaque} BitwiseAdd16(x:uint16, y:uint16):uint16
 {
-    (x + y) % 0x1000
+    (x + y) % 0x10000
 }
 
 function {:opaque} BitwiseAdd32(x:uint32, y:uint32):uint32
@@ -160,7 +160,7 @@ function {:opaque} BitwiseAdd64(x:uint64, y:uint64):uint64
 
 function {:opaque} BitwiseSAdd8(x:sint8, y:sint8):sint8
 {
-    (x + y) % 0x80
+    if (x + y) > 0 then (x+y) % 0x80 else (x+y) % -0x80
 }
 
 function {:opaque} BitwiseSAdd16(x:sint16, y:sint16):sint16
@@ -178,24 +178,25 @@ function {:opaque} BitwiseSAdd64(x:sint64, y:sint64):sint64
     (x + y) % 0x8000_0000_0000_0000
 }
 
-function BitwiseSub8(x:uint8, y:uint8):uint8
+function {:opaque} BitwiseSub8(x:uint8, y:uint8):uint8
 {
      (x - y) % 0x100
 }
 
-function BitwiseSub16(x:uint16, y:uint16):uint16
+function {:opaque} BitwiseSub16(x:uint16, y:uint16):uint16
 {
-     (x - y) % 0x1000
+     (x - y) % 0x10000
 }
-function BitwiseSub64(x:uint64, y:uint64):uint64
+function {:opaque} BitwiseSub64(x:uint64, y:uint64):uint64
 {
      (x - y) % 0x1_0000_0000_0000_0000
 }
 
 
-function BitwiseSub32(x:uint32, y:uint32):uint32
+function{:opaque}  BitwiseSub32(x:uint32, y:uint32):uint32
 {
-    BitsToWord(BitSub(WordToBits(x), WordToBits(y)))
+    // BitsToWord(BitSub(WordToBits(x), WordToBits(y)))
+    (x - y) % 0x1_0000_0000
 }
 
 function {:opaque} BitwiseSSub8(x:sint8, y:sint8):sint8

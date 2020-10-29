@@ -23,9 +23,11 @@ type sint16  = i:int | -0x8000 <= i < 0x8000
 type sint32  = i:int | -0x8000_0000 <= i < 0x8000_0000
 type sint64  = i:int | -0x8000_0000_0000_0000 <= i < 0x8000_0000_0000_0000
 
+//ADD MATH FROM IRONFLEET? IE redo this
+type bitWidth = s:nat | (s == 1 || s == 2 || s == 4 || s == 8) ghost witness 1
 // Our integers have a type associated with them that stores their size and whether
 // they're signed/unsigned
-datatype IntType_ = IntType(size:nat, signed:bool)
+datatype IntType_ = IntType(size:bitWidth, signed:bool)
 type IntType = t:IntType_ | t.size > 0 ghost witness IntType(1, false)
 
 // Bytes is just that; a list of bytes
@@ -54,6 +56,22 @@ function Pow256(n:nat) : int
 {
     if n == 0 then 1
     else 0x100 * Pow256(n-1)
+}
+
+function Pow128(n:nat) : int
+    decreases n
+{
+    if n == 0 then 1
+    else 0x80 * Pow128(n-1)
+}
+
+function  power2(exp: nat) : int
+    ensures power2(exp) > 0;
+{
+    if (exp==0) then
+        1
+    else
+        2*power2(exp-1)
 }
 
 // Functions to return a Data of the given integer type given the appropriate integer
@@ -109,11 +127,20 @@ function DataToSInt64(data:Data) : sint64
 
 
 
-predicate intTypesMatch(x:Data, y:Data)
+predicate typesMatch(x:Data, y:Data)
     requires isInt(x)
     requires isInt(y)
 {
-    x.itype == y.itype
+    x.itype.size == y.itype.size && x.itype.signed == y.itype.signed
+}
+
+function boolToData(b:bool) : (out:Data)
+    ensures out.Int? && !out.itype.signed 
+    ensures out.itype.size == 1
+{
+    reveal_IntFits();
+    var val:int := (if b then 1 else 0);
+    Int(val, IntType(1, false))
 }
 
 ////////////////////////////////////////////////////////////////
@@ -123,7 +150,7 @@ predicate intTypesMatch(x:Data, y:Data)
 // Converts a signed integer to its unsigned representation in two's complement so it
 // can be converted into bytes and stored in memory
 function {:opaque} ToTwosComp(data:Data) : (out:Data)
-    requires data.Int? && data.itype.signed
+    requires data.Int?
     ensures out.Int? && !out.itype.signed
     ensures out.itype.size == data.itype.size
 {
@@ -135,7 +162,7 @@ function {:opaque} ToTwosComp(data:Data) : (out:Data)
 // Converts an unsigned two's complement number back to its signed representation for
 // returning from a sequence of bytes back to a normal integer
 function {:opaque} FromTwosComp(data:Data) : (out:Data)
-    requires data.Int? && !data.itype.signed
+    requires data.Int? 
     ensures out.Int? && out.itype.signed
     ensures out.itype.size == data.itype.size
 {
