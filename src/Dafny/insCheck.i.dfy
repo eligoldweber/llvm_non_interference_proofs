@@ -1,7 +1,7 @@
 include "llvm.i.dfy"
 
 module insCheck {
-    import opened LLVM_def
+    import opened LLVM
 
 //-- ADD -- // 
     lemma evalADD8check_unsigned()

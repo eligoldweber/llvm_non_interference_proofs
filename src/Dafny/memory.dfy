@@ -110,5 +110,4 @@ predicate Store(s:MemState, s':MemState, bid:nat, offset:nat, data:Data)
 	// && s'.mem == s.mem[p.bid := s.mem[p.bid][p.offset := mb(1, val)]]
 }
 
-
 }

@@ -66,7 +66,8 @@ function Pow128(n:nat) : int
 }
 
 function  power2(exp: nat) : int
-    ensures power2(exp) > 0;
+    ensures power2(exp) > 0
+    decreases exp
 {
     if (exp==0) then
         1
