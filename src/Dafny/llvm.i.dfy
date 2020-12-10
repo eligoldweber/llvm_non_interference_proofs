@@ -15,7 +15,19 @@ type GlobalVar = string
 // Instructions are the building blocks of code; each one needs to be evaluable, and every block
 // of code must end with an operation that is a terminator
 datatype Operand = D(d:Data) | LV(lv:string) | GV(g:string)
-datatype Ins = ADD(dest:Operand, a:Operand, b:Operand)
+datatype Condition = eq | ne | ugt | uge | ult | ule | sgt | sge | slt | sle
+datatype Ins =
+    | ADD(dest:Operand, a:Operand, b:Operand)
+    | SUB(dst:Operand, size:nat, src1SUB:Operand, src2SUB:Operand)
+    | BR(flag:bool, labelTrue:string, labelFalse:string)
+    | CALL() //needs work
+    | GETELEMENTPTR() //needs work VV
+    | ICMP(cond:Condition, dst:Operand, src1:Operand, src2:Operand)
+    | RET()
+    | ZEXT(dst:Operand, tSrc:IntType, src:Operand, tDst:IntType)
+    | SHL()
+    | TRUN()
+    | SEXT(dst:Operand, tSrc:IntType, src:Operand, tDst:IntType)
 
 // Every function is composed of a set of blocks, which all end with some sort of termination
 // instruction (branch or return)
@@ -39,43 +51,31 @@ datatype Frame = Frame(funId:string,
 					   code:CodeBlock)
 
 // State is a combination of the frame states and the memory states
-datatype LLVMState = LLVMState(config:LLVMConfig, frames:seq<Frame>) // mem:MemState
+datatype LLVMState = LLVMState(config:LLVMConfig, frames:seq<Frame>, halt:bool) // mem:MemState
 
-datatype state = State(
-    lvs:map<LocalVar, Data>,
-    gvs:map<GlobalVar, Data>,
-    m:MemState,
-    ok:bool)
+// THIS CONFIG INIT WILL CHANGE DEPENDING ON THE PROGRAM
+predicate ConfigInit(config:LLVMConfig) {
+    && (config.globalVars == map["!a" := UInt32(10), "!b" := UInt32(11)])
+    && (config.code == map[
+        "main" := map[
+            "0" := [
+                ADD(LV("1"), GV("!a"), GV("!b"))
+            ]
+        ]
+    ])
+}
 
-datatype operand = D(d:Data) | LV(l:LocalVar) | GV(g:GlobalVar)
-datatype condition = eq | ne | ugt | uge | ult | ule | sgt | sge | slt | sle
+predicate LLVMInit(s:LLVMState) {
+    && ConfigInit(s.config)
+    && |s.frames| == 1
+    && s.frames[0].funId == "main"
+    && |s.frames[0].allocations| == 0
+    && |s.frames[0].localVars| == 0
+    && s.frames[0].code == s.config.code["main"]["0"]
+}
 
-//---
-//-----------------------------------------------------------------------------
-// Instructions
-//-----------------------------------------------------------------------------
-
-datatype ins =
-| ADD(dst:operand, size:nat, src1ADD:operand, src2ADD:operand)
-| SUB(dst:operand, size:nat, src1SUB:operand, src2SUB:operand)
-| BR(flag:bool, labelTrue:string,labelFalse:string)
-| CALL() //needs work
-| GETELEMENTPTR() //needs work VV
-| ICMP(cond:condition,dst:operand,src1:operand,src2:operand)
-| RET()
-| ZEXT(dst:operand,tSrc:IntType,src:operand,tDst:IntType)
-| SHL()
-| TRUN()
-| SEXT(dst:operand,tSrc:IntType,src:operand,tDst:IntType)
-
-
-
-predicate State_Init(s:state)
-{
-    s.ok 
-    && |s.lvs| == 0
-    && |s.gvs| == 0
-    && MemInit(s.m)    
+predicate LLVMValid(s:LLVMState) {
+    
 }
 
 predicate{:opaque} ValidRegState(lvs:map<LocalVar, Data>,gvs:map<GlobalVar, Data>)
