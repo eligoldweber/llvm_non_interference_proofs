@@ -85,6 +85,7 @@ function SInt16(val:sint16) : Data { reveal_IntFits(); Int(val, IntType(2, true)
 function SInt32(val:sint32) : Data { reveal_IntFits(); Int(val, IntType(4, true)) }
 function SInt64(val:sint64) : Data { reveal_IntFits(); Int(val, IntType(8, true)) }
 
+
 predicate isInt(data:Data)
 {
     data.Int?
@@ -140,8 +141,20 @@ function boolToData(b:bool) : (out:Data)
 {
     reveal_IntFits();
     var val:int := (if b then 1 else 0);
-    Int(val, IntType(1, false))
+    var size:bitWidth := 1;
+    Int(val, IntType(size, false))
 }
+
+// function ValToData(val:int, size:bitWidth, sign:bool ) : (out:Data)
+//     requires IntFits(val, IntType(size, sign))
+//     ensures isInt(out)
+//     ensures out.itype.signed == sign
+//     ensures out.itype.size == size
+// {
+//     reveal_IntFits();
+//     var iType:IntType := IntType(size, sign);
+//     Int(val, iType) 
+// }
 
 ////////////////////////////////////////////////////////////////
 // Primitive data operations
@@ -181,6 +194,42 @@ lemma {:opaque} TwosCompIdentity(data:Data)
     reveal_FromTwosComp();
 }
 
+function {:opaque} ExtendZeroBytes(src:Bytes,dst:nat) : (bytes:Bytes)
+    requires dst >= |src|
+    ensures |bytes| == dst
+    ensures bytes ==  src + zeroArray(dst - |src|) 
+    decreases dst
+{
+    src + zeroArray(dst - |src|) 
+}
+function {:opaque} zeroArray(s:nat) : (bytes:Bytes)
+    requires s >= 0
+    ensures |bytes| == s
+    ensures forall b :: b in bytes ==> b == 0;
+    decreases s
+{
+    if s == 0 then []
+    else  [0] + zeroArray(s-1) 
+}
+
+function {:opaque} ExtendSignedBytes(src:Bytes,dst:nat) : (bytes:Bytes)
+    requires dst >= |src|
+    ensures |bytes| == dst
+    ensures bytes ==  src + oneArray(dst - |src|) 
+    decreases dst
+{
+    src + oneArray(dst - |src|) 
+}
+
+function {:opaque} oneArray(s:nat) : (bytes:Bytes)
+    requires s >= 0
+    ensures |bytes| == s
+    ensures forall b :: b in bytes ==> b == 1;
+    decreases s
+{
+    if s == 0 then []
+    else  [1] + oneArray(s-1) 
+}
 // Transforms data that is in some arbitrary int form into a sequence of bytes
 function {:opaque} IntToBytes(data:Data) : (bytes:Bytes)
     requires data.Int?

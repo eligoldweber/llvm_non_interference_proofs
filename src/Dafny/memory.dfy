@@ -1,8 +1,10 @@
 include "types.dfy"
-
+include "./Libraries/Math/mod_auto.i.dfy"
 module memory {
 
 import opened types
+import opened Math__mod_auto_i
+
 
 // Each cell of memory is occupied by either data, a pointer, or uninitialized
 // data
@@ -54,16 +56,18 @@ predicate ByteMemValid(b:Block, offset:nat)
     requires offset < |b|
     requires b[offset].mb?
     requires b[offset].size > 0
+    requires offset > 0
 {
     var cell := b[offset];
-    var align:nat := offset - (offset % cell.size);
+    lemma_mod_auto(offset);
+    var align := offset - offset % cell.size;
     forall i | align <= i < (align + cell.size) :: (i < |b| && b[i].mb? && b[i].size == cell.size)
 }
 
 // A block is valid so long as its stored bytes are well-formed; that is, numbers
 // of size n start on an index divisible by n and fill the entire n space
 predicate BlockValid(b:Block) {
-    forall offset | 0 <= offset < |b| :: (b[offset].mb? ==> (b[offset].size > 0 && ByteMemValid(b, offset)))
+    forall offset | 0 < offset < |b| :: (b[offset].mb? ==> (b[offset].size > 0 && ByteMemValid(b, offset)))
 }
 
 // Need to check every step to make sure memory is still valid

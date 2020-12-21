@@ -1,14 +1,14 @@
 include "ops.dfy"
 include "types.dfy"
 include "memory.dfy"
-// include "typeConversions.i.dfy"
+include "typeConversions.i.dfy"
 
 module LLVM_def {
 
     import opened types
     import opened ops
     import opened memory
-    // import opened type_conversion
+    import opened type_conversion
 
     type addr = int
     type LocalVar = string
@@ -35,12 +35,12 @@ module LLVM_def {
     | BR(flag:bool, labelTrue:string,labelFalse:string)
     | CALL() //needs work
     | GETELEMENTPTR() //needs work VV
-    | ICMP(cond:condition,dst:operand,src1:operand,src2:operand)
+    | ICMP(dst:operand,cond:condition,size:nat,src1:operand,src2:operand)
     | RET()
-    | ZEXT(dst:operand,tSrc:IntType,src:operand,tDst:IntType)
+    | ZEXT(dst:operand,size:nat,src:operand,dstSize:bitWidth)
     | SHL()
     | TRUN()
-    | SEXT(dst:operand,tSrc:IntType,src:operand,tDst:IntType)
+    | SEXT(dst:operand,size:nat,src:operand,dstSize:bitWidth)
     
 
 
@@ -83,32 +83,25 @@ module LLVM_def {
             case BR(cond, labelTrue,labelFalse) => true
             case CALL() => true
             case GETELEMENTPTR() => true
-            case ICMP(cond,dst,src1,src2) => ValidOperand(s,dst) && ValidOperand(s,src1) && ValidOperand(s,src2) 
+            case ICMP(dst,cond,t,src1,src2) =>  && ValidOperand(s,dst) && ValidOperand(s,src1) && ValidOperand(s,src2)
+                                            && isInt(OperandContents(s,src1)) && isInt(OperandContents(s,src2))
+                                            && ValidOperand(s,src1) && ValidOperand(s,src2) 
+                                            && t == OperandContents(s,src1).itype.size
+                                            && typesMatch(OperandContents(s,src1),OperandContents(s,src2))
             case RET() => true
-            case ZEXT(dst,tSrc,src,tDst) => && ValidOperand(s,dst) && ValidOperand(s,src) && isInt(OperandContents(s,src))
-                                            && tSrc == OperandContents(s,src).itype 
-                                            && !tSrc.signed && !tDst.signed && tSrc.size <= tDst.size
+            case ZEXT(dst,t,src,dstSize) => && ValidOperand(s,dst) && ValidOperand(s,src) && isInt(OperandContents(s,src))
+                                            && t == OperandContents(s,src).itype.size
+                                            && t < dstSize
+                                            && isInt(OperandContents(s,dst)) && !OperandContents(s,dst).itype.signed
+                                           
             case SHL() => true
             case TRUN() => true
-            case SEXT(dst,tSrc,src,tDst) => && ValidOperand(s,dst) && ValidOperand(s,src) && isInt(OperandContents(s,src))
-                                        && tSrc == OperandContents(s,src).itype 
-                                        && tSrc.signed && tDst.signed && tSrc.size <= tDst.size
+            case SEXT(dst,t,src,dstSize) => && ValidOperand(s,dst) && ValidOperand(s,src) && isInt(OperandContents(s,src))
+                                            && t == OperandContents(s,src).itype.size
+                                            && t < dstSize
+                                            && isInt(OperandContents(s,dst)) && OperandContents(s,dst).itype.signed
                  
     }
-
-    // predicate matchOps(v0:Value,v1:Value,v2:Value)
-    // {
-    //     (v0.Val8? ==> v1.Val8? && v2.Val8?)
-    //     && (v0.Val16? ==> v1.Val16? && v2.Val16?)
-    //     && (v0.Val32? ==> v1.Val32? && v2.Val32?)
-    //     && (v0.Val64? ==> v1.Val64? && v2.Val64?)
-    //     && (v0.ValBool? ==> !v1.ValBool? && !v2.ValBool?)
-    // }
-
-    //  predicate numericalValue(v:Value)
-    // {
-    //     v.Val8? || v.Val16? || v.Val32? || v.Val64?
-    // }
 
     //EVAL//
     predicate ValidRegOperand(s:state, o:operand)
@@ -128,7 +121,6 @@ module LLVM_def {
             case GV(g) => s.gvs[g]
            
     }
-
 
     predicate evalUpdate(s:state, o:operand, data:Data, r:state)
         requires ValidState(s)
@@ -153,19 +145,16 @@ module LLVM_def {
                                 evalSUB(t,OperandContents(s,src1),OperandContents(s,src2)),r)
             case CALL() => true
             case GETELEMENTPTR() => true
-            // case ICMP(cond,dst,src1,src2) => evalUpdate(s, dst, 
-            //                     ValBool(evalICMP(cond,OperandContents(s,dst),OperandContents(s,src1),OperandContents(s,src2))),r)
+            case ICMP(dst,cond,t,src1,src2) => evalUpdate(s, dst, 
+                                 evalICMP(cond,t,OperandContents(s,src1),OperandContents(s,src2)),r)
             case RET() => true
             case BR(cond, labelTrue,labelFalse) => true
-
-            // case ZEXT(dst,t0,src,t1) => evalUpdate(s, dst, 
-            //                       evalZEXT(t0,OperandContents(s,src),t1),r)
             case SHL() => true
             case TRUN() => true
-            // case SEXT(dst,t0,src,t1) => true
-            case SEXT(dst,tSrc,src,tDst) => true
-            case ZEXT(dst,tSrc,src,tDst) => true
-            case ICMP(cond,dst,src1,src2) => true
+            case SEXT(dst,t,src,dstSize) => evalUpdate(s, dst, 
+                                evalSEXT(OperandContents(s,src),dstSize),r)
+            case ZEXT(dst,t,src,dstSize) => evalUpdate(s, dst, 
+                                evalZEXT(OperandContents(s,src),dstSize),r)
     }
 
 
@@ -208,22 +197,6 @@ module LLVM_def {
         if (v0.itype.size == 8 && v0.itype.signed) then FromTwosComp(UInt64(BitwiseSub64(DataToUInt64(ToTwosComp(v1)),DataToUInt64(ToTwosComp(v0))))) else v0
 
     }
-
-    // function evalSUB(t:IntType_,v0:Data,v1:Data): Data
-    //     requires isInt(v0)
-    //     requires isInt(v1)
-    //     requires typesMatch(v0,v1)
-    // {
-    //     if v0.itype == IntType(1, false) then UInt8(BitwiseSub8(DataToUInt8(v0),DataToUInt8(v1))) else 
-    //     if v0.itype == IntType(2, false) then UInt16(BitwiseSub16(DataToUInt16(v0),DataToUInt16(v1))) else 
-    //     if v0.itype == IntType(4, false) then UInt32(BitwiseSub32(DataToUInt32(v0),DataToUInt32(v1))) else 
-    //     if v0.itype == IntType(8, false) then UInt64(BitwiseSub64(DataToUInt64(v0),DataToUInt64(v1))) else
-    //     if v0.itype == IntType(1, true) then SInt8(BitwiseSSub8(DataToSInt8(v0),DataToSInt8(v1))) else 
-    //     if v0.itype == IntType(2, true) then SInt16(BitwiseSSub16(DataToSInt16(v0),DataToSInt16(v1))) else 
-    //     if v0.itype == IntType(4, true) then SInt32(BitwiseSSub32(DataToSInt32(v0),DataToSInt32(v1))) else 
-    //     if v0.itype == IntType(8, true) then SInt64(BitwiseSSub64(DataToSInt64(v0),DataToSInt64(v1))) else v0
-    // }
-
 
 // eq | ne | ugt | uge | ult | ule | sgt | sge | slt | sle
 
