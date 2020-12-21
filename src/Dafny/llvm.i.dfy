@@ -39,7 +39,7 @@ module LLVM_def {
     | RET()
     | ZEXT(dst:operand,size:nat,src:operand,dstSize:bitWidth)
     | SHL()
-    | TRUN()
+    | TRUN(dst:operand,size:nat,src:operand,dstSize:bitWidth)
     | SEXT(dst:operand,size:nat,src:operand,dstSize:bitWidth)
     
 
@@ -95,7 +95,10 @@ module LLVM_def {
                                             && isInt(OperandContents(s,dst)) && !OperandContents(s,dst).itype.signed
                                            
             case SHL() => true
-            case TRUN() => true
+            case TRUN(dst,t,src,dstSize) => && ValidOperand(s,dst) && ValidOperand(s,src) && isInt(OperandContents(s,src))
+                                            && t == OperandContents(s,src).itype.size
+                                            && t > dstSize
+                                            && isInt(OperandContents(s,dst))
             case SEXT(dst,t,src,dstSize) => && ValidOperand(s,dst) && ValidOperand(s,src) && isInt(OperandContents(s,src))
                                             && t == OperandContents(s,src).itype.size
                                             && t < dstSize
@@ -150,7 +153,8 @@ module LLVM_def {
             case RET() => true
             case BR(cond, labelTrue,labelFalse) => true
             case SHL() => true
-            case TRUN() => true
+            case TRUN(dst,t,src,dstSize) => evalUpdate(s, dst, 
+                                evalTRUNC(OperandContents(s,src),dstSize),r)
             case SEXT(dst,t,src,dstSize) => evalUpdate(s, dst, 
                                 evalSEXT(OperandContents(s,src),dstSize),r)
             case ZEXT(dst,t,src,dstSize) => evalUpdate(s, dst, 

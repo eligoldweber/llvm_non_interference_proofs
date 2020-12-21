@@ -5,6 +5,23 @@ module type_conversion {
     import opened ops
     import opened types
 
+    function evalTRUNC(src:Data,dstSize:bitWidth): (out:Data)
+        requires isInt(src)
+        requires src.itype.size > dstSize;
+        ensures out.Int?;
+        ensures out.itype.size == dstSize;
+    {
+        reveal_IntFits();
+        reveal_IntFromBytes();
+        reveal_IntToBytes();
+        reveal_ExtendZeroBytes();
+        reveal_TruncateBytes();
+
+        var bytes := IntToBytes(src);
+        var slice:seq<Byte> := TruncateBytes(bytes,dstSize);
+        IntFromBytes(slice,IntType(dstSize, false))
+
+    }
 
     function evalZEXT(src:Data,dstSize:bitWidth): (out:Data)
         requires isInt(src)
@@ -40,8 +57,42 @@ module type_conversion {
         IntFromBytes(extendedBytes,IntType(dstSize, true))
 
     }
-    
+
 // --  Lemmas for correctness checking -----
+    lemma evalTRUNCIsValid()
+    {
+        reveal_IntFits();
+        reveal_IntFromBytes();
+        reveal_IntToBytes();
+        reveal_ExtendZeroBytes();
+        reveal_TruncateBytes();
+        
+        // %X = trunc i32 257 to i8                        ; yields i8:1
+        var v0:sint32 := 257;
+        var d0:sint8 := 1;
+        var out:Data := evalTRUNC(SInt32(v0),1);
+        assert out.itype.size == 1;// == UInt64(d0);
+        assert out.val == SInt8(d0).val;
+        assert out.val == 1;
+       
+        // %Y = trunc i32 123 to i1                        ; yields i1:true
+        var v1:uint32 := 123;
+        var d1:uint8 := 1;
+        var out1:Data := evalTRUNC(UInt32(v1),1);
+        assert out1.itype.size == 1;// == UInt64(d0);
+        assert out1.val == UInt8(d1).val;
+        assert out1.val == 1;
+
+        // %Z = trunc i32 122 to i1                        ; yields i1:false
+        var v2:uint32 := 122;
+        var d2:uint8 := 0;
+        var out2:Data := evalTRUNC(UInt32(v2),1);
+        assert out2.itype.size == 1;// == UInt64(d0);
+        assert out2.val == UInt8(d2).val;
+        assert out2.val == 0;
+    }
+
+
     lemma evalZEXTIsValid()
     {
         reveal_IntFromBytes();

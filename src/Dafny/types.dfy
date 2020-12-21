@@ -194,6 +194,7 @@ lemma {:opaque} TwosCompIdentity(data:Data)
     reveal_FromTwosComp();
 }
 
+//Unsigned Byte extension to size dst
 function {:opaque} ExtendZeroBytes(src:Bytes,dst:nat) : (bytes:Bytes)
     requires dst >= |src|
     ensures |bytes| == dst
@@ -202,6 +203,8 @@ function {:opaque} ExtendZeroBytes(src:Bytes,dst:nat) : (bytes:Bytes)
 {
     src + zeroArray(dst - |src|) 
 }
+
+// outputs Byte seq of length s with all values eqaul to 0
 function {:opaque} zeroArray(s:nat) : (bytes:Bytes)
     requires s >= 0
     ensures |bytes| == s
@@ -212,6 +215,7 @@ function {:opaque} zeroArray(s:nat) : (bytes:Bytes)
     else  [0] + zeroArray(s-1) 
 }
 
+// Signed Byte extension to size dst
 function {:opaque} ExtendSignedBytes(src:Bytes,dst:nat) : (bytes:Bytes)
     requires dst >= |src|
     ensures |bytes| == dst
@@ -221,6 +225,7 @@ function {:opaque} ExtendSignedBytes(src:Bytes,dst:nat) : (bytes:Bytes)
     src + oneArray(dst - |src|) 
 }
 
+// outputs Byte seq of length s with all values eqaul to 1
 function {:opaque} oneArray(s:nat) : (bytes:Bytes)
     requires s >= 0
     ensures |bytes| == s
@@ -230,6 +235,19 @@ function {:opaque} oneArray(s:nat) : (bytes:Bytes)
     if s == 0 then []
     else  [1] + oneArray(s-1) 
 }
+
+// Truncates Bytes seq to size s
+function {:opaque} TruncateBytes(b:Bytes,s:nat) : (bytes:Bytes)
+    requires s >= 0
+    ensures |bytes| == s
+    decreases s
+{
+    if s == 0 then []
+    else  
+        var start:Bytes := [b[0]]; 
+        start + TruncateBytes(b,s-1)
+}
+
 // Transforms data that is in some arbitrary int form into a sequence of bytes
 function {:opaque} IntToBytes(data:Data) : (bytes:Bytes)
     requires data.Int?
