@@ -38,7 +38,7 @@ type Bytes = b:seq<Byte> | |b| > 0 ghost witness [0]
 // a pointer (in block/index form), or an integer. The validity of these is built into
 // the "Data" type
 datatype Data_ = Bytes(bytes:Bytes) |
-                 Ptr(block:nat, offset:nat) |
+                 Ptr(block:nat, bid:nat, offset:nat) |
                  Int(val:int, itype:IntType)
 type Data = d:Data_ | (d.Int? ==> IntFits(d.val, d.itype)) ghost witness Bytes([0])
 
@@ -145,16 +145,16 @@ function boolToData(b:bool) : (out:Data)
     Int(val, IntType(size, false))
 }
 
-// function ValToData(val:int, size:bitWidth, sign:bool ) : (out:Data)
-//     requires IntFits(val, IntType(size, sign))
-//     ensures isInt(out)
-//     ensures out.itype.signed == sign
-//     ensures out.itype.size == size
-// {
-//     reveal_IntFits();
-//     var iType:IntType := IntType(size, sign);
-//     Int(val, iType) 
-// }
+function ValToData(val:int, size:bitWidth, sign:bool ) : (out:Data)
+    requires IntFits(val, IntType(size, sign))
+    ensures isInt(out)
+    ensures out.itype.signed == sign
+    ensures out.itype.size == size
+{
+    reveal_IntFits();
+    var iType:IntType := IntType(size, sign);
+    Int(val, iType) 
+}
 
 ////////////////////////////////////////////////////////////////
 // Primitive data operations
@@ -323,49 +323,6 @@ lemma {:opaque} IntBytesIdentity(data:Data)
     }
 }
 
-
-////////////////////////////////////////////////////////////////
-// Old stuff
-////////////////////////////////////////////////////////////////
-
-// datatype Value = Val8(v8:uint8) | Val16(v16:uint16) | Val32(v32:uint32) | Val64(v64:uint64) | ValBool(vBool:bool)
-//                 | SVal8(sv8:sint8) | SVal16(sv16:sint16) | SVal32(sv32:sint32) | SVal64(sv64:sint64) 
-
-
-// predicate unsignedVal(v:Value)
-// {
-//     v.Val8? || v.Val16? || v.Val32? || v.Val64?
-// }
-// predicate signedVal(v:Value)
-// {
-//     v.SVal8? || v.SVal16? || v.SVal32? || v.SVal64? 
-// }
-// predicate boolVal(v:Value)
-// {
-//     v.ValBool? 
-// }
-
-// predicate unsignedValLT(v0:Value,v1:Value)
-//     requires unsignedVal(v0)
-//     requires unsignedVal(v1)
-// {
-//     &&(v0.Val8?   ==>  v1.Val8? || v1.Val16? || v1.Val32? || v1.Val64?)
-//     &&(v0.Val16?  ==> v1.Val16? || v1.Val32? || v1.Val64?)
-//     &&(v0.Val32?  ==> v1.Val32? || v1.Val64?)
-//     &&(v0.Val64?  ==> v1.Val64?)
-// }
-
-// predicate signedValLT(v0:Value,v1:Value)
-//     requires signedVal(v0)
-//     requires signedVal(v1)
-// {
-//     &&(v0.SVal8?   ==> v1.SVal8? || v1.SVal16? || v1.SVal32? || v1.SVal64? )
-//     &&(v0.SVal16?  ==> v1.SVal16? || v1.SVal32? || v1.SVal64? )
-//     &&(v0.SVal32?  ==> v1.SVal32? || v1.SVal64? )
-//     &&(v0.SVal64?  ==> v1.SVal64?)
-
-// }
-
 /////////////////
 // Quadword
 /////////////////
@@ -395,6 +352,24 @@ function byte_to_bits(b:uint8) : BitsOfByte
 /////////////////
 // Bit vectors
 /////////////////
+function method {:opaque} BitsToByte(b:bv8) : uint8 { b as uint8 }
+function method {:opaque} ByteToBits(w:uint8) : bv8 { w as bv8 }
+
+lemma {:axiom} lemma_BitsToByteToByte(b:bv8)
+    ensures ByteToBits(BitsToByte(b)) == b;
+
+lemma {:axiom} lemma_ByteToBitsToByte(w:uint8)
+    ensures BitsToByte(ByteToBits(w)) == w;
+
+
+function method {:opaque} BitsToHalfWord(b:bv16) : uint16 { b as uint16 }
+function method {:opaque} HalfWordToBits(w:uint16) : bv16 { w as bv16 }
+
+lemma {:axiom} lemma_BitsToWordToHalfBits(b:bv16)
+    ensures HalfWordToBits(BitsToHalfWord(b)) == b;
+
+lemma {:axiom} lemma_HalfWordToBitsToHalfWord(w:uint16)
+    ensures BitsToHalfWord(HalfWordToBits(w)) == w;
 
 function method {:opaque} BitsToWord(b:bv32) : uint32 { b as uint32 }
 function method {:opaque} WordToBits(w:uint32) : bv32 { w as bv32 }

@@ -3,7 +3,31 @@ include "types.dfy"
 module ops {
 
 import opened types
+///////////////////////////
+// Operations on bv8s
+///////////////////////////
+function method {:opaque} BitAnd8(x:bv8, y:bv8): bv8
+{
+    x & y
+}
 
+function method {:opaque} BitOr8(x:bv8, y:bv8): bv8
+{
+    x | y
+}
+
+///////////////////////////
+// Operations on bv16s
+///////////////////////////
+function method {:opaque} BitAnd16(x:bv16, y:bv16): bv16
+{
+    x & y
+}
+
+function method {:opaque} BitOr16(x:bv16, y:bv16): bv16
+{
+    x | y
+}
 ///////////////////////////
 // Operations on bv32s
 ///////////////////////////
@@ -86,9 +110,32 @@ function method {:opaque} BitRotateLeft(x:bv32, amount:int): bv32
 }
 
 ////////////////////////
+// Operations on bytes
+////////////////////////
+function BitwiseAndBytes(x:uint8, y:uint8) : uint8
+{
+    BitsToByte(BitAnd8(ByteToBits(x), ByteToBits(y)))
+}
+function BitwiseOrBytes(x:uint8, y:uint8) : uint8
+{
+    BitsToByte(BitOr8(ByteToBits(x), ByteToBits(y)))
+}
+
+////////////////////////
+// Operations on halfwords
+////////////////////////
+function BitwiseAndHalfWord(x:uint16, y:uint16) : uint16
+{
+    BitsToHalfWord(BitAnd16(HalfWordToBits(x), HalfWordToBits(y)))
+}
+function BitwiseOrHalfWord(x:uint16, y:uint16) : uint16
+{
+    BitsToHalfWord(BitOr16(HalfWordToBits(x), HalfWordToBits(y)))
+}
+
+////////////////////////
 // Operations on words
 ////////////////////////
-
 function BitwiseAnd(x:uint32, y:uint32) : uint32
 {
     BitsToWord(BitAnd(WordToBits(x), WordToBits(y)))
@@ -287,6 +334,10 @@ function {:opaque} BitwiseMul64hi(x:uint64, y:uint64):uint64 { ((x * y) / 0x1_00
 function{:opaque} BitAnd64(x:bv64, y:bv64):bv64 { x & y }
 function{:opaque} BitwiseAnd64_opaque(x:uint64, y:uint64):uint64 { BitsToWord64(BitAnd64(WordToBits64(x), WordToBits64(y))) }
 function BitwiseAnd64(x:uint64, y:uint64):uint64 { BitwiseAnd64_opaque(x, y) }
+
+function{:opaque} BitOr64(x:bv64, y:bv64):bv64 { x | y }
+function{:opaque} BitwiseOr64_opaque(x:uint64, y:uint64):uint64 { BitsToWord64(BitOr64(WordToBits64(x), WordToBits64(y))) }
+function BitwiseOr64(x:uint64, y:uint64):uint64 { BitwiseOr64_opaque(x, y) }
 
 lemma{:axiom} lemma_bitwise_shifts64(x:uint64)
     requires x < 64

@@ -1,14 +1,16 @@
 include "ops.dfy"
 include "types.dfy"
 include "memory.dfy"
-include "typeConversions.i.dfy"
+include "conversionOperations.i.dfy"
+include "bitwiseBinaryOperations.i.dfy"
 
 module LLVM_def {
 
     import opened types
     import opened ops
     import opened memory
-    import opened type_conversion
+    import opened conversion_operations_i
+    import opened bitwise_binary_operations_i
 
     type addr = int
     type LocalVar = string
@@ -39,6 +41,9 @@ module LLVM_def {
     | RET()
     | ZEXT(dst:operand,size:nat,src:operand,dstSize:bitWidth)
     | SHL()
+    | LSHR(dst:operand,src:operand,shiftAmt:operand)
+    | AND(dst:operand,src1:operand,src2:operand)
+    | OR(dst:operand,src1:operand,src2:operand)
     | TRUN(dst:operand,size:nat,src:operand,dstSize:bitWidth)
     | SEXT(dst:operand,size:nat,src:operand,dstSize:bitWidth)
     
@@ -94,7 +99,23 @@ module LLVM_def {
                                             && t < dstSize
                                             && isInt(OperandContents(s,dst)) && !OperandContents(s,dst).itype.signed
                                            
-            case SHL() => true
+            case SHL() => true ///        requires op1.itype.size*8 > op2.val //See note above
+            case LSHR(dst,src,shiftAmt) =>  && ValidOperand(s,dst) && ValidOperand(s,src) && ValidOperand(s,shiftAmt)
+                                            && isInt(OperandContents(s,dst)) && isInt(OperandContents(s,src)) && isInt(OperandContents(s,shiftAmt))
+                                            && OperandContents(s,src).itype.size*8 > OperandContents(s,shiftAmt).val
+                                            && OperandContents(s,shiftAmt).val > 0
+                                            && isInt(OperandContents(s,dst)) && !OperandContents(s,dst).itype.signed
+            
+            case AND(dst,src1,src2) =>      && ValidOperand(s,dst) && ValidOperand(s,src1) && ValidOperand(s,src2)
+                                            && isInt(OperandContents(s,dst)) && isInt(OperandContents(s,src1)) && isInt(OperandContents(s,src2))
+                                            && typesMatch(OperandContents(s,src1),OperandContents(s,src2))
+                                            && OperandContents(s,dst).itype.size == OperandContents(s,src1).itype.size
+                                            && !OperandContents(s,dst).itype.signed
+            case OR(dst,src1,src2) =>      && ValidOperand(s,dst) && ValidOperand(s,src1) && ValidOperand(s,src2)
+                                            && isInt(OperandContents(s,dst)) && isInt(OperandContents(s,src1)) && isInt(OperandContents(s,src2))
+                                            && typesMatch(OperandContents(s,src1),OperandContents(s,src2))
+                                            && OperandContents(s,dst).itype.size == OperandContents(s,src1).itype.size
+                                            && !OperandContents(s,dst).itype.signed
             case TRUN(dst,t,src,dstSize) => && ValidOperand(s,dst) && ValidOperand(s,src) && isInt(OperandContents(s,src))
                                             && t == OperandContents(s,src).itype.size
                                             && t > dstSize
@@ -153,6 +174,13 @@ module LLVM_def {
             case RET() => true
             case BR(cond, labelTrue,labelFalse) => true
             case SHL() => true
+            case LSHR(dst,src,shiftAmt) =>evalUpdate(s, dst, 
+                                evalLSHR(OperandContents(s,src),OperandContents(s,shiftAmt)),r)
+             
+            case AND(dst,src1,src2) => evalUpdate(s, dst, 
+                                evalAND(OperandContents(s,dst).itype.size,OperandContents(s,src1),OperandContents(s,src2)),r)
+            case OR(dst,src1,src2) => evalUpdate(s, dst, 
+                                evalOR(OperandContents(s,dst).itype.size,OperandContents(s,src1),OperandContents(s,src2)),r)
             case TRUN(dst,t,src,dstSize) => evalUpdate(s, dst, 
                                 evalTRUNC(OperandContents(s,src),dstSize),r)
             case SEXT(dst,t,src,dstSize) => evalUpdate(s, dst, 

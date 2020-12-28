@@ -114,5 +114,14 @@ predicate Store(s:MemState, s':MemState, bid:nat, offset:nat, data:Data)
     // && s'.mem == s.mem[p.bid := s.mem[p.bid][p.offset := mb(1, val)]]
 }
 
+// // Memory Access and Addressing Operations // 
+// function evalGETELEMENTPTR(s:MemState,op1:Data,op2:Data): (out:Data)
+//     ensures out.Ptr?
+//     ensures IsValidPtr(s,bid,offset)
+//     ensures MemValid(s)
+// {
+
+// }
+
 
 }
