@@ -40,12 +40,16 @@ module LLVM_def {
     | ICMP(dst:operand,cond:condition,size:nat,src1:operand,src2:operand)
     | RET()
     | ZEXT(dst:operand,size:nat,src:operand,dstSize:bitWidth)
-    | SHL()
+    | SHL(dst:operand,src:operand,shiftAmt:operand)
     | LSHR(dst:operand,src:operand,shiftAmt:operand)
     | AND(dst:operand,src1:operand,src2:operand)
     | OR(dst:operand,src1:operand,src2:operand)
     | TRUN(dst:operand,size:nat,src:operand,dstSize:bitWidth)
     | SEXT(dst:operand,size:nat,src:operand,dstSize:bitWidth)
+    | PHI()
+    | INTTOPTR()
+    | PTRTOINT()
+    | EXTRACTVALUE()
     
 
 
@@ -99,7 +103,13 @@ module LLVM_def {
                                             && t < dstSize
                                             && isInt(OperandContents(s,dst)) && !OperandContents(s,dst).itype.signed
                                            
-            case SHL() => true ///        requires op1.itype.size*8 > op2.val //See note above
+            case SHL(dst,src,shiftAmt) =>   && ValidOperand(s,dst) && ValidOperand(s,src) && ValidOperand(s,shiftAmt)
+                                            && isInt(OperandContents(s,dst)) && isInt(OperandContents(s,src)) && isInt(OperandContents(s,shiftAmt))
+                                            && OperandContents(s,src).itype.size*8 > OperandContents(s,shiftAmt).val
+                                            && OperandContents(s,shiftAmt).val > 0
+                                            && isInt(OperandContents(s,dst)) 
+                                            && OperandContents(s,dst).itype.signed == OperandContents(s,src).itype.signed
+            
             case LSHR(dst,src,shiftAmt) =>  && ValidOperand(s,dst) && ValidOperand(s,src) && ValidOperand(s,shiftAmt)
                                             && isInt(OperandContents(s,dst)) && isInt(OperandContents(s,src)) && isInt(OperandContents(s,shiftAmt))
                                             && OperandContents(s,src).itype.size*8 > OperandContents(s,shiftAmt).val
@@ -124,7 +134,10 @@ module LLVM_def {
                                             && t == OperandContents(s,src).itype.size
                                             && t < dstSize
                                             && isInt(OperandContents(s,dst)) && OperandContents(s,dst).itype.signed
-                 
+            case PHI() => true
+            case INTTOPTR() => true
+            case PTRTOINT() => true
+            case EXTRACTVALUE() => true     
     }
 
     //EVAL//
@@ -173,7 +186,8 @@ module LLVM_def {
                                  evalICMP(cond,t,OperandContents(s,src1),OperandContents(s,src2)),r)
             case RET() => true
             case BR(cond, labelTrue,labelFalse) => true
-            case SHL() => true
+            case SHL(dst,src,shiftAmt) =>evalUpdate(s, dst, 
+                                evalSHL(OperandContents(s,src),OperandContents(s,shiftAmt)),r)
             case LSHR(dst,src,shiftAmt) =>evalUpdate(s, dst, 
                                 evalLSHR(OperandContents(s,src),OperandContents(s,shiftAmt)),r)
              
@@ -187,6 +201,10 @@ module LLVM_def {
                                 evalSEXT(OperandContents(s,src),dstSize),r)
             case ZEXT(dst,t,src,dstSize) => evalUpdate(s, dst, 
                                 evalZEXT(OperandContents(s,src),dstSize),r)
+            case PHI() => true
+            case INTTOPTR() => true
+            case PTRTOINT() => true
+            case EXTRACTVALUE() => true   
     }
 
 

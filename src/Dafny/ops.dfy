@@ -16,6 +16,17 @@ function method {:opaque} BitOr8(x:bv8, y:bv8): bv8
     x | y
 }
 
+function method {:opaque} BitShiftRight8(x:bv8, amount:int): bv8
+    requires 0 <= amount < 8;
+{
+    x >> amount
+}
+
+function method {:opaque} BitShiftLeft8(x:bv8, amount:int): bv8
+    requires 0 <= amount < 8;
+{
+    x << amount
+}
 ///////////////////////////
 // Operations on bv16s
 ///////////////////////////
@@ -28,6 +39,19 @@ function method {:opaque} BitOr16(x:bv16, y:bv16): bv16
 {
     x | y
 }
+
+function method {:opaque} BitShiftRight16(x:bv16, amount:int): bv16
+    requires 0 <= amount < 16;
+{
+    x >> amount
+}
+
+function method {:opaque} BitShiftLeft16(x:bv16, amount:int): bv16
+    requires 0 <= amount < 16;
+{
+    x << amount
+}
+
 ///////////////////////////
 // Operations on bv32s
 ///////////////////////////
@@ -120,7 +144,16 @@ function BitwiseOrBytes(x:uint8, y:uint8) : uint8
 {
     BitsToByte(BitOr8(ByteToBits(x), ByteToBits(y)))
 }
-
+function RightShiftByte(x:uint8, amount:uint8) : uint8
+    requires amount < 8;
+{
+    BitsToByte(BitShiftRight8(ByteToBits(x), amount))
+}
+function LeftShiftByte(x:uint8, amount:uint8) : uint8
+    requires amount < 8;
+{
+    BitsToByte(BitShiftLeft8(ByteToBits(x), amount))
+}
 ////////////////////////
 // Operations on halfwords
 ////////////////////////
@@ -131,6 +164,16 @@ function BitwiseAndHalfWord(x:uint16, y:uint16) : uint16
 function BitwiseOrHalfWord(x:uint16, y:uint16) : uint16
 {
     BitsToHalfWord(BitOr16(HalfWordToBits(x), HalfWordToBits(y)))
+}
+function RightShiftHalfWord(x:uint16, amount:uint16) : uint16
+    requires amount < 16;
+{
+    BitsToHalfWord(BitShiftRight16(HalfWordToBits(x), amount))
+}
+function LeftShiftHalfWord(x:uint16, amount:uint16) : uint16
+    requires amount < 16;
+{
+    BitsToHalfWord(BitShiftLeft16(HalfWordToBits(x), amount))
 }
 
 ////////////////////////
