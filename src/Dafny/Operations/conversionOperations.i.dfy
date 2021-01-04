@@ -1,5 +1,5 @@
-include "ops.dfy"
-include "types.dfy"
+include "../ops.dfy"
+include "../types.dfy"
 
 // Contains the following conversion operations: TRUNC, ZEXT, SEXT
 // TODO: BITCAST

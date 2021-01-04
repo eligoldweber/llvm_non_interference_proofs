@@ -1,5 +1,7 @@
 module types {
 
+datatype condition = eq | ne | ugt | uge | ult | ule | sgt | sge | slt | sle
+
 /////////////////
 // Native types
 /////////////////
@@ -143,6 +145,15 @@ function boolToData(b:bool) : (out:Data)
     var val:int := (if b then 1 else 0);
     var size:bitWidth := 1;
     Int(val, IntType(size, false))
+}
+
+function dataToBool(b:Data) : (out:bool)
+    requires b.Int? && !b.itype.signed 
+    requires b.itype.size == 1
+{
+    reveal_IntFits();
+    var val:int := b.val;
+    if val == 1 then true else false
 }
 
 function ValToData(val:int, size:bitWidth, sign:bool ) : (out:Data)

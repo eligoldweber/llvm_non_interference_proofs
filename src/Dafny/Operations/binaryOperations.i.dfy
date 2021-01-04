@@ -1,7 +1,55 @@
-include "llvm.i.dfy"
+include "../ops.dfy"
+include "../types.dfy"
 
-module insCheck {
-    import opened LLVM_def
+// Contains the following conversion operations: ADD, SUB
+
+module binary_operations_i {
+    import opened ops
+    import opened types
+
+    function evalADD(size:nat,v0:Data,v1:Data):  (out:Data) // doesnt support nsw/nuw
+        requires isInt(v0)
+        requires isInt(v1)
+        requires typesMatch(v0,v1)
+        // ensures out.itype.size == size
+    { 
+        reveal_ToTwosComp();
+        reveal_FromTwosComp();
+        if (v0.itype.size == 1 && !v0.itype.signed) then UInt8(BitwiseAdd8(DataToUInt8(ToTwosComp(v0)),DataToUInt8(ToTwosComp(v1)))) else 
+        if (v0.itype.size == 1 && v0.itype.signed) then FromTwosComp(UInt8(BitwiseAdd8(DataToUInt8(ToTwosComp(v1)),DataToUInt8(ToTwosComp(v0))))) else 
+        if (v0.itype.size == 2 && !v0.itype.signed) then UInt16(BitwiseAdd16(DataToUInt16(ToTwosComp(v0)),DataToUInt16(ToTwosComp(v1)))) else 
+        if (v0.itype.size == 2 && v0.itype.signed) then FromTwosComp(UInt16(BitwiseAdd16(DataToUInt16(ToTwosComp(v1)),DataToUInt16(ToTwosComp(v0))))) else 
+        if (v0.itype.size == 4 && !v0.itype.signed) then UInt32(BitwiseAdd32(DataToUInt32(ToTwosComp(v0)),DataToUInt32(ToTwosComp(v1)))) else 
+        if (v0.itype.size == 4 && v0.itype.signed) then FromTwosComp(UInt32(BitwiseAdd32(DataToUInt32(ToTwosComp(v1)),DataToUInt32(ToTwosComp(v0))))) else 
+        if (v0.itype.size == 8 && !v0.itype.signed) then UInt64(BitwiseAdd64(DataToUInt64(ToTwosComp(v0)),DataToUInt64(ToTwosComp(v1)))) else 
+        if (v0.itype.size == 8 && v0.itype.signed) then FromTwosComp(UInt64(BitwiseAdd64(DataToUInt64(ToTwosComp(v1)),DataToUInt64(ToTwosComp(v0))))) else v0
+
+    }
+
+
+    function evalSUB(size:nat,v0:Data,v1:Data):  (out:Data) // doesnt support nsw/nuw
+        requires isInt(v0)
+        requires isInt(v1)
+        requires typesMatch(v0,v1)
+        // ensures out.itype.size == size
+        ensures (v0.itype.size == 1 && v0.itype.signed) ==> evalSUB(size,v0,v1)== FromTwosComp(UInt8(BitwiseSub8(DataToUInt8(ToTwosComp(v1)),DataToUInt8(ToTwosComp(v0)))))
+    { 
+        reveal_ToTwosComp();
+        reveal_FromTwosComp();
+        if (v0.itype.size == 1 && !v0.itype.signed) then UInt8(BitwiseSub8(DataToUInt8(ToTwosComp(v0)),DataToUInt8(ToTwosComp(v1)))) else 
+        if (v0.itype.size == 1 && v0.itype.signed) then FromTwosComp(UInt8(BitwiseSub8(DataToUInt8(ToTwosComp(v1)),DataToUInt8(ToTwosComp(v0))))) else 
+        if (v0.itype.size == 2 && !v0.itype.signed) then UInt16(BitwiseSub16(DataToUInt16(ToTwosComp(v0)),DataToUInt16(ToTwosComp(v1)))) else 
+        if (v0.itype.size == 2 && v0.itype.signed) then FromTwosComp(UInt16(BitwiseSub16(DataToUInt16(ToTwosComp(v1)),DataToUInt16(ToTwosComp(v0))))) else 
+        if (v0.itype.size == 4 && !v0.itype.signed) then UInt32(BitwiseSub32(DataToUInt32(ToTwosComp(v0)),DataToUInt32(ToTwosComp(v1)))) else 
+        if (v0.itype.size == 4 && v0.itype.signed) then FromTwosComp(UInt32(BitwiseSub32(DataToUInt32(ToTwosComp(v1)),DataToUInt32(ToTwosComp(v0))))) else 
+        if (v0.itype.size == 8 && !v0.itype.signed) then UInt64(BitwiseSub64(DataToUInt64(ToTwosComp(v0)),DataToUInt64(ToTwosComp(v1)))) else 
+        if (v0.itype.size == 8 && v0.itype.signed) then FromTwosComp(UInt64(BitwiseSub64(DataToUInt64(ToTwosComp(v1)),DataToUInt64(ToTwosComp(v0))))) else v0
+
+    }
+
+//-----------------------------------------------------------------------------
+// INSTRICTION VALIDITY
+//-----------------------------------------------------------------------------
 
 //-- ADD -- // 
     lemma evalADD8check_unsigned()
@@ -115,56 +163,5 @@ lemma evalSUB8check_signed()
         assert -evalSUB(1,SInt8(v2),SInt8(v3)).val == FromTwosComp(UInt8(BitwiseSub8(DataToUInt8(ToTwosComp(SInt8(v2))),DataToUInt8(ToTwosComp(SInt8(v3)))))).val;
         // assert forall d0,d1:Data :: isInt(d0) && isInt(d1) && typesMatch(d0,d1) && d0.itype == IntType(1, true) 
                                     // ==> evalSUB(1,d0,d1).val == FromTwosComp(evalSUB(1,ToTwosComp(d0),ToTwosComp(d1))).val;   
-    }    
-
-
-// -- ICMP -- // 
-    lemma evalICMPcheck()
-    {
-        reveal_ToTwosComp();
-        reveal_FromTwosComp();
-        //<result> = icmp eq i32 4, 5          ; yields: result=false
-        var v0:sint32 := 4;
-        var v1:sint32 := 5;
-        assert evalICMP(eq,4,SInt32(v0),SInt32(v1)).val == 0;
-        // <result> = icmp ult i16  4, 5        ; yields: result=true
-        var v2:uint16 := 4;
-        var v3:uint16 := 5;
-        assert evalICMP(ult,2,SInt16(v2),SInt16(v3)).val == 1;
-        // <result> = icmp sgt i16  4, 5        ; yields: result=false
-        var v4:sint16 := 4;
-        var v5:sint16 := 5;
-        assert evalICMP(sgt,2,SInt16(v4),SInt16(v5)).val == 0;
-        // <result> = icmp ule i16 -4, 5        ; yields: result=false
-        var v6:sint16 := -4;
-        var v7:sint16 := 5;
-        assert evalICMP(ule,2,SInt16(v6),SInt16(v7)).val == 0;
-        assert  evalICMP(sle,2,SInt16(v6),SInt16(v7)).val == 1;
-        // <result> = icmp sge i16  4, 5        ; yields: result=false
-        var v8:sint16 := 4;
-        var v9:sint16 := 5;
-        assert evalICMP(sge,2,SInt16(v8),SInt16(v9)).val == 0;
-        
-    }    
-
+    }   
 }
-
-// var v0:sint8 := -4;
-//         var v1:sint8 := 5;
-
-//         assert evalADD(1,SInt8(v0),SInt8(v1)).val == 1;
-
-//         var v2:sint8 := 127;
-//         var v3:sint8 := 2;
-//         assert evalADD(1,SInt8(v2),SInt8(v3)).val == (127+2) % Pow128(1);
-
-
-//         v2 := -50;
-//         v3 := 2;
-//         var r:uint8 := 208;
-//         assert SInt8(v2).val == -50;
-//         assert  (v2+v3) == -48;
-//         assert ToTwosComp(SInt8(v2)).val +  ToTwosComp(SInt8(v3)).val == 208;
-//         assert FromTwosComp(UInt8(r)).val == -48;
-//         assert FromTwosComp(evalADD(1,ToTwosComp(SInt8(v2)),ToTwosComp(SInt8(v3)))).val == -48;
-//         assert evalADD(1,SInt8(v2),SInt8(v3)).val == -48;

@@ -1,5 +1,5 @@
-include "ops.dfy"
-include "types.dfy"
+include "../ops.dfy"
+include "../types.dfy"
 include "conversionOperations.i.dfy"
 
 // Contains the following bitwise binary operations: LSHL, AND, OR

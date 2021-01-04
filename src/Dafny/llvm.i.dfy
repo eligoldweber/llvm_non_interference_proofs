@@ -1,8 +1,10 @@
 include "ops.dfy"
 include "types.dfy"
 include "memory.dfy"
-include "conversionOperations.i.dfy"
-include "bitwiseBinaryOperations.i.dfy"
+include "./Operations/conversionOperations.i.dfy"
+include "./Operations/bitwiseBinaryOperations.i.dfy"
+include "./Operations/binaryOperations.i.dfy"
+include "./Operations/otherOperations.i.dfy"
 
 module LLVM_def {
 
@@ -11,10 +13,17 @@ module LLVM_def {
     import opened memory
     import opened conversion_operations_i
     import opened bitwise_binary_operations_i
+    import opened binary_operations_i
+    import opened other_operations_i
+
 
     type addr = int
     type LocalVar = string
     type GlobalVar = string
+
+//-----------------------------------------------------------------------------
+// Code Representation
+//-----------------------------------------------------------------------------
 
     datatype state = State(
         lvs:map<LocalVar, Data>,
@@ -24,12 +33,18 @@ module LLVM_def {
 
 
     datatype operand = D(d:Data) | LV(l:LocalVar) | GV(g:GlobalVar)
-    datatype condition = eq | ne | ugt | uge | ult | ule | sgt | sge | slt | sle
+    
+    datatype codes = CNil | va_CCons(hd:code, tl:codes)
+    datatype obool = OCmp(cmp:condition, o1:operand, o2:operand)
 
-    //---
-    //-----------------------------------------------------------------------------
-    // Instructions
-    //-----------------------------------------------------------------------------
+    datatype code =
+    | Ins(ins:ins)
+    | Block(block:codes)
+    | IfElse(ifCond:obool, ifTrue:code, ifFalse:code)
+
+//-----------------------------------------------------------------------------
+// Instructions
+//-----------------------------------------------------------------------------
 
     datatype ins =
     | ADD(dst:operand, size:nat, src1ADD:operand, src2ADD:operand)
@@ -207,65 +222,48 @@ module LLVM_def {
             case EXTRACTVALUE() => true   
     }
 
+    predicate evalBlock(block:codes, s:state, r:state)
+    {
+        if block.CNil? then
+            r == s
+        else
+            exists r' :: evalCode(block.hd, s, r') && evalBlock(block.tl, r', r)
+    }
 
-        function evalADD(size:nat,v0:Data,v1:Data):  (out:Data) // doesnt support nsw/nuw
-        requires isInt(v0)
-        requires isInt(v1)
-        requires typesMatch(v0,v1)
-        // ensures out.itype.size == size
-    { 
-        reveal_ToTwosComp();
-        reveal_FromTwosComp();
-        if (v0.itype.size == 1 && !v0.itype.signed) then UInt8(BitwiseAdd8(DataToUInt8(ToTwosComp(v0)),DataToUInt8(ToTwosComp(v1)))) else 
-        if (v0.itype.size == 1 && v0.itype.signed) then FromTwosComp(UInt8(BitwiseAdd8(DataToUInt8(ToTwosComp(v1)),DataToUInt8(ToTwosComp(v0))))) else 
-        if (v0.itype.size == 2 && !v0.itype.signed) then UInt16(BitwiseAdd16(DataToUInt16(ToTwosComp(v0)),DataToUInt16(ToTwosComp(v1)))) else 
-        if (v0.itype.size == 2 && v0.itype.signed) then FromTwosComp(UInt16(BitwiseAdd16(DataToUInt16(ToTwosComp(v1)),DataToUInt16(ToTwosComp(v0))))) else 
-        if (v0.itype.size == 4 && !v0.itype.signed) then UInt32(BitwiseAdd32(DataToUInt32(ToTwosComp(v0)),DataToUInt32(ToTwosComp(v1)))) else 
-        if (v0.itype.size == 4 && v0.itype.signed) then FromTwosComp(UInt32(BitwiseAdd32(DataToUInt32(ToTwosComp(v1)),DataToUInt32(ToTwosComp(v0))))) else 
-        if (v0.itype.size == 8 && !v0.itype.signed) then UInt64(BitwiseAdd64(DataToUInt64(ToTwosComp(v0)),DataToUInt64(ToTwosComp(v1)))) else 
-        if (v0.itype.size == 8 && v0.itype.signed) then FromTwosComp(UInt64(BitwiseAdd64(DataToUInt64(ToTwosComp(v1)),DataToUInt64(ToTwosComp(v0))))) else v0
-
+    predicate branchRelation(s:state, s':state, cond:bool)
+    {
+        s' == s
+    }
+    // function evalICMP(c:condition,size:nat,v0:Data,v1:Data): Data
+    function evalOBool(s:state, o:obool):bool
+        requires ValidState(s)
+        requires ValidOperand(s,o.o1)
+        requires ValidOperand(s,o.o2)
+        requires OperandContents(s, o.o1).Int? && OperandContents(s, o.o2).Int?
+        requires typesMatch(OperandContents(s, o.o1),OperandContents(s, o.o2)) 
+    {
+        dataToBool(evalICMP(o.cmp, OperandContents(s, o.o1).itype.size, OperandContents(s, o.o1), OperandContents(s, o.o2)))
     }
 
 
-    function evalSUB(size:nat,v0:Data,v1:Data):  (out:Data) // doesnt support nsw/nuw
-        requires isInt(v0)
-        requires isInt(v1)
-        requires typesMatch(v0,v1)
-        // ensures out.itype.size == size
-        ensures (v0.itype.size == 1 && v0.itype.signed) ==> evalSUB(size,v0,v1)== FromTwosComp(UInt8(BitwiseSub8(DataToUInt8(ToTwosComp(v1)),DataToUInt8(ToTwosComp(v0)))))
-    { 
-        reveal_ToTwosComp();
-        reveal_FromTwosComp();
-        if (v0.itype.size == 1 && !v0.itype.signed) then UInt8(BitwiseSub8(DataToUInt8(ToTwosComp(v0)),DataToUInt8(ToTwosComp(v1)))) else 
-        if (v0.itype.size == 1 && v0.itype.signed) then FromTwosComp(UInt8(BitwiseSub8(DataToUInt8(ToTwosComp(v1)),DataToUInt8(ToTwosComp(v0))))) else 
-        if (v0.itype.size == 2 && !v0.itype.signed) then UInt16(BitwiseSub16(DataToUInt16(ToTwosComp(v0)),DataToUInt16(ToTwosComp(v1)))) else 
-        if (v0.itype.size == 2 && v0.itype.signed) then FromTwosComp(UInt16(BitwiseSub16(DataToUInt16(ToTwosComp(v1)),DataToUInt16(ToTwosComp(v0))))) else 
-        if (v0.itype.size == 4 && !v0.itype.signed) then UInt32(BitwiseSub32(DataToUInt32(ToTwosComp(v0)),DataToUInt32(ToTwosComp(v1)))) else 
-        if (v0.itype.size == 4 && v0.itype.signed) then FromTwosComp(UInt32(BitwiseSub32(DataToUInt32(ToTwosComp(v1)),DataToUInt32(ToTwosComp(v0))))) else 
-        if (v0.itype.size == 8 && !v0.itype.signed) then UInt64(BitwiseSub64(DataToUInt64(ToTwosComp(v0)),DataToUInt64(ToTwosComp(v1)))) else 
-        if (v0.itype.size == 8 && v0.itype.signed) then FromTwosComp(UInt64(BitwiseSub64(DataToUInt64(ToTwosComp(v1)),DataToUInt64(ToTwosComp(v0))))) else v0
-
+    predicate evalIfElse(cond:obool, ifT:code, ifF:code, s:state, r:state)
+        decreases if ValidState(s) && ValidOperand(s,cond.o1) && ValidOperand(s,cond.o2) && OperandContents(s, cond.o1).Int? && OperandContents(s, cond.o2).Int? && typesMatch(OperandContents(s, cond.o1),OperandContents(s, cond.o2)) && evalOBool(s, cond)  then ifT else ifF
+    {
+        if ValidState(s) && s.ok && ValidOperand(s,cond.o1) && ValidOperand(s,cond.o2) 
+           && OperandContents(s, cond.o1).Int? && OperandContents(s, cond.o2).Int? 
+           && typesMatch(OperandContents(s, cond.o1),OperandContents(s, cond.o2)) then
+            exists s' :: branchRelation(s, s', evalOBool(s, cond)) && (if evalOBool(s, cond) then evalCode(ifT, s', r) else evalCode(ifF, s', r))
+        else
+            !r.ok
     }
 
-// eq | ne | ugt | uge | ult | ule | sgt | sge | slt | sle
-
-    function evalICMP(c:condition,size:nat,v0:Data,v1:Data): Data
-        requires isInt(v0)
-        requires isInt(v1)
-        requires typesMatch(v0,v1)
+    predicate evalCode(c:code, s:state, r:state)
+        decreases c, 0
     {
         match c
-            case eq => boolToData(v0.val == v1.val)
-            case ne => boolToData(v0.val != v1.val)
-            case ugt => boolToData(ToTwosComp(v0).val > ToTwosComp(v1).val)
-            case uge => boolToData(ToTwosComp(v0).val >= ToTwosComp(v1).val) 
-            case ult => boolToData(ToTwosComp(v0).val < ToTwosComp(v1).val)
-            case ule => boolToData(ToTwosComp(v0).val <= ToTwosComp(v1).val) 
-            case sgt => boolToData(FromTwosComp(v0).val > FromTwosComp(v1).val)             
-            case sge => boolToData(FromTwosComp(v0).val >= FromTwosComp(v1).val) 
-            case slt => boolToData(FromTwosComp(v0).val < FromTwosComp(v1).val)             
-            case sle => boolToData(FromTwosComp(v0).val <= FromTwosComp(v1).val)
+            case Ins(ins) => evalIns(ins, s, r)
+            case Block(block) => evalBlock(block, s, r)
+            case IfElse(cond, ifT, ifF) => evalIfElse(cond, ifT, ifF, s, r)
     }
 
 }
