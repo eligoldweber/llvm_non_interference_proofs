@@ -59,7 +59,19 @@ module conversion_operations_i {
         IntFromBytes(extendedBytes,IntType(dstSize, true))
 
     }
+    // function evalPTRTOINT(src:Data,dstSize:bitWidth): (out:Data)
+    //     requires src.Ptr?
+    //     ensures out.Int?
+    //     ensures out.itype.size == dstSize
+    // {
+    // }
 
+    // function evalINTTOPTR(src:Data,dstSize:bitWidth): (out:Data)
+    //     requires src.Int?
+    //     ensures out.Ptr?
+    //     ensures out.itype.size == dstSize
+    // {
+    // }
     // function evalBITCAST(src:Data,dstSize:bitWidth): (out:Data)
     // {}
 

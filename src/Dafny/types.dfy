@@ -41,7 +41,7 @@ type Bytes = b:seq<Byte> | |b| > 0 ghost witness [0]
 // the "Data" type
 datatype Data_ = Bytes(bytes:Bytes) |
                  Ptr(block:nat, bid:nat, offset:nat) |
-                 Int(val:int, itype:IntType)
+                 Int(val:int, itype:IntType) | Void
 type Data = d:Data_ | (d.Int? ==> IntFits(d.val, d.itype)) ghost witness Bytes([0])
 
 // Specifies whether the given integer value fits in the given IntType; used for the

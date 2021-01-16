@@ -40,7 +40,7 @@ module LLVM_def {
     datatype code =
     | Ins(ins:ins)
     | Block(block:codes)
-    | IfElse(ifCond:obool, ifTrue:code, ifFalse:code)
+    | IfElse(ifCond:bool, ifTrue:code, ifFalse:code)
 
 //-----------------------------------------------------------------------------
 // Instructions
@@ -49,11 +49,11 @@ module LLVM_def {
     datatype ins =
     | ADD(dst:operand, size:nat, src1ADD:operand, src2ADD:operand)
     | SUB(dst:operand, size:nat, src1SUB:operand, src2SUB:operand)
-    | BR(flag:bool, labelTrue:string,labelFalse:string)
-    | CALL() //needs work
+    | BR(flag:bool, labelTrue:code,labelFalse:code)
+    | CALL(dst:operand,fnc:code)
     | GETELEMENTPTR() //needs work VV
     | ICMP(dst:operand,cond:condition,size:nat,src1:operand,src2:operand)
-    | RET()
+    | RET(val:operand)
     | ZEXT(dst:operand,size:nat,src:operand,dstSize:bitWidth)
     | SHL(dst:operand,src:operand,shiftAmt:operand)
     | LSHR(dst:operand,src:operand,shiftAmt:operand)
@@ -105,14 +105,14 @@ module LLVM_def {
                                          && isInt(OperandContents(s,src1)) && isInt(OperandContents(s,src2))
                                          && typesMatch(OperandContents(s,src1),OperandContents(s,src2))
             case BR(cond, labelTrue,labelFalse) => true
-            case CALL() => true
+            case CALL(dst,fnc) => ValidOperand(s,dst)
             case GETELEMENTPTR() => true
             case ICMP(dst,cond,t,src1,src2) =>  && ValidOperand(s,dst) && ValidOperand(s,src1) && ValidOperand(s,src2)
                                             && isInt(OperandContents(s,src1)) && isInt(OperandContents(s,src2))
                                             && ValidOperand(s,src1) && ValidOperand(s,src2) 
                                             && t == OperandContents(s,src1).itype.size
                                             && typesMatch(OperandContents(s,src1),OperandContents(s,src2))
-            case RET() => true
+            case RET(val) => ValidOperand(s,val)
             case ZEXT(dst,t,src,dstSize) => && ValidOperand(s,dst) && ValidOperand(s,src) && isInt(OperandContents(s,src))
                                             && t == OperandContents(s,src).itype.size
                                             && t < dstSize
@@ -187,34 +187,34 @@ module LLVM_def {
             
     }
 
-    predicate evalIns(ins:ins, s:state, r:state)
+    predicate evalIns(ins:ins, s:state, r:state,o:operand)
     {   
         if !s.ok || !ValidInstruction(s, ins) then !r.ok
         else match ins
-            case ADD(dst,t,src1,src2) => evalUpdate(s, dst, 
+            case ADD(dst,t,src1,src2) => o == dst && evalUpdate(s, dst, 
                                 evalADD(t,OperandContents(s,src1),OperandContents(s,src2)),r)
-            case SUB(dst,t,src1,src2) => evalUpdate(s, dst, 
+            case SUB(dst,t,src1,src2) => o == dst && evalUpdate(s, dst, 
                                 evalSUB(t,OperandContents(s,src1),OperandContents(s,src2)),r)
-            case CALL() => true
+            case CALL(dst,fnc) => o == dst && evalCode(fnc,s,r,o) && evalUpdate(s,dst,OperandContents(s,o),r)
             case GETELEMENTPTR() => true
-            case ICMP(dst,cond,t,src1,src2) => evalUpdate(s, dst, 
+            case ICMP(dst,cond,t,src1,src2) => o == dst && evalUpdate(s, dst, 
                                  evalICMP(cond,t,OperandContents(s,src1),OperandContents(s,src2)),r)
-            case RET() => true
-            case BR(cond, labelTrue,labelFalse) => true
-            case SHL(dst,src,shiftAmt) =>evalUpdate(s, dst, 
+            case RET(val) => o == val
+            case BR(cond, labelTrue,labelFalse) => evalIfElse(cond,labelTrue,labelFalse,s,r,o)
+            case SHL(dst,src,shiftAmt) =>o == dst && evalUpdate(s, dst, 
                                 evalSHL(OperandContents(s,src),OperandContents(s,shiftAmt)),r)
-            case LSHR(dst,src,shiftAmt) =>evalUpdate(s, dst, 
+            case LSHR(dst,src,shiftAmt) => o == dst && evalUpdate(s, dst, 
                                 evalLSHR(OperandContents(s,src),OperandContents(s,shiftAmt)),r)
              
-            case AND(dst,src1,src2) => evalUpdate(s, dst, 
+            case AND(dst,src1,src2) => o == dst && evalUpdate(s, dst, 
                                 evalAND(OperandContents(s,dst).itype.size,OperandContents(s,src1),OperandContents(s,src2)),r)
-            case OR(dst,src1,src2) => evalUpdate(s, dst, 
+            case OR(dst,src1,src2) => o == dst &&  evalUpdate(s, dst, 
                                 evalOR(OperandContents(s,dst).itype.size,OperandContents(s,src1),OperandContents(s,src2)),r)
-            case TRUN(dst,t,src,dstSize) => evalUpdate(s, dst, 
+            case TRUN(dst,t,src,dstSize) => o == dst && evalUpdate(s, dst, 
                                 evalTRUNC(OperandContents(s,src),dstSize),r)
-            case SEXT(dst,t,src,dstSize) => evalUpdate(s, dst, 
+            case SEXT(dst,t,src,dstSize) => o == dst && evalUpdate(s, dst, 
                                 evalSEXT(OperandContents(s,src),dstSize),r)
-            case ZEXT(dst,t,src,dstSize) => evalUpdate(s, dst, 
+            case ZEXT(dst,t,src,dstSize) => o == dst && evalUpdate(s, dst, 
                                 evalZEXT(OperandContents(s,src),dstSize),r)
             case PHI() => true
             case INTTOPTR() => true
@@ -222,12 +222,12 @@ module LLVM_def {
             case EXTRACTVALUE() => true   
     }
 
-    predicate evalBlock(block:codes, s:state, r:state)
+    predicate evalBlock(block:codes, s:state, r:state, o:operand)
     {
         if block.CNil? then
             r == s
         else
-            exists r' :: evalCode(block.hd, s, r') && evalBlock(block.tl, r', r)
+            exists r' :: evalCode(block.hd, s, r',o) && evalBlock(block.tl, r', r,o)
     }
 
     predicate branchRelation(s:state, s':state, cond:bool)
@@ -246,24 +246,33 @@ module LLVM_def {
     }
 
 
-    predicate evalIfElse(cond:obool, ifT:code, ifF:code, s:state, r:state)
-        decreases if ValidState(s) && ValidOperand(s,cond.o1) && ValidOperand(s,cond.o2) && OperandContents(s, cond.o1).Int? && OperandContents(s, cond.o2).Int? && typesMatch(OperandContents(s, cond.o1),OperandContents(s, cond.o2)) && evalOBool(s, cond)  then ifT else ifF
+    // predicate evalIfElse(cond:obool, ifT:code, ifF:code, s:state, r:state)
+    //     decreases if ValidState(s) && ValidOperand(s,cond.o1) && ValidOperand(s,cond.o2) && OperandContents(s, cond.o1).Int? && OperandContents(s, cond.o2).Int? && typesMatch(OperandContents(s, cond.o1),OperandContents(s, cond.o2)) && evalOBool(s, cond)  then ifT else ifF
+    // {
+    //     if ValidState(s) && s.ok && ValidOperand(s,cond.o1) && ValidOperand(s,cond.o2) 
+    //        && OperandContents(s, cond.o1).Int? && OperandContents(s, cond.o2).Int? 
+    //        && typesMatch(OperandContents(s, cond.o1),OperandContents(s, cond.o2)) then
+    //         exists s' :: branchRelation(s, s', evalOBool(s, cond)) && (if evalOBool(s, cond) then evalCode(ifT, s', r) else evalCode(ifF, s', r))
+    //     else
+    //         !r.ok
+    // }
+
+    predicate evalIfElse(cond:bool, ifT:code, ifF:code, s:state, r:state,o:operand)
+        decreases if ValidState(s) && cond then ifT else ifF
     {
-        if ValidState(s) && s.ok && ValidOperand(s,cond.o1) && ValidOperand(s,cond.o2) 
-           && OperandContents(s, cond.o1).Int? && OperandContents(s, cond.o2).Int? 
-           && typesMatch(OperandContents(s, cond.o1),OperandContents(s, cond.o2)) then
-            exists s' :: branchRelation(s, s', evalOBool(s, cond)) && (if evalOBool(s, cond) then evalCode(ifT, s', r) else evalCode(ifF, s', r))
+        if ValidState(s) && s.ok then
+            exists s' :: branchRelation(s, s', cond) && (if cond then evalCode(ifT, s', r,o) else evalCode(ifF, s', r,o))
         else
             !r.ok
     }
 
-    predicate evalCode(c:code, s:state, r:state)
+    predicate evalCode(c:code, s:state, r:state, o:operand)
         decreases c, 0
     {
         match c
-            case Ins(ins) => evalIns(ins, s, r)
-            case Block(block) => evalBlock(block, s, r)
-            case IfElse(cond, ifT, ifF) => evalIfElse(cond, ifT, ifF, s, r)
+            case Ins(ins) => evalIns(ins, s, r, o)
+            case Block(block) => evalBlock(block, s, r,o)
+            case IfElse(cond, ifT, ifF) => evalIfElse(cond, ifT, ifF, s, r,o)
     }
 
 }

@@ -95,7 +95,7 @@ predicate Free(s:MemState, s':MemState, bid:nat) {
 
 // TODO: Support reading and writing more than one byte at a time
 predicate Load(s:MemState, s':MemState, bid:nat, offset:nat, data:Data) {
-    if !IsValidPtr(s, bid, offset) || data.Ptr? then false
+    if !IsValidPtr(s, bid, offset) || data.Ptr?  || data.Void? then false
     else
         var bytes := (if data.Bytes? then data.bytes else IntToBytes(data));
         && (s' == s)
@@ -115,13 +115,16 @@ predicate Store(s:MemState, s':MemState, bid:nat, offset:nat, data:Data)
 }
 
 // // Memory Access and Addressing Operations // 
-// function evalGETELEMENTPTR(s:MemState,op1:Data,op2:Data): (out:Data)
-//     ensures out.Ptr?
-//     ensures IsValidPtr(s,bid,offset)
-//     ensures MemValid(s)
-// {
-
-// }
+function evalGETELEMENTPTR(s:MemState,t:bitWidth,op1:Data,op2:Data): (out:Data)
+    requires MemValid(s)
+    requires op1.Ptr? //TODO: Also could be vector of Ptrs
+    requires IsValidPtr(s,op1.bid,op1.offset)
+    requires op2.Int? 
+    ensures out.Ptr?
+    ensures IsValidPtr(s,out.bid,out.offset) 
+{
+    op1
+}
 
 
 }
