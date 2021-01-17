@@ -51,7 +51,7 @@ module LLVM_def {
     | SUB(dst:operand, size:nat, src1SUB:operand, src2SUB:operand)
     | BR(flag:bool, labelTrue:code,labelFalse:code)
     | CALL(dst:operand,fnc:code)
-    | GETELEMENTPTR() //needs work VV
+    | GETELEMENTPTR(dst:operand,s:MemState,t:bitWidth,op1:operand,op2:operand) //needs work VV
     | ICMP(dst:operand,cond:condition,size:nat,src1:operand,src2:operand)
     | RET(val:operand)
     | ZEXT(dst:operand,size:nat,src:operand,dstSize:bitWidth)
@@ -106,7 +106,11 @@ module LLVM_def {
                                          && typesMatch(OperandContents(s,src1),OperandContents(s,src2))
             case BR(cond, labelTrue,labelFalse) => true
             case CALL(dst,fnc) => ValidOperand(s,dst)
-            case GETELEMENTPTR() => true
+            case GETELEMENTPTR(dst,mems,t,op1,op2) => MemValid(mems) && ValidOperand(s,dst) && ValidOperand(s,op1) && ValidOperand(s,op2)
+                                                   && OperandContents(s,op1).Ptr? && OperandContents(s,op2).Int?
+                                                   && !OperandContents(s,op2).itype.signed
+                                                   && IsValidPtr(mems,OperandContents(s,op1).bid,OperandContents(s,op1).offset)
+                                                   && OperandContents(s,op1).offset + OperandContents(s,op2).val < |mems.mem[OperandContents(s,op1).bid]|
             case ICMP(dst,cond,t,src1,src2) =>  && ValidOperand(s,dst) && ValidOperand(s,src1) && ValidOperand(s,src2)
                                             && isInt(OperandContents(s,src1)) && isInt(OperandContents(s,src2))
                                             && ValidOperand(s,src1) && ValidOperand(s,src2) 
@@ -196,7 +200,8 @@ module LLVM_def {
             case SUB(dst,t,src1,src2) => o == dst && evalUpdate(s, dst, 
                                 evalSUB(t,OperandContents(s,src1),OperandContents(s,src2)),r)
             case CALL(dst,fnc) => o == dst && evalCode(fnc,s,r,o) && evalUpdate(s,dst,OperandContents(s,o),r)
-            case GETELEMENTPTR() => true
+            case GETELEMENTPTR(dst,mems,t,op1,op2) => o == dst && evalUpdate(s, dst, 
+                                evalGETELEMENTPTR(mems,t,OperandContents(s,op1),OperandContents(s,op2)),r)
             case ICMP(dst,cond,t,src1,src2) => o == dst && evalUpdate(s, dst, 
                                  evalICMP(cond,t,OperandContents(s,src1),OperandContents(s,src2)),r)
             case RET(val) => o == val

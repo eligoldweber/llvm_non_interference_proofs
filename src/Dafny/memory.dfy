@@ -119,11 +119,17 @@ function evalGETELEMENTPTR(s:MemState,t:bitWidth,op1:Data,op2:Data): (out:Data)
     requires MemValid(s)
     requires op1.Ptr? //TODO: Also could be vector of Ptrs
     requires IsValidPtr(s,op1.bid,op1.offset)
-    requires op2.Int? 
+    requires op2.Int? && !op2.itype.signed
+    requires  op1.offset + op2.val < |s.mem[op1.bid]|;
     ensures out.Ptr?
-    ensures IsValidPtr(s,out.bid,out.offset) 
+    ensures IsValidPtr(s,out.bid,out.offset)
+    // ensures out.
 {
-    op1
+    reveal_IntFits();
+    assert  op1.offset + op2.val < |s.mem[op1.bid]|;
+    assert op1.offset >= 0;
+    assert op2.val >= 0;
+    Ptr(op1.block,op1.bid,op1.offset + op2.val)
 }
 
 
