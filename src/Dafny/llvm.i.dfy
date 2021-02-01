@@ -34,7 +34,7 @@ module LLVM_def {
 
     datatype operand = D(d:Data) | LV(l:LocalVar) | GV(g:GlobalVar)
     
-    datatype codes = CNil | va_CCons(hd:code, tl:codes)
+    datatype codes = CNil | lvm_CCons(hd:code, tl:codes)
     datatype obool = OCmp(cmp:condition, o1:operand, o2:operand)
 
     datatype code =
@@ -204,8 +204,8 @@ module LLVM_def {
                                 evalGETELEMENTPTR(mems,t,OperandContents(s,op1),OperandContents(s,op2)),r)
             case ICMP(dst,cond,t,src1,src2) => o == dst && evalUpdate(s, dst, 
                                  evalICMP(cond,t,OperandContents(s,src1),OperandContents(s,src2)),r)
-            case RET(val) => o == val
-            case BR(cond, labelTrue,labelFalse) => evalIfElse(cond,labelTrue,labelFalse,s,r,o)
+            case RET(val) => o == val && ValidState(r)
+            case BR(cond, labelTrue,labelFalse) => evalIfElse(cond,labelTrue,labelFalse,s,r,o)&& ValidState(r)
             case SHL(dst,src,shiftAmt) =>o == dst && evalUpdate(s, dst, 
                                 evalSHL(OperandContents(s,src),OperandContents(s,shiftAmt)),r)
             case LSHR(dst,src,shiftAmt) => o == dst && evalUpdate(s, dst, 
@@ -221,10 +221,10 @@ module LLVM_def {
                                 evalSEXT(OperandContents(s,src),dstSize),r)
             case ZEXT(dst,t,src,dstSize) => o == dst && evalUpdate(s, dst, 
                                 evalZEXT(OperandContents(s,src),dstSize),r)
-            case PHI() => true
-            case INTTOPTR() => true
-            case PTRTOINT() => true
-            case EXTRACTVALUE() => true   
+            case PHI() => ValidState(r)
+            case INTTOPTR() => ValidState(r)
+            case PTRTOINT() => ValidState(r)
+            case EXTRACTVALUE() => ValidState(r)   
     }
 
     predicate evalBlock(block:codes, s:state, r:state, o:operand)
