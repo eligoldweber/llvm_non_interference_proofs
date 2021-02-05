@@ -84,6 +84,7 @@ module LLVM_def {
     predicate ValidState(s:state)
     
     {
+        reveal_ValidRegState();
         ValidRegState(s.lvs,s.gvs) && MemValid(s.m)
     }
 
