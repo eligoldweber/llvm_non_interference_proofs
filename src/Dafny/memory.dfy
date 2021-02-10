@@ -108,10 +108,11 @@ predicate Load(s:MemState, s':MemState, bid:nat, offset:nat, data:Data) {
 // TODO: Support reading and writing more than one byte at a time
 predicate Store(s:MemState, s':MemState, bid:nat, offset:nat, data:Data)
     requires IsValidPtr(s, bid, offset)
+    requires data.Int? && IntType(1, false) == data.itype;
 {
-    true
-    // && s'.nextBlock == s.nextBlock
-    // && s'.mem == s.mem[p.bid := s.mem[p.bid][p.offset := mb(1, val)]]
+    // true
+    && s'.nextBlock == s.nextBlock
+    && s'.mem == s.mem[bid := s.mem[bid][offset := mb(data.itype.size, DataToUInt8(data))]]
 }
 
 // // Memory Access and Addressing Operations // 

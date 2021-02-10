@@ -1,5 +1,6 @@
 include "llvm.i.dfy"
 
+// Adapted from Vale
 module control_flow {
     import opened LLVM_def
 
@@ -194,7 +195,7 @@ type lvm_codes = codes
 type lvm_state = state
 type lvm_operand_opr = operand
 
-function lvm_get_ok(s:lvm_state):bool { s.ok }
+function lvm_get_ok(s:lvm_state):bool { ValidState(s) }
 predicate lvm_is_src_opr(o:operand, s:lvm_state) { true }
 predicate lvm_is_dst_opr(o:operand, s:lvm_state) { true }
 function method lvm_get_block(c:code):codes requires c.Block? { c.block }

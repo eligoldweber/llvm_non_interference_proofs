@@ -85,7 +85,10 @@ module LLVM_def {
     
     {
         reveal_ValidRegState();
-        ValidRegState(s.lvs,s.gvs) && MemValid(s.m)
+
+           ValidRegState(s.lvs,s.gvs) 
+        && MemValid(s.m) 
+        && s.ok
     }
 
     predicate ValidOperand(s:state,o:operand)
@@ -240,7 +243,6 @@ module LLVM_def {
     {
         s' == s
     }
-    // function evalICMP(c:condition,size:nat,v0:Data,v1:Data): Data
     function evalOBool(s:state, o:obool):bool
         requires ValidState(s)
         requires ValidOperand(s,o.o1)
@@ -250,18 +252,6 @@ module LLVM_def {
     {
         dataToBool(evalICMP(o.cmp, OperandContents(s, o.o1).itype.size, OperandContents(s, o.o1), OperandContents(s, o.o2)))
     }
-
-
-    // predicate evalIfElse(cond:obool, ifT:code, ifF:code, s:state, r:state)
-    //     decreases if ValidState(s) && ValidOperand(s,cond.o1) && ValidOperand(s,cond.o2) && OperandContents(s, cond.o1).Int? && OperandContents(s, cond.o2).Int? && typesMatch(OperandContents(s, cond.o1),OperandContents(s, cond.o2)) && evalOBool(s, cond)  then ifT else ifF
-    // {
-    //     if ValidState(s) && s.ok && ValidOperand(s,cond.o1) && ValidOperand(s,cond.o2) 
-    //        && OperandContents(s, cond.o1).Int? && OperandContents(s, cond.o2).Int? 
-    //        && typesMatch(OperandContents(s, cond.o1),OperandContents(s, cond.o2)) then
-    //         exists s' :: branchRelation(s, s', evalOBool(s, cond)) && (if evalOBool(s, cond) then evalCode(ifT, s', r) else evalCode(ifF, s', r))
-    //     else
-    //         !r.ok
-    // }
 
     predicate evalIfElse(cond:bool, ifT:code, ifF:code, s:state, r:state,o:operand)
         decreases if ValidState(s) && cond then ifT else ifF
