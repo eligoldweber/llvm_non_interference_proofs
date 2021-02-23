@@ -116,6 +116,18 @@ predicate Store(s:MemState, s':MemState, bid:nat, offset:nat, data:Data)
 }
 
 // // Memory Access and Addressing Operations // 
+function evalLOAD(s:MemState,s':MemState,t:bitWidth,op1:Data): (out:Data)
+    requires MemValid(s)
+    requires op1.Ptr?
+    requires IsValidPtr(s,op1.bid,op1.offset)
+    requires exists d:Data :: Load(s,s',op1.bid,op1.offset,d)
+    ensures !out.Ptr?;
+{
+    var d :| Load(s,s',op1.bid,op1.offset,d);
+    d
+}
+
+
 function evalGETELEMENTPTR(s:MemState,t:bitWidth,op1:Data,op2:Data): (out:Data)
     requires MemValid(s)
     requires op1.Ptr? //TODO: Also could be vector of Ptrs

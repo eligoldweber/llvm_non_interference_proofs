@@ -61,6 +61,7 @@ module LLVM_def {
     | OR(dst:operand,src1:operand,src2:operand)
     | TRUN(dst:operand,size:nat,src:operand,dstSize:bitWidth)
     | SEXT(dst:operand,size:nat,src:operand,dstSize:bitWidth)
+    | LOAD(dst:operand,mems:MemState,t:bitWidth,src:operand) //o:operand, bid:nat, ofs:nat,
     | PHI()
     | INTTOPTR()
     | PTRTOINT()
@@ -76,17 +77,34 @@ module LLVM_def {
         && MemInit(s.m)    
     }
 
-    predicate{:opaque} ValidRegState(lvs:map<LocalVar, Data>,gvs:map<GlobalVar, Data>)
+    predicate{:opaque} ValidRegState(s:state,lvs:map<LocalVar, Data>,gvs:map<GlobalVar, Data>)
     {
-        forall l:LocalVar :: l in lvs && forall g:GlobalVar :: g in gvs
+        reveal_ValidData();
+        // forall l:LocalVar :: l in lvs && forall g:GlobalVar :: g in gvs
+        forall l:LocalVar :: l in lvs ==> ValidData(s,lvs[l])
+        && forall g:GlobalVar :: g in gvs ==> ValidData(s,gvs[g])
     }
+
+    predicate{:opaque} ValidData(s:state, d:Data)
+    {
+        reveal_IntFits();
+        match d
+            case Void => true
+            case Int(val,itype) => IntFits(val,itype)
+            case Bytes(bytes) => |bytes| > 0 && forall b :: b in bytes ==> 0 <= b < 0x100
+            case Ptr(block,bid,offset) => && IsValidPtr(s.m,bid,offset) 
+                                          && block in s.m.mem 
+                                          && BlockValid(s.m.mem[block])
+    }
+
+
 
     predicate ValidState(s:state)
     
     {
         reveal_ValidRegState();
 
-           ValidRegState(s.lvs,s.gvs) 
+           ValidRegState(s,s.lvs,s.gvs) 
         && MemValid(s.m) 
         && s.ok
     }
@@ -94,9 +112,9 @@ module LLVM_def {
     predicate ValidOperand(s:state,o:operand)
     {
         match o
-            case D(d) => true
-            case LV(l) => l in s.lvs
-            case GV(g) => g in s.gvs
+            case D(d) => true && ValidData(s,d)
+            case LV(l) => l in s.lvs && ValidData(s,s.lvs[l])
+            case GV(g) => g in s.gvs && ValidData(s,s.gvs[g])
     }
 
     predicate ValidInstruction(s:state, ins:ins)
@@ -157,6 +175,10 @@ module LLVM_def {
                                             && t == OperandContents(s,src).itype.size
                                             && t < dstSize
                                             && isInt(OperandContents(s,dst)) && OperandContents(s,dst).itype.signed
+            case LOAD(dst,mems,size,src) => && ValidOperand(s,dst) && ValidOperand(s,src) 
+                                            && MemValid(mems) && OperandContents(s,src).Ptr? 
+                                            && IsValidPtr(mems,OperandContents(s,src).bid,OperandContents(s,src).offset)
+                                            // && exists d:Data :: Load(mems,OperandContents(s,src).bid,OperandContents(s,src).offset,d)
             case PHI() => true
             case INTTOPTR() => true
             case PTRTOINT() => true
@@ -185,46 +207,85 @@ module LLVM_def {
     predicate evalUpdate(s:state, o:operand, data:Data, r:state)
         requires ValidState(s)
         requires ValidRegOperand(s,o)
+        requires ValidData(r,data)
         ensures evalUpdate(s, o, data, r) ==> ValidState(r)
+        ensures evalUpdate(s, o, data, r) ==> ValidData(r,data)
+        ensures evalUpdate(s, o, data, r) ==> ValidRegOperand(r,o)
+        ensures evalUpdate(s, o, data, r) ==> ValidOperand(r,o)
+
     {
         reveal_ValidRegState();
+        reveal_ValidData();
         match o
-            case D(d) => r == s 
+            case D(d) => data == d && r == s 
             case GV(g) => r == s.(gvs := s.gvs[g := data]) 
             case LV(l) => r == s.(lvs := s.lvs[l := data]) 
             
+    }
+
+    predicate evalLoad(s:state, o:operand, bid:nat, ofs:nat, r:state)
+        requires ValidState(s)
+        requires ValidOperand(s,o)
+        requires exists d:Data :: Load(s.m,r.m,bid,ofs,d)
+        ensures  evalLoad(s, o, bid, ofs, r) ==> ValidState(r)
+
+        
+    {
+        reveal_ValidData();
+        reveal_ValidRegState();
+        var d :| Load(s.m,r.m,bid,ofs,d);
+        match o
+            case D(data) => data == d && r == s 
+            case GV(g) => r == s.(gvs := s.gvs[g := d]) 
+            case LV(l) => r == s.(lvs := s.lvs[l := d])
     }
 
     predicate evalIns(ins:ins, s:state, r:state,o:operand)
     {   
         if !s.ok || !ValidInstruction(s, ins) then !r.ok
         else match ins
-            case ADD(dst,t,src1,src2) => o == dst && evalUpdate(s, dst, 
-                                evalADD(t,OperandContents(s,src1),OperandContents(s,src2)),r)
-            case SUB(dst,t,src1,src2) => o == dst && evalUpdate(s, dst, 
-                                evalSUB(t,OperandContents(s,src1),OperandContents(s,src2)),r)
-            case CALL(dst,fnc) => o == dst && evalCode(fnc,s,r,o) && evalUpdate(s,dst,OperandContents(s,o),r)
-            case GETELEMENTPTR(dst,mems,t,op1,op2) => o == dst && evalUpdate(s, dst, 
-                                evalGETELEMENTPTR(mems,t,OperandContents(s,op1),OperandContents(s,op2)),r)
-            case ICMP(dst,cond,t,src1,src2) => o == dst && evalUpdate(s, dst, 
-                                 evalICMP(cond,t,OperandContents(s,src1),OperandContents(s,src2)),r)
+            case ADD(dst,t,src1,src2) => o == dst 
+                                && ValidData(r,evalADD(t,OperandContents(s,src1),OperandContents(s,src2))) 
+                                && evalUpdate(s, dst, evalADD(t,OperandContents(s,src1),OperandContents(s,src2)),r)
+            case SUB(dst,t,src1,src2) => o == dst 
+                                && ValidData(r,evalSUB(t,OperandContents(s,src1),OperandContents(s,src2))) 
+                                && evalUpdate(s, dst, evalSUB(t,OperandContents(s,src1),OperandContents(s,src2)),r)
+            case CALL(dst,fnc) => o == dst 
+                                && evalCode(fnc,s,r,o) 
+                                && ValidData(r,OperandContents(s,o))
+                                && evalUpdate(s,dst,OperandContents(s,o),r)
+            case GETELEMENTPTR(dst,mems,t,op1,op2) => o == dst 
+                                && ValidData(r,evalGETELEMENTPTR(mems,t,OperandContents(s,op1),OperandContents(s,op2)))
+                                && evalUpdate(s, dst, evalGETELEMENTPTR(mems,t,OperandContents(s,op1),OperandContents(s,op2)),r)
+            case ICMP(dst,cond,t,src1,src2) => o == dst 
+                                && ValidData(r,evalICMP(cond,t,OperandContents(s,src1),OperandContents(s,src2)))
+                                && evalUpdate(s, dst, evalICMP(cond,t,OperandContents(s,src1),OperandContents(s,src2)),r)
             case RET(val) => o == val && ValidState(r)
             case BR(cond, labelTrue,labelFalse) => evalIfElse(cond,labelTrue,labelFalse,s,r,o)&& ValidState(r)
-            case SHL(dst,src,shiftAmt) =>o == dst && evalUpdate(s, dst, 
-                                evalSHL(OperandContents(s,src),OperandContents(s,shiftAmt)),r)
-            case LSHR(dst,src,shiftAmt) => o == dst && evalUpdate(s, dst, 
-                                evalLSHR(OperandContents(s,src),OperandContents(s,shiftAmt)),r)
-             
-            case AND(dst,src1,src2) => o == dst && evalUpdate(s, dst, 
-                                evalAND(OperandContents(s,dst).itype.size,OperandContents(s,src1),OperandContents(s,src2)),r)
-            case OR(dst,src1,src2) => o == dst &&  evalUpdate(s, dst, 
-                                evalOR(OperandContents(s,dst).itype.size,OperandContents(s,src1),OperandContents(s,src2)),r)
-            case TRUN(dst,t,src,dstSize) => o == dst && evalUpdate(s, dst, 
-                                evalTRUNC(OperandContents(s,src),dstSize),r)
-            case SEXT(dst,t,src,dstSize) => o == dst && evalUpdate(s, dst, 
-                                evalSEXT(OperandContents(s,src),dstSize),r)
-            case ZEXT(dst,t,src,dstSize) => o == dst && evalUpdate(s, dst, 
-                                evalZEXT(OperandContents(s,src),dstSize),r)
+            case SHL(dst,src,shiftAmt) =>o == dst
+                                && ValidData(r,evalSHL(OperandContents(s,src),OperandContents(s,shiftAmt)))
+                                && evalUpdate(s, dst, evalSHL(OperandContents(s,src),OperandContents(s,shiftAmt)),r)
+            case LSHR(dst,src,shiftAmt) => o == dst 
+                                && ValidData(r,evalLSHR(OperandContents(s,src),OperandContents(s,shiftAmt)))
+                                && evalUpdate(s, dst, evalLSHR(OperandContents(s,src),OperandContents(s,shiftAmt)),r)
+            case AND(dst,src1,src2) => o == dst 
+                                && ValidData(r,evalAND(OperandContents(s,dst).itype.size,OperandContents(s,src1),OperandContents(s,src2)))   
+                                && evalUpdate(s, dst, evalAND(OperandContents(s,dst).itype.size,OperandContents(s,src1),OperandContents(s,src2)),r)
+            case OR(dst,src1,src2) => o == dst 
+                                && ValidData(r,evalOR(OperandContents(s,dst).itype.size,OperandContents(s,src1),OperandContents(s,src2)))   
+                                && evalUpdate(s, dst, evalOR(OperandContents(s,dst).itype.size,OperandContents(s,src1),OperandContents(s,src2)),r)
+            case TRUN(dst,t,src,dstSize) => o == dst
+                                && ValidData(r,evalTRUNC(OperandContents(s,src),dstSize))    
+                                && evalUpdate(s, dst, evalTRUNC(OperandContents(s,src),dstSize),r)
+            case SEXT(dst,t,src,dstSize) => o == dst
+                                && ValidData(r,evalSEXT(OperandContents(s,src),dstSize))    
+                                && evalUpdate(s, dst, evalSEXT(OperandContents(s,src),dstSize),r)
+            case ZEXT(dst,t,src,dstSize) => o == dst 
+                                && ValidData(r,evalZEXT(OperandContents(s,src),dstSize))
+                                && evalUpdate(s, dst, evalZEXT(OperandContents(s,src),dstSize),r)
+            case LOAD(dst,mems,size,src) => o == dst 
+                                && exists d:Data :: Load(s.m,r.m,OperandContents(s,src).bid,OperandContents(s,src).offset,d) 
+                                && evalLoad(s,o,OperandContents(s,src).bid,OperandContents(s,src).offset,r) //bid:nat, ofs:nat
             case PHI() => ValidState(r)
             case INTTOPTR() => ValidState(r)
             case PTRTOINT() => ValidState(r)

@@ -20,8 +20,17 @@ function lvm_update_ok(sM:lvm_state, sK:lvm_state):state { sK.(ok := sM.ok) }
 function lvm_update_local(l:LocalVar, sM:lvm_state, sK:lvm_state):lvm_state
     requires l in sM.lvs
 { sK.(lvs := sK.lvs[l := sM.lvs[l]]) }
+function lvm_update_global(g:GlobalVar, sM:lvm_state, sK:lvm_state):lvm_state
+    requires g in sM.gvs
+{ sK.(gvs := sK.gvs[g := sM.gvs[g]]) }
 function lvm_update_mem(sM:lvm_state, sK:lvm_state):lvm_state {
     sK.(m := sK.m.(mem := sM.m.mem))
+}
+function lvm_update_all(sM:lvm_state, sK:lvm_state):lvm_state{
+    sK.(m  := sK.m.(mem := sM.m.mem),
+       ok  := sM.ok,
+       gvs := sM.gvs,
+       lvs := sM.lvs)
 }
 
 predicate {:opaque} eval_code(c:code, s:state, r:state, o:operand)
@@ -120,7 +129,8 @@ lemma code_state_validity(c:code, s:state, r:state, o:operand)
     }
 }
 
-lemma lvm_lemma_block_lax(b0:lvm_codes, s0:state, sN:state,o:operand) returns(s1:state, c1:lvm_code, b1:lvm_codes)
+lemma lvm_lemma_block_lax(b0:lvm_codes, s0:state, sN:state,o:operand) 
+                returns(s1:state, c1:lvm_code, b1:lvm_codes)
     requires b0.lvm_CCons?
     requires evalCode_lax(lvm_Block(b0), s0, sN,o)
     ensures  b0 == lvm_CCons(c1, b1)
@@ -147,13 +157,15 @@ lemma lvm_lemma_block_lax(b0:lvm_codes, s0:state, sN:state,o:operand) returns(s1
     }
 }
 
-lemma lvm_lemma_block(b:codes, s0:lvm_state, r:lvm_state,o:operand) returns(r1:lvm_state, c0:code, b1:codes)
+lemma lvm_lemma_block(b:codes, s0:lvm_state, r:lvm_state,o:operand) 
+                returns(r1:lvm_state, c0:code, b1:codes)
     requires b.lvm_CCons?
     requires eval_code(Block(b), s0, r,o)
     ensures  b == lvm_CCons(c0, b1)
     ensures  ValidState(s0) && r1.ok ==> ValidState(r1);
     ensures  eval_code(c0, s0, r1,o)
     ensures  eval_code(Block(b1), r1, r,o)
+    ensures s0.ok ==> evalCode(b.hd, s0, r1,o) && evalBlock(b.tl, r1, r,o);
 {
     reveal_eval_code();
     c0 := b.hd;
