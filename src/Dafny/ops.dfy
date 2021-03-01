@@ -228,27 +228,31 @@ function LeftShift(x:uint32, amount:uint32) : uint32
     BitsToWord(BitShiftLeft(WordToBits(x), amount))
 }
 
-function {:opaque} BitwiseAdd8(x:uint8, y:uint8):uint8
+function {:opaque} BitwiseAdd8(x:uint8, y:uint8): (out:uint8)
+    ensures out == (x + y) % 0x100
 {
     (x + y) % 0x100
 }
 
-function {:opaque} BitwiseAdd16(x:uint16, y:uint16):uint16
+function {:opaque} BitwiseAdd16(x:uint16, y:uint16): (out:uint16)
+    ensures out == (x + y) % 0x10000
 {
     (x + y) % 0x10000
 }
 
-function {:opaque} BitwiseAdd32(x:uint32, y:uint32):uint32
+function {:opaque} BitwiseAdd32(x:uint32, y:uint32): (out:uint32)
+    ensures out == (x + y) % 0x1_0000_0000
 {
     (x + y) % 0x1_0000_0000
 }
 
-function {:opaque} BitwiseAdd64(x:uint64, y:uint64):uint64
+function {:opaque} BitwiseAdd64(x:uint64, y:uint64): (out:uint64)
+    ensures out == (x + y) % 0x1_0000_0000_0000_0000
 {
     (x + y) % 0x1_0000_0000_0000_0000
 }
 
-function {:opaque} BitwiseSAdd8(x:sint8, y:sint8):sint8
+function {:opaque} BitwiseSAdd8(x:sint8, y:sint8): (out:sint8)
 {
     if (x + y) > 0 then (x+y) % 0x80 else (x+y) % -0x80
 }
@@ -268,24 +272,27 @@ function {:opaque} BitwiseSAdd64(x:sint64, y:sint64):sint64
     (x + y) % 0x8000_0000_0000_0000
 }
 
-function {:opaque} BitwiseSub8(x:uint8, y:uint8):uint8
+function {:opaque} BitwiseSub8(x:uint8, y:uint8): (out:uint8)
+    ensures out == (x - y) % 0x100
 {
      (x - y) % 0x100
 }
 
-function {:opaque} BitwiseSub16(x:uint16, y:uint16):uint16
+function {:opaque} BitwiseSub16(x:uint16, y:uint16): (out:uint16)
+    ensures out == (x - y) % 0x10000
 {
      (x - y) % 0x10000
 }
-function {:opaque} BitwiseSub64(x:uint64, y:uint64):uint64
+function {:opaque} BitwiseSub64(x:uint64, y:uint64): (out:uint64)
+    ensures out == (x - y) % 0x1_0000_0000_0000_0000
 {
      (x - y) % 0x1_0000_0000_0000_0000
 }
 
 
-function{:opaque}  BitwiseSub32(x:uint32, y:uint32):uint32
+function{:opaque}  BitwiseSub32(x:uint32, y:uint32): (out:uint32)
+    ensures out == (x - y) % 0x1_0000_0000
 {
-    // BitsToWord(BitSub(WordToBits(x), WordToBits(y)))
     (x - y) % 0x1_0000_0000
 }
 

@@ -30,7 +30,7 @@ type bitWidth = s:nat | (s == 1 || s == 2 || s == 4 || s == 8) ghost witness 1
 // Our integers have a type associated with them that stores their size and whether
 // they're signed/unsigned
 datatype IntType_ = IntType(size:bitWidth, signed:bool)
-type IntType = t:IntType_ | t.size > 0 ghost witness IntType(1, false)
+type IntType = t:IntType_ | validBitWidth(t.size) ghost witness IntType(1, false)
 
 // Bytes is just that; a list of bytes
 type Byte = b:int | 0 <= b < 0x100
@@ -76,6 +76,10 @@ function  power2(exp: nat) : int
         2*power2(exp-1)
 }
 
+predicate validBitWidth(s:bitWidth)
+{
+    (s == 1 || s == 2 || s == 4 || s == 8)
+}
 // Functions to return a Data of the given integer type given the appropriate integer
 // value
 function UInt8(val:uint8) : Data { reveal_IntFits(); Int(val, IntType(1, false)) }
@@ -183,6 +187,14 @@ function {:opaque} ToTwosComp(data:Data) : (out:Data)
     Int(newval, IntType(data.itype.size, false))
 }
 
+lemma UnsignedToTwosComp(data:Data)
+    requires data.Int?
+    requires !data.itype.signed
+    ensures data == ToTwosComp(data)
+{
+    reveal_ToTwosComp();
+    assert data == ToTwosComp(data);
+}
 // Converts an unsigned two's complement number back to its signed representation for
 // returning from a sequence of bytes back to a normal integer
 function {:opaque} FromTwosComp(data:Data) : (out:Data)
