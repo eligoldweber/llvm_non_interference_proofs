@@ -131,18 +131,20 @@ function evalLOAD(s:MemState,s':MemState,t:bitWidth,op1:Data): (out:Data)
 function evalGETELEMENTPTR(s:MemState,t:bitWidth,op1:Data,op2:Data): (out:Data)
     requires MemValid(s)
     requires op1.Ptr? //TODO: Also could be vector of Ptrs
+    requires validBitWidth(t)
     requires IsValidPtr(s,op1.bid,op1.offset)
     requires op2.Int? && !op2.itype.signed
-    requires  op1.offset + op2.val < |s.mem[op1.bid]|;
+    requires op1.offset + (op2.val * t) < |s.mem[op1.bid]|;
     ensures out.Ptr?
     ensures IsValidPtr(s,out.bid,out.offset)
-    // ensures out.
 {
     reveal_IntFits();
-    assert  op1.offset + op2.val < |s.mem[op1.bid]|;
+    assert  op1.offset + (op2.val * t) < |s.mem[op1.bid]|;
     assert op1.offset >= 0;
     assert op2.val >= 0;
-    Ptr(op1.block,op1.bid,op1.offset + op2.val)
+    assert (op2.val * t) >= 0;
+    var newOffset:nat := op1.offset + (op2.val * t);
+    Ptr(op1.block,op1.bid,newOffset)
 }
 
 
