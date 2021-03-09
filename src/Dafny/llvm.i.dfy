@@ -76,6 +76,20 @@ module LLVM_def {
         && |s.gvs| == 0
         && MemInit(s.m)    
     }
+    
+    predicate{:opaque} ValidData(s:state, d:Data)
+    {
+        reveal_IntFits();
+        match d
+            case Void => true
+            case Int(val,itype) => IntFits(val,itype)
+            case Bytes(bytes) => |bytes| > 0 && forall b :: b in bytes ==> 0 <= b < 0x100
+            case Ptr(block,bid,offset) => true
+            // case Ptr(block,bid,offset) => && IsValidPtr(s.m,bid,offset) 
+            //                               && block in s.m.mem 
+            //                               && BlockValid(s.m.mem[block])
+    }
+
 
     predicate{:opaque} ValidRegState(s:state,lvs:map<LocalVar, Data>,gvs:map<GlobalVar, Data>)
     {
@@ -85,17 +99,7 @@ module LLVM_def {
         && forall g:GlobalVar :: g in gvs ==> ValidData(s,gvs[g])
     }
 
-    predicate{:opaque} ValidData(s:state, d:Data)
-    {
-        reveal_IntFits();
-        match d
-            case Void => true
-            case Int(val,itype) => IntFits(val,itype)
-            case Bytes(bytes) => |bytes| > 0 && forall b :: b in bytes ==> 0 <= b < 0x100
-            case Ptr(block,bid,offset) => && IsValidPtr(s.m,bid,offset) 
-                                          && block in s.m.mem 
-                                          && BlockValid(s.m.mem[block])
-    }
+
 
 
 
@@ -132,8 +136,9 @@ module LLVM_def {
                                                    && OperandContents(s,op1).Ptr? && OperandContents(s,op2).Int?
                                                    && !OperandContents(s,op2).itype.signed
                                                    && validBitWidth(t)
-                                                   && IsValidPtr(s.m,OperandContents(s,op1).bid,OperandContents(s,op1).offset)
-                                                   && OperandContents(s,op1).offset + (OperandContents(s,op2).val * t) < |s.m.mem[OperandContents(s,op1).bid]|
+                                                   && IsValidBid(s.m,OperandContents(s,op1).bid)
+                                                //    && IsValidPtr(s.m,OperandContents(s,op1).bid,OperandContents(s,op1).offset)
+                                                //    && OperandContents(s,op1).offset + (OperandContents(s,op2).val * t) < |s.m.mem[OperandContents(s,op1).bid]|
             case ICMP(dst,cond,t,src1,src2) =>  && ValidOperand(s,dst) && ValidOperand(s,src1) && ValidOperand(s,src2)
                                             && isInt(OperandContents(s,src1)) && isInt(OperandContents(s,src2))
                                             && ValidOperand(s,src1) && ValidOperand(s,src2) 
@@ -261,7 +266,7 @@ module LLVM_def {
             case ICMP(dst,cond,t,src1,src2) => o == dst 
                                 && ValidData(r,evalICMP(cond,t,OperandContents(s,src1),OperandContents(s,src2)))
                                 && evalUpdate(s, dst, evalICMP(cond,t,OperandContents(s,src1),OperandContents(s,src2)),r)
-            case RET(val) => o == val && ValidState(r)
+            case RET(val) => o == val && ValidState(r) && r == s
             case BR(cond, labelTrue,labelFalse) => evalIfElse(cond,labelTrue,labelFalse,s,r,o)&& ValidState(r)
             case SHL(dst,src,shiftAmt) =>o == dst
                                 && ValidData(r,evalSHL(OperandContents(s,src),OperandContents(s,shiftAmt)))

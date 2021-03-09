@@ -71,23 +71,6 @@ lemma lemma_FailurePreservedByCode(c:code, s:state, r:state, o:operand)
     }
 }
 
-lemma block_state_validity(block:codes, s:state, r:state, o:operand)
-    requires evalBlock(block, s, r, o);
-    requires ValidState(s);
-    decreases block, 0;
-    ensures  r.ok ==> ValidState(r);
-{
-    if block.lvm_CCons? {
-        var r':state :| evalCode(block.hd, s, r', o) && evalBlock(block.tl, r', r, o);
-        code_state_validity(block.hd, s, r', o);
-        if r'.ok {
-            block_state_validity(block.tl, r', r, o);
-        }
-        else {
-            lemma_FailurePreservedByBlock(block.tl, r', r, o);
-        }
-    }
-}
 lemma code_state_validity(c:code, s:state, r:state, o:operand)
     requires evalCode(c, s, r, o);
     requires ValidState(s);
@@ -104,7 +87,7 @@ lemma code_state_validity(c:code, s:state, r:state, o:operand)
             assert evalIns(c.ins,s,r,o);
             assert c.ins.RET? ==> ValidState(r);
 
-            // assert MemValid(r.m);
+            assert MemValid(r.m);
             assert ValidState(r);
         } else if c.Block? {
             block_state_validity(c.block, s, r, o);
@@ -128,6 +111,25 @@ lemma code_state_validity(c:code, s:state, r:state, o:operand)
         // }
     }
 }
+
+lemma block_state_validity(block:codes, s:state, r:state, o:operand)
+    requires evalBlock(block, s, r, o);
+    requires ValidState(s);
+    decreases block, 0;
+    ensures  r.ok ==> ValidState(r);
+{
+    if block.lvm_CCons? {
+        var r':state :| evalCode(block.hd, s, r', o) && evalBlock(block.tl, r', r, o);
+        code_state_validity(block.hd, s, r', o);
+        if r'.ok {
+            block_state_validity(block.tl, r', r, o);
+        }
+        else {
+            lemma_FailurePreservedByBlock(block.tl, r', r, o);
+        }
+    }
+}
+
 
 lemma lvm_lemma_block_lax(b0:lvm_codes, s0:state, sN:state,o:operand) 
                 returns(s1:state, c1:lvm_code, b1:lvm_codes)
