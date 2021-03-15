@@ -115,8 +115,9 @@ module LLVM_def {
 
     predicate ValidOperand(s:state,o:operand)
     {
+        reveal_ValidData();
         match o
-            case D(d) => true && ValidData(s,d)
+            case D(d) => ValidData(s,d)
             case LV(l) => l in s.lvs && ValidData(s,s.lvs[l])
             case GV(g) => g in s.gvs && ValidData(s,s.gvs[g])
     }
@@ -291,6 +292,7 @@ module LLVM_def {
                                 && evalUpdate(s, dst, evalZEXT(OperandContents(s,src),dstSize),r)
             case LOAD(dst,mems,size,src) => o == dst 
                                 && exists d:Data :: Load(s.m,r.m,OperandContents(s,src).bid,OperandContents(s,src).offset,d) 
+                                // && evalUpdate(s, dst, evalLOAD(s.m,r.m,size,OperandContents(s,src)),r)
                                 && evalLoad(s,o,OperandContents(s,src).bid,OperandContents(s,src).offset,r) //bid:nat, ofs:nat
             case PHI() => ValidState(r)
             case INTTOPTR() => ValidState(r)
