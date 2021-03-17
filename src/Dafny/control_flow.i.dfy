@@ -168,16 +168,20 @@ lemma lvm_lemma_block(b:codes, s0:lvm_state, r:lvm_state,o:operand)
     ensures  eval_code(c0, s0, r1,o)
     ensures  eval_code(Block(b1), r1, r,o)
     ensures s0.ok ==> evalCode(b.hd, s0, r1,o) && evalBlock(b.tl, r1, r,o);
+    ensures s0.ok && b.hd.Block? ==> r1 == s0;
 {
     reveal_eval_code();
     c0 := b.hd;
     b1 := b.tl;
     if s0.ok {
         assert evalBlock(b, s0, r,o);
-        var r':state :| evalCode(b.hd, s0, r',o) && evalBlock(b.tl, r', r,o);
+        var r':state :| evalCode(b.hd, s0, r',o) && evalBlock(b.tl, r', r,o)  && (b.hd.Block? ==> s0 == r');
         r1 := r';
         if ValidState(s0) {
             code_state_validity(c0, s0, r1,o);
+        }
+        if(b.hd.Block?){
+            assert r1 == s0;
         }
         assert eval_code(c0, s0, r1,o);
     } else {

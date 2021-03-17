@@ -291,6 +291,7 @@ module LLVM_def {
                                 && ValidData(r,evalZEXT(OperandContents(s,src),dstSize))
                                 && evalUpdate(s, dst, evalZEXT(OperandContents(s,src),dstSize),r)
             case LOAD(dst,mems,size,src) => o == dst 
+                                && s.m == r.m
                                 && exists d:Data :: Load(s.m,r.m,OperandContents(s,src).bid,OperandContents(s,src).offset,d) 
                                 // && evalUpdate(s, dst, evalLOAD(s.m,r.m,size,OperandContents(s,src)),r)
                                 && evalLoad(s,o,OperandContents(s,src).bid,OperandContents(s,src).offset,r) //bid:nat, ofs:nat
@@ -305,7 +306,8 @@ module LLVM_def {
         if block.CNil? then
             r == s
         else
-            exists r' :: evalCode(block.hd, s, r',o) && evalBlock(block.tl, r', r,o)
+            exists r' :: (evalCode(block.hd, s, r',o) && evalBlock(block.tl, r', r,o)
+            && (block.hd.Block? ==> s == r'))
     }
 
     predicate branchRelation(s:state, s':state, cond:bool)
