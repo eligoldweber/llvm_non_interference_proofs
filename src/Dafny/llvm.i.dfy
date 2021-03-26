@@ -147,9 +147,11 @@ module LLVM_def {
                                             && typesMatch(OperandContents(s,src1),OperandContents(s,src2))
             case RET(val) => ValidOperand(s,val)
             case ZEXT(dst,t,src,dstSize) => && ValidOperand(s,dst) && ValidOperand(s,src) && isInt(OperandContents(s,src))
-                                            && t == OperandContents(s,src).itype.size
-                                            && t < dstSize
-                                            && isInt(OperandContents(s,dst)) && !OperandContents(s,dst).itype.signed
+                                            // && t == OperandContents(s,src).itype.size
+                                            // && t < dstSize
+                                            && OperandContents(s,src).itype.size < dstSize
+                                            && isInt(OperandContents(s,dst)) 
+                                            //&& !OperandContents(s,dst).itype.signed
                                            
             case SHL(dst,src,shiftAmt) =>   && ValidOperand(s,dst) && ValidOperand(s,src) && ValidOperand(s,shiftAmt)
                                             && isInt(OperandContents(s,dst)) && isInt(OperandContents(s,src)) && isInt(OperandContents(s,shiftAmt))
@@ -179,9 +181,10 @@ module LLVM_def {
                                             && t > dstSize
                                             && isInt(OperandContents(s,dst))
             case SEXT(dst,t,src,dstSize) => && ValidOperand(s,dst) && ValidOperand(s,src) && isInt(OperandContents(s,src))
-                                            && t == OperandContents(s,src).itype.size
-                                            && t < dstSize
-                                            && isInt(OperandContents(s,dst)) && OperandContents(s,dst).itype.signed
+                                            // && t == OperandContents(s,src).itype.size
+                                            && OperandContents(s,src).itype.size < dstSize
+                                            && isInt(OperandContents(s,dst)) 
+                                            // && OperandContents(s,dst).itype.signed
             case LOAD(dst,mems,size,src) => && ValidOperand(s,dst) && ValidOperand(s,src) 
                                             && MemValid(mems) && OperandContents(s,src).Ptr? 
                                             && IsValidPtr(mems,OperandContents(s,src).bid,OperandContents(s,src).offset)
@@ -292,9 +295,9 @@ module LLVM_def {
                                 && evalUpdate(s, dst, evalZEXT(OperandContents(s,src),dstSize),r)
             case LOAD(dst,mems,size,src) => o == dst 
                                 && s.m == r.m
-                                && exists d:Data :: Load(s.m,r.m,OperandContents(s,src).bid,OperandContents(s,src).offset,d) 
-                                // && evalUpdate(s, dst, evalLOAD(s.m,r.m,size,OperandContents(s,src)),r)
-                                && evalLoad(s,o,OperandContents(s,src).bid,OperandContents(s,src).offset,r) //bid:nat, ofs:nat
+                                // && exists d:Data :: Load(s.m,r.m,OperandContents(s,src).bid,OperandContents(s,src).offset,d) 
+                                && evalUpdate(s, dst, evalLOAD(s.m,r.m,size,OperandContents(s,src)),r)
+                                // && evalLoad(s,o,OperandContents(s,src).bid,OperandContents(s,src).offset,r) //bid:nat, ofs:nat
             case PHI() => ValidState(r)
             case INTTOPTR() => ValidState(r)
             case PTRTOINT() => ValidState(r)

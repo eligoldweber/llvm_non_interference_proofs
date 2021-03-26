@@ -103,6 +103,7 @@ predicate Load(s:MemState, s':MemState, bid:nat, offset:nat, data:Data) {
         && (offset + |bytes| <= |s.mem[bid]|)
         && (forall i | 0 <= i < |bytes| :: (offset + i < |s.mem[bid]|))
         && (forall i | 0 <= i < |bytes| :: s.mem[bid][offset + i].mb?)
+        && validBitWidth(|bytes|)
 }
 
 // TODO: Support reading and writing more than one byte at a time
@@ -119,12 +120,17 @@ predicate Store(s:MemState, s':MemState, bid:nat, offset:nat, data:Data)
 function evalLOAD(s:MemState,s':MemState,t:bitWidth,op1:Data): (out:Data)
     requires MemValid(s)
     requires op1.Ptr?
-    requires IsValidPtr(s,op1.bid,op1.offset)
+    // requires IsValidPtr(s,op1.bid,op1.offset)
+    ensures out.Bytes? ==> validBitWidth(|out.bytes|)
+    ensures out.Int? || out.Bytes? || out.Void?;
     // requires exists d:Data :: Load(s,s',op1.bid,op1.offset,d)
     ensures !out.Ptr?;
+    ensures out.Int? ==> out.itype.size == t;
 {
-    if exists d:Data :: Load(s,s',op1.bid,op1.offset,d) then
-        var d:Data :| Load(s,s',op1.bid,op1.offset,d);
+    if exists d:Data :: d.Int? && d.itype.size == t && Load(s,s',op1.bid,op1.offset,d) then
+        var d:Data :| d.Int? && d.itype.size == t && Load(s,s',op1.bid,op1.offset,d);
+        assert d.Int?;
+        assert d.Int? ==> d.itype.size == t;
         d
     else Void
     // var d :| Load(s,s',op1.bid,op1.offset,d);

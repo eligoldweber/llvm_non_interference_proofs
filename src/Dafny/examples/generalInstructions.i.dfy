@@ -209,7 +209,11 @@ lemma lvm_lemma_Load(lvm_b0:lvm_codes, lvm_s0:lvm_state, lvm_sN:lvm_state,dst:lv
   ensures  lvm_get_ok(lvm_sM)
   ensures ValidOperand(lvm_sM,dst);
   ensures  !OperandContents(lvm_sM,dst).Ptr?;
+    ensures  OperandContents(lvm_sM,dst).Int? || OperandContents(lvm_sM,dst).Void?;
 
+  ensures OperandContents(lvm_sM,dst).Bytes? ==> validBitWidth(|OperandContents(lvm_sM,dst).bytes|)
+  ensures OperandContents(lvm_sM,dst).Int? || OperandContents(lvm_sM,dst).Bytes? || OperandContents(lvm_sM,dst).Void?;
+  ensures OperandContents(lvm_sM,dst).Int? ==> OperandContents(lvm_sM,dst).itype.size == t;
 //   ensures  lvm_state_eq(lvm_sM,  lvm_s0)
 {
   reveal_lvm_LOAD();
@@ -246,8 +250,16 @@ lemma lvm_lemma_Load(lvm_b0:lvm_codes, lvm_s0:lvm_state, lvm_sN:lvm_state,dst:lv
   lvm_bM := lvm_ltmp2;
 
   assert lvm_sM.ok;
+  assert  evalCode(lvm_b0.hd, lvm_s0, lvm_sM,dst);
+  assert lvm_b0.hd == lvm_LOAD(dst,lvm_s0.m,t,op1);
+  assert lvm_b0.hd.ins.LOAD?;
+  assert evalIns(lvm_b0.hd.ins,lvm_s0,lvm_sM,dst);
+
   assert lvm_b0.tl == lvm_bM;
   assert !OperandContents(lvm_sM,dst).Ptr?;
+  assert OperandContents(lvm_sM,dst).Int? || OperandContents(lvm_sM,dst).Bytes? ||OperandContents(lvm_sM,dst).Void?;
+   assert OperandContents(lvm_sM,dst).Int? ==> OperandContents(lvm_sM,dst).itype.size == t;
+
   assert ValidState(lvm_sM);
   assert evalCode_lax(lvm_cM, lvm_s0, lvm_sM,dst);
 }
@@ -262,20 +274,25 @@ function method{:opaque} lvm_code_ZEXT(dst:lvm_operand_opr,t:bitWidth,op1:lvm_op
 }
 
 lemma lvm_lemma_Zext(lvm_b0:lvm_codes, lvm_s0:lvm_state, lvm_sN:lvm_state, 
-            dst:lvm_operand_opr, t:bitWidth,op1:lvm_operand_opr,dstSize:bitWidth,o:operand)
+            dst:lvm_operand_opr, t:bitWidth,op1:lvm_operand_opr,dstSize:bitWidth)
   returns (lvm_bM:lvm_codes, lvm_sM:lvm_state)
 
   requires lvm_require(lvm_b0, lvm_code_ZEXT(dst,t,op1,dstSize), lvm_s0, lvm_sN,dst)
   requires lvm_is_dst_opr(dst, lvm_s0)
   requires lvm_is_src_opr(op1, lvm_s0)
   requires lvm_get_ok(lvm_s0)
-  requires ValidOperand(lvm_s0,op1);
 
-  requires ValidInstruction(lvm_s0, lvm_code_ZEXT(dst,t,op1,dstSize).ins);
+//   requires ValidInstruction(lvm_s0, lvm_code_ZEXT(dst,t,op1,dstSize).ins);
+  requires ValidOperand(lvm_s0,op1);
+  requires ValidOperand(lvm_s0,dst);
   requires OperandContents(lvm_s0,op1).Int?;
+//   requires t == OperandContents(lvm_s0,op1).itype.size;
   requires OperandContents(lvm_s0,op1).itype.size < dstSize;
+  requires OperandContents(lvm_s0,dst).Int?;
+//   requires !OperandContents(lvm_s0,dst).itype.signed;
 
 // //   
+  ensures  lvm_ensure(lvm_b0, lvm_bM, lvm_s0, lvm_sM, lvm_sN,dst)
   ensures  lvm_get_ok(lvm_sM)
   ensures  ValidOperand(lvm_sM,dst)
   ensures  OperandContents(lvm_sM,dst).Int?;
@@ -290,13 +307,6 @@ lemma lvm_lemma_Zext(lvm_b0:lvm_codes, lvm_s0:lvm_state, lvm_sN:lvm_state,
     reveal_eval_code();
     assert lvm_code_ZEXT(dst,t,op1,dstSize).Ins?;
 
-
-    // assert  ValidRegOperand(lvm_s0, dst);
-    // assert ValidState(lvm_s0);
-    // var lvm_old_s:lvm_state := lvm_s0;
-    // assert evalCode_lax(lvm_Block(lvm_b0), lvm_s0, lvm_sN,dst);
-    // assert lvm_s0.ok;
-    // assert eval_code(lvm_Block(lvm_b0), lvm_s0, lvm_sN,dst);
     assert ValidInstruction(lvm_s0, lvm_code_ZEXT(dst,t,op1,dstSize).ins);
 
     ghost var lvm_ltmp1, lvm_cM:lvm_code, lvm_ltmp2 := lvm_lemma_block(lvm_b0, lvm_s0, lvm_sN,dst);
@@ -311,8 +321,78 @@ lemma lvm_lemma_Zext(lvm_b0:lvm_codes, lvm_s0:lvm_state, lvm_sN:lvm_state,
     // assert evalUpdate(lvm_s0, dst, evalADD(OperandContents(lvm_s0,dst).itype.size,OperandContents(lvm_s0,src1),OperandContents(lvm_s0,src2)),lvm_sM);
     // assert ValidData(lvm_sM,evalADD(OperandContents(lvm_s0,dst).itype.size,OperandContents(lvm_s0,src1),OperandContents(lvm_s0,src2)));
     // assert OperandContents(lvm_sM, dst).val == evalADD(OperandContents(lvm_s0,dst).itype.size,OperandContents(lvm_s0,src1),OperandContents(lvm_s0,src2)).val;
-    reveal_evalCodeOpaque();
+  assert lvm_sM.ok;
+  assert lvm_b0.tl == lvm_bM;
+
+  assert ValidState(lvm_sM);
+  assert evalCode_lax(lvm_cM, lvm_s0, lvm_sM,dst);
+  reveal_evalCodeOpaque();
 }
+
+
+function method{:opaque} lvm_code_SEXT(dst:lvm_operand_opr,t:bitWidth,op1:lvm_operand_opr,dstSize:bitWidth):(out:lvm_code)
+    ensures out.Ins?;
+{
+    reveal_IntFits();
+    Ins(SEXT(dst,t,op1,dstSize))
+}
+
+lemma lvm_lemma_Sext(lvm_b0:lvm_codes, lvm_s0:lvm_state, lvm_sN:lvm_state, 
+            dst:lvm_operand_opr, t:bitWidth,op1:lvm_operand_opr,dstSize:bitWidth)
+  returns (lvm_bM:lvm_codes, lvm_sM:lvm_state)
+
+  requires lvm_require(lvm_b0, lvm_code_SEXT(dst,t,op1,dstSize), lvm_s0, lvm_sN,dst)
+  requires lvm_is_dst_opr(dst, lvm_s0)
+  requires lvm_is_src_opr(op1, lvm_s0)
+  requires lvm_get_ok(lvm_s0)
+
+//   requires ValidInstruction(lvm_s0, lvm_code_ZEXT(dst,t,op1,dstSize).ins);
+  requires ValidOperand(lvm_s0,op1);
+  requires ValidOperand(lvm_s0,dst);
+  requires OperandContents(lvm_s0,op1).Int?;
+//   requires t == OperandContents(lvm_s0,op1).itype.size;
+  requires OperandContents(lvm_s0,op1).itype.size < dstSize;
+  requires OperandContents(lvm_s0,dst).Int?;
+//   requires !OperandContents(lvm_s0,dst).itype.signed;
+
+// //   
+  ensures  lvm_ensure(lvm_b0, lvm_bM, lvm_s0, lvm_sM, lvm_sN,dst)
+  ensures  lvm_get_ok(lvm_sM)
+  ensures  ValidOperand(lvm_sM,dst)
+  ensures  OperandContents(lvm_sM,dst).Int?;
+  ensures OperandContents(lvm_sM,dst).itype.signed;
+  ensures  OperandContents(lvm_sM,dst).itype.size == dstSize;
+  ensures OperandContents(lvm_sM, dst).val == evalSEXT(OperandContents(lvm_s0,op1),dstSize).val;
+  ensures  lvm_state_eq(lvm_sM, lvm_update_ok(lvm_sM, lvm_update_all( lvm_sM, lvm_s0)))
+
+{
+    reveal_lvm_code_SEXT();
+    reveal_evalCodeOpaque();
+    reveal_eval_code();
+    assert lvm_code_SEXT(dst,t,op1,dstSize).Ins?;
+
+    assert ValidInstruction(lvm_s0, lvm_code_SEXT(dst,t,op1,dstSize).ins);
+
+    ghost var lvm_ltmp1, lvm_cM:lvm_code, lvm_ltmp2 := lvm_lemma_block(lvm_b0, lvm_s0, lvm_sN,dst);
+    lvm_sM := lvm_ltmp1;
+    lvm_bM := lvm_ltmp2;
+    // assert lvm_b0.tl == lvm_bM;
+    assert ValidState(lvm_s0);
+    // assert lvm_s0.ok;
+    assert ValidState(lvm_sM);
+    // assert ValidOperand(lvm_sM,dst);
+    // assert evalIns(lvm_code_Add(dst, size,src1,src2).ins,lvm_s0,lvm_sM,dst);
+    // assert evalUpdate(lvm_s0, dst, evalADD(OperandContents(lvm_s0,dst).itype.size,OperandContents(lvm_s0,src1),OperandContents(lvm_s0,src2)),lvm_sM);
+    // assert ValidData(lvm_sM,evalADD(OperandContents(lvm_s0,dst).itype.size,OperandContents(lvm_s0,src1),OperandContents(lvm_s0,src2)));
+    // assert OperandContents(lvm_sM, dst).val == evalADD(OperandContents(lvm_s0,dst).itype.size,OperandContents(lvm_s0,src1),OperandContents(lvm_s0,src2)).val;
+  assert lvm_sM.ok;
+  assert lvm_b0.tl == lvm_bM;
+
+  assert ValidState(lvm_sM);
+  assert evalCode_lax(lvm_cM, lvm_s0, lvm_sM,dst);
+  reveal_evalCodeOpaque();
+}
+
 
 
 }

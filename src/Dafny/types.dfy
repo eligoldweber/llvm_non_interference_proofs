@@ -76,7 +76,7 @@ function  power2(exp: nat) : int
         2*power2(exp-1)
 }
 
-predicate validBitWidth(s:bitWidth)
+predicate validBitWidth(s:nat)
 {
     (s == 1 || s == 2 || s == 4 || s == 8)
 }
