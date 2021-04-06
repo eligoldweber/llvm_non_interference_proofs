@@ -1,9 +1,8 @@
 # llvm_model
 Dafny model of llvm semantics
 
-# NuBuild tool  -- Mac/Linux
-This guide will walk through building and verifying dafny files using the NuBuild tool on Mac or Linux Machines.
-You will need to make sure that Dafny and z3 are already downloaded, and will install Bazel by following these  instructions. 
+
+This README will walk through building and verifying dafny files using scons. [See the NuBuild Directory for instructions on building and using the NuBuild tool]
 
 
 # Setup

@@ -93,9 +93,9 @@ def recursive_glob(env, pattern, strings=False):
 ####################################################################
 
 source_to_args = [
-  ('.*src\/Dafny\/Libraries\/math\/[^\.]+nonlinear\.i\.dfy', dafny_args_nlarith),
-  ('.*src\/Dafny\/Libraries\/math\/[^\.]+auto[^\.]*\.i\.dfy', dafny_default_args),
-  ('.*src\/Dafny\/Libraries\/math\/mul\.i\.dfy', dafny_args_nlarith),
+  ('.*Dafny\/Libraries\/math\/[^\.]+nonlinear\.i\.dfy', dafny_args_nlarith),
+  ('.*Dafny\/Libraries\/math\/[^\.]+auto[^\.]*\.i\.dfy', dafny_default_args),
+  ('.*Dafny\/Libraries\/math\/mul\.i\.dfy', dafny_args_nlarith),
   ('.*\.dfy', dafny_default_args),
 ]
 
@@ -309,8 +309,8 @@ def run_directory(dir_name, dafny_files):
 
 
 if verify_root is None:
-  print("==> No .dfy root specified, verifying all .dfy files in src/Dafny/examples folder")
-  run_directory('src/Dafny/examples',["challengeProblem1Simplified",
+  print("==> No .dfy root specified, verifying all .dfy files in Dafny/examples folder")
+  run_directory('Dafny/examples',["challengeProblem1Simplified",
                                       "sextchallengeProblem1Simplified",
                                       "simple",
                                       "generalInstructions"])

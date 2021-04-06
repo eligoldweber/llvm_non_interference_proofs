@@ -1,7 +1,6 @@
-# llvm_model
-Dafny model of llvm semantics
+# [Deprecated tool for building and verifying]
 
-#[Deprecated tool for building and verifying]
+
 
 # NuBuild tool  -- Mac/Linux
 This guide will walk through building and verifying dafny files using the NuBuild tool on Mac or Linux Machines.

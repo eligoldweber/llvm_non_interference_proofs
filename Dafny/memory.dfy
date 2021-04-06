@@ -34,6 +34,11 @@ function UninitBlock(size:nat) : (b:Block)
     else UninitBlock(size - 1) + [muninit()]
 }
 
+predicate byteRangeIsValid(i:int,s:int)
+{
+    0 <= i < s
+}
+
 // Pointers and block indices can be valid/invalid depending on whether the
 // location exists in memory
 predicate IsValidBid(s:MemState, bid:nat) {
@@ -101,10 +106,11 @@ predicate Load(s:MemState, s':MemState, bid:nat, offset:nat, data:Data) {
         && (s' == s)
         && (data.Int? ==> offset % |bytes| == 0)
         && (offset + |bytes| <= |s.mem[bid]|)
-        && (forall i | 0 <= i < |bytes| :: (offset + i < |s.mem[bid]|))
-        && (forall i | 0 <= i < |bytes| :: s.mem[bid][offset + i].mb?)
+        && (forall i {:trigger byteRangeIsValid(i,|bytes|)} | 0 <= i < |bytes| :: (offset + i < |s.mem[bid]|))
+        && (forall i {:trigger byteRangeIsValid(i,|bytes|)} | 0 <= i < |bytes| :: s.mem[bid][offset + i].mb?)
         && validBitWidth(|bytes|)
 }
+
 
 // TODO: Support reading and writing more than one byte at a time
 predicate Store(s:MemState, s':MemState, bid:nat, offset:nat, data:Data)
