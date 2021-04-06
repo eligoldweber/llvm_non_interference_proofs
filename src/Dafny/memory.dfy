@@ -61,7 +61,7 @@ predicate ByteMemValid(b:Block, offset:nat)
     var cell := b[offset];
     lemma_mod_auto(offset);
     var align := offset - offset % cell.size;
-    forall i | align <= i < (align + cell.size) :: (i < |b| && b[i].mb? && b[i].size == cell.size)
+    forall i :: (align <= i < (align + cell.size) && i < |b| && i>=0) ==> (i < |b| && b[i].mb? && b[i].size == cell.size)
 }
 
 // A block is valid so long as its stored bytes are well-formed; that is, numbers

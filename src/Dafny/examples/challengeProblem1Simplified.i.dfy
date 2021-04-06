@@ -1,11 +1,15 @@
 include "../llvm.i.dfy"
 include "../control_flow.i.dfy"
 include "generalInstructions.i.dfy"
+include "../types.dfy"
+include "../memory.dfy"
 
 module challenge_problem_1_simplified {
     import opened LLVM_def
     import opened control_flow
     import opened general_instructions
+    import opened types
+    import opened memory
 
 // ; Function Attrs: norecurse nounwind readonly ssp uwtable
 // define i32 @rx_message_routine(i8* nocapture readonly %0) local_unnamed_addr #1 {
@@ -151,9 +155,9 @@ lemma lvm_lemma_simple_challenge1(lvm_b0:lvm_codes, lvm_s0:lvm_state, lvm_sN:lvm
 // }
 
 function method{:opaque} lvm_simple_challenge1_cont(dst:lvm_operand_opr,s:MemState,t:bitWidth,op1:lvm_operand_opr,op2:lvm_operand_opr):lvm_code
-requires op1.D?;
-requires op1.d.Ptr?;
-requires IsValidBid(s,op1.d.bid) ==> op1.d.offset + ((Int(2,IntType(8,false))).val * 1) < |s.mem[op1.d.bid]|;
+// requires op1.D?;
+// requires op1.d.Ptr?;
+// requires IsValidBid(s,op1.d.bid) ==> op1.d.offset + ((Int(2,IntType(8,false))).val * 1) < |s.mem[op1.d.bid]|;
 // requires exists d:Data :: Load(lvm_s2.m,lvm_sM.m,OperandContents(lvm_s2,dst).bid,OperandContents(lvm_s2,dst).offset,d);
 
 {
@@ -162,11 +166,12 @@ requires IsValidBid(s,op1.d.bid) ==> op1.d.offset + ((Int(2,IntType(8,false))).v
     var void := D(Void);
     var ptrVar:lvm_operand_opr := D(Void);
     var index := D(Int(2,IntType(8,false)));
-
     var largetest := D(Int(4294967295,IntType(4,false)));
 
-    lvm_Block(lvm_CCons(Ins(GETELEMENTPTR(dst,1,op1,index)),
-              lvm_CCons(Ins(LOAD(dst,s,1,dst)),
+    var var_2:lvm_operand_opr := dst;
+
+    lvm_Block(lvm_CCons(Ins(GETELEMENTPTR(var_2,1,op1,index)),
+              lvm_CCons(Ins(LOAD(dst,s,1,var_2)),
               lvm_CCons(Ins(ZEXT(dst,t,dst,4)),
               lvm_CCons(Ins(ADD(dst,4,dst,largetest)),
               lvm_CCons(Ins(RET(void)),lvm_CNil()))))))
@@ -243,7 +248,7 @@ requires IsValidBid(lvm_s0.m,op1.d.bid) ==> op1.d.offset + ((Int(2,IntType(8,fal
       // var lvm_old_s:lvm_state := lvm_s0;
   // assert evalCode(Ins(getelementins), lvm_s0, lvm_sN,dst);
   assert lvm_s0.ok;
-  assert dst == getelementins.dst;
+  // assert dst == getelementins.dst;
   var getPtr := D(evalGETELEMENTPTR(lvm_s0.m,t,OperandContents(lvm_s0,getelementins.op1),OperandContents(lvm_s0,getelementins.op2)));
   // assert getPtr.Ptr?;
   // assert IsValidPtr(lvm_s0.m,getPtr.bid,getPtr.offset);
@@ -272,23 +277,24 @@ requires IsValidBid(lvm_s0.m,op1.d.bid) ==> op1.d.offset + ((Int(2,IntType(8,fal
   assert lvm_b1.tl.lvm_CCons?;
   assert lvm_b1.tl.hd.Ins?;
   assert lvm_b1.tl.hd.ins.LOAD?;
-  assert lvm_b1.hd == Ins(GETELEMENTPTR(dst,1,op1,D(Int(2,IntType(8,false)))));
+  var var_2:lvm_operand_opr := dst;
+  assert lvm_b1.hd == Ins(GETELEMENTPTR(var_2,1,op1,D(Int(2,IntType(8,false)))));
   assert lvm_sM == lvm_s0;
   // ghost var lvm_ltmp3, lvm_b2, lvm_s2 := lvm_lemma_block(lvm_b1, lvm_s0, lvm_sM, dst);
-  ghost var lvm_b2, lvm_s2 := lvm_lemma_GetElementPtr(lvm_b1, lvm_s0, lvm_sM, dst, s,1,op1,D(Int(2,IntType(8,false))));
-  assert OperandContents(lvm_s2, dst) 
+  ghost var lvm_b2, lvm_s2 := lvm_lemma_GetElementPtr(lvm_b1, lvm_s0, lvm_sM, var_2, s,1,op1,D(Int(2,IntType(8,false))));
+  assert OperandContents(lvm_s2, var_2) 
         == evalGETELEMENTPTR(lvm_s0.m,1,OperandContents(lvm_s0,op1),Int(2,IntType(8,false)));
   // assert lvm_sM.ok;
   assert lvm_b2.hd.Ins?;
   assert lvm_b2.hd.ins.LOAD?;
-  assert lvm_b2.hd.ins == LOAD(dst,lvm_s0.m,1,dst);
+  assert lvm_b2.hd.ins == LOAD(dst,lvm_s0.m,1,var_2);
   assert lvm_s0.m == lvm_s2.m;
-  assert IsValidBid(lvm_s2.m,OperandContents(lvm_s2,dst).bid);
-  assert IsValidPtr(lvm_s2.m,OperandContents(lvm_s2,dst).bid,OperandContents(lvm_s2,op1).offset);
+  assert IsValidBid(lvm_s2.m,OperandContents(lvm_s2,var_2).bid);
+  assert IsValidPtr(lvm_s2.m,OperandContents(lvm_s2,var_2).bid,OperandContents(lvm_s2,op1).offset);
   assert lvm_s2.m == lvm_sM.m;
   // assert exists d:Data :: Load(lvm_s2.m,lvm_sM.m,OperandContents(lvm_s2,dst).bid,OperandContents(lvm_s2,dst).offset,d);
 
-  ghost var lvm_b3, lvm_s3 := lvm_lemma_Load(lvm_b2, lvm_s2, lvm_sM, dst,1,dst);
+  ghost var lvm_b3, lvm_s3 := lvm_lemma_Load(lvm_b2, lvm_s2, lvm_sM, dst,1,var_2);
   assert !OperandContents(lvm_s3,dst).Ptr?;
   if (OperandContents(lvm_s3,dst).Void?) { // Load failed
     lvm_sM := lvm_s3;

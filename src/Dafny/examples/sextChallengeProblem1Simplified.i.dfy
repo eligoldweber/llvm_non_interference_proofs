@@ -1,12 +1,17 @@
 include "../llvm.i.dfy"
 include "../control_flow.i.dfy"
 include "generalInstructions.i.dfy"
+include "../types.dfy"
+include "../memory.dfy"
+include "../Operations/binaryOperations.i.dfy"
 
 module sext_challenge_problem_1_simplified {
     import opened LLVM_def
     import opened control_flow
     import opened general_instructions
-
+    import opened types
+    import opened memory
+    import opened binary_operations_i
 
 // ----*****-----
 // ; Function Attrs: norecurse nounwind readonly ssp uwtable
@@ -68,7 +73,7 @@ requires IsValidBid(lvm_s0.m,op1.d.bid) ==> op1.d.offset + ((Int(2,IntType(8,fal
   // ensures  OperandContents(lvm_sM, dst) == evalGETELEMENTPTR(lvm_s0.m,1,OperandContents(lvm_s0,op1),Int(2,IntType(8,false)));
   ensures  !OperandContents(lvm_sM, dst).Void? ==> OperandContents(lvm_sM, dst).Int?;
   ensures  !OperandContents(lvm_sM, dst).Void? ==> OperandContents(lvm_sM, dst).itype.size == 4;
-//   ensures  !OperandContents(lvm_sM, dst).Void? ==> OperandContents(lvm_sM, dst).val < 0x1_0000_0000;
+  ensures  !OperandContents(lvm_sM, dst).Void? ==> OperandContents(lvm_sM, dst).val < 0;
   ensures  !OperandContents(lvm_sM, dst).Void? ==> OperandContents(lvm_sM, dst).itype.signed;
 
 
@@ -203,7 +208,7 @@ requires IsValidBid(lvm_s0.m,op1.d.bid) ==> op1.d.offset + ((Int(2,IntType(8,fal
         // assert OperandContents(lvm_s5, dst).val >= 2147483647;
         assert ToTwosComp(OperandContents(lvm_s5, dst)).val == 
           (OperandContents(lvm_s4, dst).val + OperandContents(lvm_s4, largetest).val) % Pow256(OperandContents(lvm_s4, dst).itype.size);
-
+    // assert OperandContents(lvm_s5, dst).val < 0;
     ghost var lvm_b6, lvm_s6 := lvm_lemma_Ret(lvm_b5, lvm_s5, lvm_sM, dst, D(Void));
 
     lvm_sM := lvm_lemma_empty(lvm_s6,lvm_sM);
@@ -211,6 +216,7 @@ requires IsValidBid(lvm_s0.m,op1.d.bid) ==> op1.d.offset + ((Int(2,IntType(8,fal
 
     assert ValidState(lvm_sM);
     // lvm_sM := lvm_lemma_empty(lvm_s2,lvm_sM);
+    assert OperandContents(lvm_sM, dst).val < 0;
 
     assert evalCode_lax(lvm_cM, lvm_s0, lvm_sM,dst);
     reveal_evalCodeOpaque();

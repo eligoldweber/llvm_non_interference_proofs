@@ -1,2 +1,6 @@
 *.dll
 *.dll.mdb
+*.vdfy
+*.tmp
+tools/NuBuild/*
+nubuild*

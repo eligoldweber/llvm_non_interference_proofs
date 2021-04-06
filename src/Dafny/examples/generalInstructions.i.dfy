@@ -1,10 +1,17 @@
 include "../llvm.i.dfy"
 include "../control_flow.i.dfy"
+include "../types.dfy"
+include "../memory.dfy"
+include "../Operations/binaryOperations.i.dfy"
+include "../Operations/conversionOperations.i.dfy"
 
 module general_instructions {
     import opened LLVM_def
     import opened control_flow
-
+    import opened types
+    import opened memory
+    import opened binary_operations_i
+    import opened conversion_operations_i
 
 function method{:opaque}lvm_code_Add(dst:lvm_operand_opr, size:nat, src1:lvm_operand_opr,src2:lvm_operand_opr):lvm_code
 
@@ -156,7 +163,7 @@ lemma lvm_lemma_Ret(lvm_b0:lvm_codes, lvm_s0:lvm_state, lvm_sN:lvm_state,dst:lvm
 //   
   ensures  lvm_ensure(lvm_b0, lvm_bM, lvm_s0, lvm_sM, lvm_sN,dst)
   ensures  lvm_get_ok(lvm_sM)
-
+  ensures lvm_s0 == lvm_sM
   ensures  lvm_state_eq(lvm_sM,  lvm_s0)
 {
   reveal_lvm_RET();

@@ -228,7 +228,7 @@ function {:opaque} ExtendZeroBytes(src:Bytes,dst:nat) : (bytes:Bytes)
 }
 
 // outputs Byte seq of length s with all values eqaul to 0
-function {:opaque} zeroArray(s:nat) : (bytes:Bytes)
+function {:opaque} zeroArray(s:nat) : (bytes:seq<Byte>)
     requires s >= 0
     ensures |bytes| == s
     ensures forall b :: b in bytes ==> b == 0;
@@ -237,6 +237,33 @@ function {:opaque} zeroArray(s:nat) : (bytes:Bytes)
     if s == 0 then []
     else  [0] + zeroArray(s-1) 
 }
+
+// lemma BytesAssociate(src1:Bytes,src2:Bytes)
+//     requires forall i :: i >=0 && i < |src2| ==> src2[i] == 0
+//     requires validBitWidth(|src1|)
+//     requires validBitWidth(|src2|)
+//     requires validBitWidth(|src1| + |src2|)
+//     ensures IntFromBytes(src1,IntType(|src1|, false)).val == IntFromBytes(src1+src2,IntType(|src1|+|src2|, false)).val
+//     {
+//         reveal_IntFromBytes();
+//         Zero_lemma();
+//         assert IntFromBytes(src1,IntType(|src1|, false)).val + 0 == IntFromBytes(src1,IntType(|src1|, false)).val;
+//         ZeroBytes(src2);
+//         assert IntFromBytes(src2,IntType(|src2|, false)).val == 0;
+//         assert IntFromBytes(src1,IntType(|src1|, false)).val == IntFromBytes(src2+src1,IntType(|src1|+|src2|, false)).val;
+//     }
+
+// lemma ZeroBytes(src:Bytes)
+//     requires |src| > 0
+//     requires forall i :: i >=0 && i < |src| ==> src[i] == 0
+//     ensures RecurseIntFromBytes(src) == 0;
+//     {
+//         reveal_RecurseIntFromBytes();
+//         assert src[0] as nat == 0;
+//     }
+// lemma Zero_lemma(){
+//     assert forall n:int :: n+0 == n;
+// }
 
 // Signed Byte extension to size dst
 function {:opaque} ExtendSignedBytes(src:Bytes,dst:nat) : (bytes:Bytes)
@@ -249,7 +276,7 @@ function {:opaque} ExtendSignedBytes(src:Bytes,dst:nat) : (bytes:Bytes)
 }
 
 // outputs Byte seq of length s with all values eqaul to 1
-function {:opaque} oneArray(s:nat) : (bytes:Bytes)
+function {:opaque} oneArray(s:nat) : (bytes:seq<Byte>)
     requires s >= 0
     ensures |bytes| == s
     ensures forall b :: b in bytes ==> b == 1;
@@ -260,8 +287,9 @@ function {:opaque} oneArray(s:nat) : (bytes:Bytes)
 }
 
 // Truncates Bytes seq to size s
-function {:opaque} TruncateBytes(b:Bytes,s:nat) : (bytes:Bytes)
+function {:opaque} TruncateBytes(b:Bytes,s:nat) : (bytes:seq<Byte>)
     requires s >= 0
+    requires |b| > 0
     ensures |bytes| == s
     decreases s
 {

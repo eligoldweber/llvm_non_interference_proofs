@@ -1,8 +1,12 @@
 include "llvm.i.dfy"
+include "types.dfy"
+include "memory.dfy"
 
 // Adapted from Vale
 module control_flow {
     import opened LLVM_def
+    import opened types
+    import opened memory
 
 predicate{:opaque} evalCodeOpaque(c:code, s0:state, sN:state,o:operand) 
     { evalCode(c, s0, sN,o) }
@@ -39,13 +43,25 @@ predicate {:opaque} eval_code(c:code, s:state, r:state, o:operand)
 }
 
 
+// lemma lvm_lemma_empty(s0:state, sN:state) returns(sM:state)
+//     // requires evalCode_lax(lvm_Block(lvm_CNil()), s0, sN, void_Operand())
+//         requires exists o:operand :: evalCode_lax(lvm_Block(lvm_CNil()), s0, sN, o)
+
+//     ensures  s0 == sM
+//     ensures  s0.ok ==> s0 == sN
+// {
+//     reveal_evalCodeOpaque();
+//     sM := s0;
+// }
+
 lemma lvm_lemma_empty(s0:state, sN:state) returns(sM:state)
     // requires evalCode_lax(lvm_Block(lvm_CNil()), s0, sN, void_Operand())
-        requires exists o:operand :: evalCode_lax(lvm_Block(lvm_CNil()), s0, sN, o)
-
-    ensures  s0 == sM
-    ensures  s0.ok ==> s0 == sN
+    requires exists o:operand :: eval_code(lvm_Block(lvm_CNil()), s0, sN, o)
+    ensures  s0.ok ==> sN.ok
+    ensures  sM == s0
+    ensures  s0.ok ==> sN == s0
 {
+    reveal_eval_code();
     reveal_evalCodeOpaque();
     sM := s0;
 }

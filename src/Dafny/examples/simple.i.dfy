@@ -1,22 +1,28 @@
 include "../llvm.i.dfy"
 include "../control_flow.i.dfy"
 include "generalInstructions.i.dfy"
+include "../types.dfy"
+include "../memory.dfy"
+include "../Operations/binaryOperations.i.dfy"
 
 
 module simple_functions {
     import opened LLVM_def
     import opened control_flow
     import opened general_instructions
+    import opened types
+    import opened memory
+    import opened binary_operations_i
 
 
-function method{:opaque} lvm_code_Empty_Test():lvm_code
+function method{:opaque} lvm_code_Empty():lvm_code
 {   
     lvm_Block(lvm_CNil())
 }       
 
 lemma lvm_lemma_Empty_Test(lvm_b0:lvm_codes, lvm_s0:lvm_state, lvm_sN:lvm_state, src:lvm_operand_opr,o:operand)
   returns (lvm_bM:lvm_codes, lvm_sM:lvm_state)
-  requires lvm_require(lvm_b0, lvm_code_Empty_Test(), lvm_s0, lvm_sN,o)
+  requires lvm_require(lvm_b0, lvm_code_Empty(), lvm_s0, lvm_sN,o)
   requires lvm_is_src_opr(src, lvm_s0)
   requires lvm_get_ok(lvm_s0)
   ensures  lvm_ensure(lvm_b0, lvm_bM, lvm_s0, lvm_sM, lvm_sN,o)
@@ -25,15 +31,17 @@ lemma lvm_lemma_Empty_Test(lvm_b0:lvm_codes, lvm_s0:lvm_state, lvm_sN:lvm_state,
   ensures  lvm_state_eq(lvm_sM, lvm_update_mem( lvm_sM, lvm_update_ok(lvm_sM, lvm_sM)))
   ensures  forall s2 :: evalCode(lvm_b0.hd, lvm_s0, s2,o) ==> s2.ok
 {
-    reveal_lvm_code_Empty_Test();
+    reveal_lvm_code_Empty();
     reveal_eval_code();
+    reveal_evalCodeOpaque();
+
     var lvm_old_s:lvm_state := lvm_s0;
 
     assert lvm_s0.ok;
-    assert lvm_code_Empty_Test() == Block(CNil);
-    assert lvm_b0.hd == lvm_code_Empty_Test();
+    assert lvm_code_Empty() == Block(CNil);
+    assert lvm_b0.hd == lvm_code_Empty();
     assert !lvm_b0.CNil?;
-    assert lvm_code_Empty_Test().block.CNil?;
+    assert lvm_code_Empty().block.CNil?;
     assert lvm_b0.hd.Block?;
     assert lvm_get_block(lvm_b0.hd).CNil?;
     assert evalBlock(lvm_get_block(lvm_b0.hd),lvm_s0, lvm_s0,o);
@@ -43,12 +51,12 @@ lemma lvm_lemma_Empty_Test(lvm_b0:lvm_codes, lvm_s0:lvm_state, lvm_sN:lvm_state,
     assert evalBlock(lvm_b0, lvm_s0, lvm_sN,o) ==> exists r' :: evalCode(lvm_b0.hd, lvm_s0, r',o) && evalBlock(lvm_b0.tl, r', lvm_sN,o);
     assert exists r' :: if evalCode(lvm_b0.hd, lvm_s0, r',o) then true else true;
 
-
-    ghost var lvm_ltmp1, lvm_cM:lvm_code, lvm_ltmp2 := lvm_lemma_block_lax(lvm_b0, lvm_s0, lvm_sN,o);
+    // lvm_sM := lvm_lemma_empty(lvm_s0,lvm_sN);
+    ghost var lvm_ltmp1, lvm_cM:lvm_code, lvm_ltmp2 := lvm_lemma_block(lvm_b0, lvm_s0, lvm_sN,o);
     lvm_sM := lvm_ltmp1;
     lvm_bM := lvm_ltmp2;
     var lvm_b1:lvm_codes := lvm_get_block(lvm_cM);
-    assert evalCode_lax(lvm_Block(lvm_CNil()), lvm_s0, lvm_sM, o);
+    // assert evalCode_lax(lvm_Block(lvm_CNil()), lvm_s0, lvm_sM, o);
 
     lvm_sM := lvm_lemma_empty(lvm_s0, lvm_sM);
 }
@@ -344,6 +352,7 @@ lemma lvm_lemma_Add_Multiple1(lvm_b0:lvm_codes, lvm_s0:lvm_state, lvm_sN:lvm_sta
 
       assert evalBlock(lvm_b1,lvm_s0, lvm_sM,dst);
       assert evalCode(lvm_Block(lvm_b1), lvm_s0, lvm_sM,dst);
+      assert  exists r' ::  evalCode(lvm_b1.hd, lvm_s0, r',dst);
       assert  exists r' ::  evalIns(lvm_b1.hd.ins, lvm_s0, r',dst); // ???  
 
     var val2 := D(Int(5,src2.d.itype));
