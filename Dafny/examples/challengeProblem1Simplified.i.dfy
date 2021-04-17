@@ -133,6 +133,7 @@ lemma lvm_lemma_simple_challenge1(lvm_b0:lvm_codes, lvm_s0:lvm_state, lvm_sN:lvm
   assert lvm_b2.hd.ins == RET(D(Void));
   
   ghost var lvm_b3, lvm_s3 := lvm_lemma_Ret(lvm_b2, lvm_s2, lvm_sM, dst, D(Void));
+  assert eval_code(lvm_Block(lvm_b3), lvm_s3, lvm_sM,dst);
 
   lvm_sM := lvm_lemma_empty(lvm_s3,lvm_sM);
 
@@ -336,6 +337,7 @@ requires IsValidBid(lvm_s0.m,op1.d.bid) ==> op1.d.offset + ((Int(2,IntType(8,fal
 
 
     ghost var lvm_b6, lvm_s6 := lvm_lemma_Ret(lvm_b5, lvm_s5, lvm_sM, dst, D(Void));
+      assert eval_code(lvm_Block(lvm_b6), lvm_s6, lvm_sM,dst);
 
     lvm_sM := lvm_lemma_empty(lvm_s6,lvm_sM);
     assert OperandContents(lvm_sM, dst).Int?;

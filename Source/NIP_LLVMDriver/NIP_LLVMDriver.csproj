@@ -1,6 +1,10 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
 
+  <ItemGroup>
+    <ProjectReference Include="..\NIP_LLVM\pipeline.csproj" />
+  </ItemGroup>
+
   <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Debug|net5.0|AnyCPU'">
     <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
     <AppendRuntimeIdentifierToOutputPath>false</AppendRuntimeIdentifierToOutputPath>

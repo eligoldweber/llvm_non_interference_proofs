@@ -3,3 +3,5 @@
 *.vdfy
 *.tmp
 
+Source/*/bin/
+Source/*/obj/

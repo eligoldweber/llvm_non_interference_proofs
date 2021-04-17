@@ -154,6 +154,7 @@ lemma lvm_lemma_block_lax(b0:lvm_codes, s0:state, sN:state,o:operand)
     ensures  b0 == lvm_CCons(c1, b1)
     ensures  evalCode_lax(c1, s0, s1,o)
     ensures  evalCode_lax(lvm_Block(b1), s1, sN,o)
+    // ensures StateNext(s0,s1)
 {
     reveal_evalCodeOpaque();
     c1 := b0.hd;
@@ -228,6 +229,7 @@ type lvm_code = code
 type lvm_codes = codes
 type lvm_state = state
 type lvm_operand_opr = operand
+type lvm_data = Data
 
 function lvm_get_ok(s:lvm_state):bool { ValidState(s) }
 predicate lvm_is_src_opr(o:operand, s:lvm_state) { true }

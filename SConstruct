@@ -40,8 +40,17 @@ AddOption('--verify-root',
   action='store',
   help='Optionally specify a .dfy file to verify (along with all dependencies)')
 
+AddOption('--no-trace',
+  dest='no_trace',
+  type='int',
+  default=0,
+  action='store',
+  help='Optionally remove /trace from dafny command line parameters :: set --no-trace=1 to remove')
+
 verify_root = GetOption('verify_root')
 dafny_path = GetOption('dafny_path')
+no_trace = GetOption('no_trace')
+
 if dafny_path is None:
   sys.stderr.write("ERROR:  Missing --dafny-path on command line\n")
   exit(-1)
@@ -63,10 +72,15 @@ else:
 
 # Useful Dafny command lines
 dafny_basic_args = ['/compile:0', '/timeLimit:' + str(GetOption('time_limit')), '/trace']
+dafny_basic_args_no_trace = ['/compile:0', '/timeLimit:' + str(GetOption('time_limit'))]
 dafny_default_args = dafny_basic_args + ['/arith:5', '/noCheating:1']
+dafny_default_args_no_trace = dafny_basic_args_no_trace + ['/arith:5', '/noCheating:1']
 dafny_args_nlarith = dafny_basic_args + ['/arith:2', '/noCheating:1']
 dafny_spec_args = dafny_basic_args
 
+#change default args to remove /trace depending on command line argument
+if no_trace == 1:
+  dafny_default_args = dafny_default_args_no_trace
 ####################################################################
 #
 #   General routines
@@ -313,7 +327,8 @@ if verify_root is None:
   run_directory('Dafny/examples',["challengeProblem1Simplified",
                                       "sextchallengeProblem1Simplified",
                                       "simple",
-                                      "generalInstructions"])
+                                      "generalInstructions",
+                                      "demoChallengeProb1"])
 else:
   verify_dafny_file(str(GetOption('verify_root')))
 

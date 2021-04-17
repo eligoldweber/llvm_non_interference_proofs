@@ -81,6 +81,12 @@ predicate MemValid(s:MemState) {
     && (forall bid | bid in s.mem :: BlockValid(s.mem[bid]))
 }
 
+// predicate MemStateNext(s:MemState,s':MemState)
+// {
+//     MemValid(s)
+//     && MemValid(s')
+//     && 
+// }
 // When a new block is allocated, all the previous blocks should remain the same,
 // and an unininitialized block of the appropriate size should be added with block
 // nextBlock

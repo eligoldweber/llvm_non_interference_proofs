@@ -113,6 +113,13 @@ module LLVM_def {
         && s.ok
     }
 
+    predicate StateNext(s:state,s':state)
+    {
+        ValidState(s)
+        && ValidState(s')
+        && exists ins,o :: (ValidInstruction(s,ins) && evalIns(ins, s, s',o))
+    }
+
     predicate ValidOperand(s:state,o:operand)
     {
         reveal_ValidData();
@@ -145,7 +152,7 @@ module LLVM_def {
                                             && ValidOperand(s,src1) && ValidOperand(s,src2) 
                                             && t == OperandContents(s,src1).itype.size
                                             && typesMatch(OperandContents(s,src1),OperandContents(s,src2))
-            case RET(val) => ValidOperand(s,val)
+            case RET(val) => && ValidOperand(s,val)//&& ValidOperand(s,dst) 
             case ZEXT(dst,t,src,dstSize) => && ValidOperand(s,dst) && ValidOperand(s,src) && isInt(OperandContents(s,src))
                                             // && t == OperandContents(s,src).itype.size
                                             // && t < dstSize
@@ -157,7 +164,6 @@ module LLVM_def {
                                             && isInt(OperandContents(s,dst)) && isInt(OperandContents(s,src)) && isInt(OperandContents(s,shiftAmt))
                                             && OperandContents(s,src).itype.size*8 > OperandContents(s,shiftAmt).val
                                             && OperandContents(s,shiftAmt).val > 0
-                                            && isInt(OperandContents(s,dst)) 
                                             && OperandContents(s,dst).itype.signed == OperandContents(s,src).itype.signed
             
             case LSHR(dst,src,shiftAmt) =>  && ValidOperand(s,dst) && ValidOperand(s,src) && ValidOperand(s,shiftAmt)
@@ -250,6 +256,21 @@ module LLVM_def {
             case LV(l) => r == s.(lvs := s.lvs[l := d])
     }
 
+    predicate evalRet(s:state, o:operand, data:Data, r:state)
+        requires ValidState(s)
+        requires ValidRegOperand(s,o)
+        requires ValidData(r,data)
+        // ensures !data.Void? ==> evalUpdate(s,o,data,r)
+    {
+        reveal_ValidData();
+        if data.Void? then 
+            && s == r 
+            // && OperandContents(s, o) == OperandContents(r, o)
+        else evalUpdate(s,o,data,r)
+    }
+
+    // lemma equalStatesEqualOperands(s:state, s':state, o:operand)
+    //     requires ValidState(s)
     predicate evalIns(ins:ins, s:state, r:state,o:operand)
     {   
         if !s.ok || !ValidInstruction(s, ins) then !r.ok
@@ -270,7 +291,11 @@ module LLVM_def {
             case ICMP(dst,cond,t,src1,src2) => o == dst 
                                 && ValidData(r,evalICMP(cond,t,OperandContents(s,src1),OperandContents(s,src2)))
                                 && evalUpdate(s, dst, evalICMP(cond,t,OperandContents(s,src1),OperandContents(s,src2)),r)
-            case RET(val) => o == val && ValidState(r) && r == s
+            case RET(val) => ValidState(r) && 
+                    if OperandContents(s,val).Void? then r == s
+                    else o == val  && evalUpdate(s, o, OperandContents(s,val),r)// && r == s
+            // case RET(dst, val) => && ValidData(r,OperandContents(s,val)) 
+            //                       && if OperandContents(s,val).Void? then s == r else evalUpdate(s, dst, OperandContents(s,val),r)//evalRet(s,dst,OperandContents(s,val),r)// o == val && ValidState(r) //&& r == s
             case BR(cond, labelTrue,labelFalse) => evalIfElse(cond,labelTrue,labelFalse,s,r,o)&& ValidState(r)
             case SHL(dst,src,shiftAmt) =>o == dst
                                 && ValidData(r,evalSHL(OperandContents(s,src),OperandContents(s,shiftAmt)))

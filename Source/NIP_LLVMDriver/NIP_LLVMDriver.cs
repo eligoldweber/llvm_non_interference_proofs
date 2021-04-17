@@ -5,14 +5,22 @@ using System.Diagnostics.Contracts;
 using System.IO;
 using System.Linq;
 
-public class DafnyDriver
-  {
 
-    public static int Main(string[] args)
+namespace NIP.LLVM
+{
+    
+  public class DafnyDriver
     {
-      Console.WriteLine("Starting NIP_LLVM");
-      int ret = 0;
-      return ret;
+
+      public static int Main(string[] args)
+      {
+        Console.WriteLine("Starting NIP_LLVM");
+        DafnyFile d = new DafnyFile("../../Dafny/memory.dfy");
+        Console.WriteLine("memory is valid Dafny File : " + d.SourceFileName);
+        int ret = 0;
+        return ret;
+      }
+
     }
 
-  }
+}
