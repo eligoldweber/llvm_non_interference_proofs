@@ -59,7 +59,7 @@ lemma lvm_lemma_simple_challenge1(lvm_b0:lvm_codes, lvm_s0:lvm_state, lvm_sN:lvm
   ensures  lvm_state_eq(lvm_sM, lvm_update_ok(lvm_sM, lvm_update_mem( lvm_sM, lvm_s0)))
 {
   reveal_lvm_simple_challenge1();
-  reveal_lvm_RET();
+  reveal_lvm_code_Ret();
   reveal_ValidData();
   reveal_evalCodeOpaque();
   reveal_lvm_code_GetElementPtr();
@@ -213,7 +213,7 @@ requires IsValidBid(lvm_s0.m,op1.d.bid) ==> op1.d.offset + ((Int(2,IntType(8,fal
   ensures  !OperandContents(lvm_sM, dst).Void? ==> lvm_state_eq(lvm_sM, lvm_update_ok(lvm_sM, lvm_update_mem( lvm_sM, lvm_s0)))
 {
   reveal_lvm_simple_challenge1_cont();
-  reveal_lvm_RET();
+  reveal_lvm_code_Ret();
   reveal_lvm_LOAD();
   reveal_lvm_code_Add();
   reveal_lvm_code_ZEXT();
