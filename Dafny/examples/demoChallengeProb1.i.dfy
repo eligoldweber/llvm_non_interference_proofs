@@ -104,13 +104,16 @@ function {:opaque} demo_challenge_prob_1_code(dst:lvm_operand_opr,s:MemState,t:b
 
     // var var_index2:lvm_operand_opr :| var_index2 == dst;
 
-    lvm_Block(lvm_CCons(Ins(GETELEMENTPTR(var_5,1,op1,index3)),                   // %5 = getelementptr inbounds i8, i8* %0, i64 3
+    lvm_Block(lvm_CCons(Ins(GETELEMENTPTR(var_5,1,op1,index3)),                  // %5 = getelementptr inbounds i8, i8* %0, i64 3
               lvm_CCons(Ins(LOAD(var_6,s,1,var_5)),                              // %6 = load i8, i8* %2, align 1, !tbaa !4
               lvm_CCons(Ins(ZEXT(var_7,t,var_6,4)),                              // %7 = zext i8 %3 to i32
               lvm_CCons(Ins(SHL(var_8,var_7,shl_amount)),                        // %8 = shl i32 %7, 8
-              lvm_CCons(Ins(GETELEMENTPTR(var_index2,1,op2,index2)),
-              lvm_CCons(Ins(ICMP(comp,sgt,4,var_8,D(Int(0,IntType(4,false))))), // %17 = icmp sgt i32 %16, 0 
-              lvm_CCons(Ins(RET(void)),lvm_CNil()))))))))                       //  ret void
+              lvm_CCons(Ins(GETELEMENTPTR(var_index2,1,op2,index2)),             // %10 = getelementptr inbounds i8, i8* %0, i64 2
+              lvm_CCons(Ins(LOAD(var_index2,s,1,var_index2)),                    // %11 = load i8, i8* %10, align 1
+              lvm_CCons(Ins(ZEXT(var_index2,t,var_index2,4)),                    // %12 = zext i8 %11 to i32
+              lvm_CCons(Ins(ADD(dst,4,var_8,var_index2)),                        // %13 = add nsw i32 %8, %12
+              lvm_CCons(Ins(ICMP(comp,sgt,4,var_8,D(Int(0,IntType(4,false))))),  // %17 = icmp sgt i32 %16, 0 
+              lvm_CCons(Ins(RET(void)),lvm_CNil())))))))))))                     // ret void
 
 }
 
@@ -144,7 +147,7 @@ lemma lvm_demo_challenge_prob_1(lvm_b0:lvm_codes, lvm_s0:lvm_state, lvm_sN:lvm_s
 //   
 
   ensures ValidOperand(lvm_sM,dst)
-  // ensures ValidOperand(lvm_sM, var_5)
+  ensures ValidOperand(lvm_sM, var_index2)
 
   ensures  lvm_get_ok(lvm_sM)
 
@@ -153,8 +156,8 @@ lemma lvm_demo_challenge_prob_1(lvm_b0:lvm_codes, lvm_s0:lvm_state, lvm_sN:lvm_s
   ensures  !OperandContents(lvm_sM, dst).Void? ==> OperandContents(lvm_sM, dst).val < 0x1_0000_0000;
   ensures  !OperandContents(lvm_sM, dst).Void? ==> OperandContents(lvm_sM, dst).val >= 0;
 
-  ensures  !OperandContents(lvm_sM, dst).Void? ==> lvm_state_eq(lvm_sM, lvm_update_ok(lvm_sM, lvm_update_mem( lvm_sM, lvm_s0)))
-  ensures  !OperandContents(lvm_sM, dst).Void? ==> lvm_ensure(lvm_b0, lvm_bM, lvm_s0, lvm_sM, lvm_sN)
+  ensures  (!OperandContents(lvm_sM, dst).Void? && !OperandContents(lvm_sM, var_index2).Void?) ==> lvm_state_eq(lvm_sM, lvm_update_ok(lvm_sM, lvm_update_mem( lvm_sM, lvm_s0)))
+  ensures  (!OperandContents(lvm_sM, dst).Void? && !OperandContents(lvm_sM, var_index2).Void?) ==> lvm_ensure(lvm_b0, lvm_bM, lvm_s0, lvm_sM, lvm_sN)
 
 {
   reveal_demo_challenge_prob_1_code();
@@ -215,7 +218,7 @@ lemma lvm_demo_challenge_prob_1(lvm_b0:lvm_codes, lvm_s0:lvm_state, lvm_sN:lvm_s
     lvm_sM := lvm_s3;
     assert OperandContents(lvm_sM, dst).Void?;
     return;
-  }else{
+  }
     assert OperandContents(lvm_s3,dst).Int? || OperandContents(lvm_s3,dst).Bytes?;
     assert lvm_b3.hd.Ins?;
     assert lvm_b3.hd.ins.ZEXT?;
@@ -269,7 +272,7 @@ lemma lvm_demo_challenge_prob_1(lvm_b0:lvm_codes, lvm_s0:lvm_state, lvm_sN:lvm_s
     assert lvm_s5.ok;
     assert lvm_b5.lvm_CCons?;
     assert ValidState(lvm_s5);
-    assert lvm_b5.tl.hd.ins.ICMP?;
+    assert lvm_b5.tl.hd.ins.LOAD?;
     assert !lvm_b5.tl.tl.CNil?;
 
     // assert evalCode(lvm_Block(lvm_b5), lvm_s5, lvm_sM,opTest);// lvm_require(lvm_b5, lvm_code_GetElementPtr(var_index2,1,op2,D(Int(2,IntType(8,false)))),lvm_s5, lvm_sM,var_index2);
@@ -279,23 +282,41 @@ lemma lvm_demo_challenge_prob_1(lvm_b0:lvm_codes, lvm_s0:lvm_state, lvm_sN:lvm_s
 
     assert lvm_s4.m.mem == lvm_s5.m.mem;
     ghost var lvm_b6, lvm_s6 := lvm_lemma_GetElementPtr(lvm_b5, lvm_s5, lvm_sM, var_index2, s,1,op2,D(Int(2,IntType(8,false))));
+    assert lvm_s5.m.mem == lvm_s6.m.mem;
+
+    // LOAD now
+    ghost var lvm_b7, lvm_s7 := lvm_lemma_Load(lvm_b6, lvm_s6, lvm_sM, var_index2,1,var_index2);
+    assert lvm_s6.m.mem == lvm_s7.m.mem;
+    if (OperandContents(lvm_s7,var_index2).Void?) { // LOAD ins failed
+      lvm_sM := lvm_s7;
+      assert OperandContents(lvm_sM, var_index2).Void?;
+      return;
+    }
+    assert OperandContents(lvm_s7,var_index2).Int? || OperandContents(lvm_s7,var_index2).Bytes?;
+    
+
+    assert lvm_b7.hd.ins.ZEXT?;
+    ghost var lvm_b8, lvm_s8 := lvm_lemma_Zext(lvm_b7, lvm_s7, lvm_sM, var_index2, t,var_index2,4);
+    assert OperandContents(lvm_s8,var_index2).itype.size == 4;
+
+    assert lvm_b8.hd.ins.ADD?;
+    ghost var lvm_b9, lvm_s9 := lvm_lemma_Add(lvm_b8, lvm_s8, lvm_sM, dst,4,dst,var_index2);
+
     var arr55 :=[dst,var_index2,var_5,comp];
-    assert operandsUnique(lvm_s5,arr55);
+    assert operandsUnique(lvm_s9,arr55);
     assert arr55[0] == dst && arr55[1] == var_index2;
     assert dst != var_index2;
     assert var_8 != var_index2;
-    assert forall d :: ValidOperand(lvm_s5,d) && d != var_index2 ==> ValidOperand(lvm_s6,d) && OperandContents(lvm_s5,d) == OperandContents(lvm_s6,d);
-    assert lvm_s5.m.mem == lvm_s6.m.mem;
-    assert  OperandContents(lvm_s6,var_8).Int?;
+    assert  OperandContents(lvm_s9,var_8).Int?;
 
-    ghost var lvm_b7, lvm_s7:= lvm_lemma_Icmp(lvm_b6, lvm_s6, lvm_sM, comp,sgt,4,var_8,D(Int(0,IntType(4,false))));
+    ghost var lvm_b10, lvm_s10:= lvm_lemma_Icmp(lvm_b9, lvm_s9, lvm_sM, comp,sgt,4,var_8,D(Int(0,IntType(4,false))));
     
 
-    ghost var lvm_b8, lvm_s8:= lvm_lemma_Ret(lvm_b7, lvm_s7, lvm_sM, dst, D(Void));
+    ghost var lvm_b11, lvm_s11:= lvm_lemma_Ret(lvm_b10, lvm_s10, lvm_sM, dst, D(Void));
 
-    assert lvm_b8 == (lvm_CNil());
-    assert eval_code(lvm_Block(lvm_b8), lvm_s7, lvm_sM);
-    lvm_sM := lvm_lemma_empty(lvm_s8,lvm_sM);
+    assert lvm_b11 == (lvm_CNil());
+    assert eval_code(lvm_Block(lvm_b11), lvm_s10, lvm_sM);
+    lvm_sM := lvm_lemma_empty(lvm_s11,lvm_sM);
     assert OperandContents(lvm_sM, dst).Int?;
     assert OperandContents(lvm_sM,dst).itype.size == 4;
     // assert OperandContents(lvm_sM,dst).val <= 4;
@@ -304,7 +325,7 @@ lemma lvm_demo_challenge_prob_1(lvm_b0:lvm_codes, lvm_s0:lvm_state, lvm_sN:lvm_s
     
     assert evalCode(lvm_cM, lvm_s0, lvm_sM);
     reveal_evalCodeOpaque();
-  }
+  
 }
 
 
