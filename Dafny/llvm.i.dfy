@@ -117,9 +117,10 @@ module LLVM_def {
 
     predicate StateNext(s:state,s':state)
     {
-        ValidState(s)
+        && ValidState(s)
         && ValidState(s')
-        && exists ins :: (ValidInstruction(s,ins) && evalIns(ins, s, s'))
+        &&  (|| (exists ins :: (ValidInstruction(s,ins) && evalIns(ins, s, s')))
+             || (s == s'))
     }
 
     predicate ValidOperand(s:state,o:operand)
@@ -408,6 +409,29 @@ module LLVM_def {
         reveal_SeqIsUniqueAtomic();
         SeqIsUnique(ops) && SeqIsUniqueAtomic(ops)
     }
+
+    // lemma twoOperandsUnique(s:state,ops:seq<operand>, o1:operand,o2:operand)
+    //     requires ValidState(s)
+    //     requires forall o :: o in ops ==> ValidOperand(s,o)
+    //     requires operandsUnique(s,ops)
+    //     requires o1 in ops
+    //     requires o2 in ops
+    //     ensures exists i,j :: 
+    //             0 <= i < |ops| 
+    //             &&  0 <= j < |ops| 
+    //             && ops[i] == o1 
+    //             && ops[j] == o2
+    //             && i != j 
+    //             && o1 != o2
+    //     {
+    //         reveal_SeqIsUnique();
+    //         reveal_SeqIsUniqueAtomic();
+    //         assert SeqIsUnique(ops) && SeqIsUniqueAtomic(ops);
+    //         var i :| 0 <= i < |ops| && ops[i] == o1;
+    //         var j :| 0 <= j < |ops| && ops[j] == o2;
+            
+    //         assert i != j ==> o1 != o2;
+    //     }
 
 
 }

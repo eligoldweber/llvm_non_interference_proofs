@@ -61,6 +61,7 @@ lemma lvm_lemma_Add(lvm_b0:lvm_codes, lvm_s0:lvm_state, lvm_sN:lvm_state,
   ensures ToTwosComp(OperandContents(lvm_sM, dst)).val == 
           (OperandContents(lvm_s0, src1).val + OperandContents(lvm_s0, src2).val) % Pow256(OperandContents(lvm_s0, src1).itype.size)
   ensures forall d :: ValidOperand(lvm_s0,d) && d != dst ==> ValidOperand(lvm_sM,d) && OperandContents(lvm_s0,d) == OperandContents(lvm_sM,d)
+  ensures StateNext(lvm_s0,lvm_sM)
 {
     reveal_lvm_code_Add();
     reveal_evalCodeOpaque();
@@ -130,6 +131,7 @@ ensures lvm_s0.m == lvm_sM.m;
   ensures  OperandContents(lvm_sM, dst) == evalGETELEMENTPTR(lvm_s0.m,t,OperandContents(lvm_s0,op1),OperandContents(lvm_s0,op2));
   ensures  lvm_state_eq(lvm_sM, lvm_update_ok(lvm_sM, lvm_update_all( lvm_sM, lvm_s0)))
   ensures forall d :: ValidOperand(lvm_s0,d) && d != dst ==> ValidOperand(lvm_sM,d) && OperandContents(lvm_s0,d) == OperandContents(lvm_sM,d)
+  ensures StateNext(lvm_s0,lvm_sM)
 
 {
   reveal_lvm_code_GetElementPtr();
@@ -176,7 +178,8 @@ lemma lvm_lemma_Ret(lvm_b0:lvm_codes, lvm_s0:lvm_state, lvm_sN:lvm_state,dst:lvm
   ensures  OperandContents(lvm_s0,op1).Void? ==> lvm_s0 == lvm_sM
   ensures  lvm_state_eq(lvm_sM,  lvm_s0)
   ensures lvm_bM == lvm_b0.tl;
-    ensures forall d :: ValidOperand(lvm_s0,d) && d != dst ==> ValidOperand(lvm_sM,d) && OperandContents(lvm_s0,d) == OperandContents(lvm_sM,d)
+  ensures forall d :: ValidOperand(lvm_s0,d) && d != dst ==> ValidOperand(lvm_sM,d) && OperandContents(lvm_s0,d) == OperandContents(lvm_sM,d)
+  ensures StateNext(lvm_s0,lvm_sM)
 
 {
   reveal_lvm_code_Ret();
@@ -235,7 +238,8 @@ lemma lvm_lemma_Load(lvm_b0:lvm_codes, lvm_s0:lvm_state, lvm_sN:lvm_state,dst:lv
   ensures OperandContents(lvm_sM,dst).Int? || OperandContents(lvm_sM,dst).Bytes? || OperandContents(lvm_sM,dst).Void?;
   ensures OperandContents(lvm_sM,dst).Int? ==> OperandContents(lvm_sM,dst).itype.size == t;
   ensures  lvm_s0.m == lvm_sM.m;
-    ensures forall d :: ValidOperand(lvm_s0,d) && d != dst ==> ValidOperand(lvm_sM,d) && OperandContents(lvm_s0,d) == OperandContents(lvm_sM,d)
+  ensures forall d :: ValidOperand(lvm_s0,d) && d != dst ==> ValidOperand(lvm_sM,d) && OperandContents(lvm_s0,d) == OperandContents(lvm_sM,d)
+  ensures StateNext(lvm_s0,lvm_sM)
 
 {
   reveal_lvm_LOAD();
@@ -315,7 +319,8 @@ lemma lvm_lemma_Zext(lvm_b0:lvm_codes, lvm_s0:lvm_state, lvm_sN:lvm_state,
   ensures OperandContents(lvm_sM, dst).val == evalZEXT(OperandContents(lvm_s0,op1),dstSize).val;
   ensures  lvm_state_eq(lvm_sM, lvm_update_ok(lvm_sM, lvm_update_all( lvm_sM, lvm_s0)))
   ensures lvm_s0.m == lvm_sM.m;
-    ensures forall d :: ValidOperand(lvm_s0,d) && d != dst ==> ValidOperand(lvm_sM,d) && OperandContents(lvm_s0,d) == OperandContents(lvm_sM,d)
+  ensures forall d :: ValidOperand(lvm_s0,d) && d != dst ==> ValidOperand(lvm_sM,d) && OperandContents(lvm_s0,d) == OperandContents(lvm_sM,d)
+  ensures StateNext(lvm_s0,lvm_sM)
 
 {
     reveal_lvm_code_ZEXT();
@@ -376,7 +381,8 @@ lemma lvm_lemma_Sext(lvm_b0:lvm_codes, lvm_s0:lvm_state, lvm_sN:lvm_state,
   ensures  OperandContents(lvm_sM,dst).itype.size == dstSize;
   ensures OperandContents(lvm_sM, dst).val == evalSEXT(OperandContents(lvm_s0,op1),dstSize).val;
   ensures  lvm_state_eq(lvm_sM, lvm_update_ok(lvm_sM, lvm_update_all( lvm_sM, lvm_s0)))
-    ensures forall d :: ValidOperand(lvm_s0,d) && d != dst ==> ValidOperand(lvm_sM,d) && OperandContents(lvm_s0,d) == OperandContents(lvm_sM,d)
+  ensures forall d :: ValidOperand(lvm_s0,d) && d != dst ==> ValidOperand(lvm_sM,d) && OperandContents(lvm_s0,d) == OperandContents(lvm_sM,d)
+  ensures StateNext(lvm_s0,lvm_sM)
 
 {
     reveal_lvm_code_SEXT();
@@ -443,7 +449,8 @@ lemma lvm_lemma_Shl(lvm_b0:lvm_codes, lvm_s0:lvm_state, lvm_sN:lvm_state,
   ensures OperandContents(lvm_sM, dst) == evalSHL(OperandContents(lvm_s0,src),OperandContents(lvm_s0,shiftAmt));
   ensures  lvm_state_eq(lvm_sM, lvm_update_ok(lvm_sM, lvm_update_all( lvm_sM, lvm_s0)))
   ensures lvm_s0.m == lvm_sM.m;
-    ensures forall d :: ValidOperand(lvm_s0,d) && d != dst ==> ValidOperand(lvm_sM,d) && OperandContents(lvm_s0,d) == OperandContents(lvm_sM,d)
+  ensures forall d :: ValidOperand(lvm_s0,d) && d != dst ==> ValidOperand(lvm_sM,d) && OperandContents(lvm_s0,d) == OperandContents(lvm_sM,d)
+  ensures StateNext(lvm_s0,lvm_sM)
 
 {
     reveal_lvm_code_SHL();
@@ -502,6 +509,7 @@ lemma lvm_lemma_Icmp(lvm_b0:lvm_codes, lvm_s0:lvm_state, lvm_sN:lvm_state,
   ensures OperandContents(lvm_sM, dst) == evalICMP(cond,size,OperandContents(lvm_s0,op1),OperandContents(lvm_s0,op2));
   ensures  lvm_state_eq(lvm_sM, lvm_update_ok(lvm_sM, lvm_update_all( lvm_sM, lvm_s0)))
   ensures forall d :: ValidOperand(lvm_s0,d) && d != dst ==> ValidOperand(lvm_sM,d) && OperandContents(lvm_s0,d) == OperandContents(lvm_sM,d)
+  ensures StateNext(lvm_s0,lvm_sM)
 
 {
     reveal_lvm_code_ICMP();
@@ -540,6 +548,8 @@ lemma lvm_lemma_Empty(lvm_b0:lvm_codes, lvm_s0:lvm_state, lvm_sN:lvm_state)
   ensures  lvm_state_eq(lvm_sM, lvm_s0)
   ensures  lvm_state_eq(lvm_sM, lvm_update_mem( lvm_sM, lvm_update_ok(lvm_sM, lvm_sM)))
   ensures  forall s2 :: evalCode(lvm_b0.hd, lvm_s0, s2) ==> s2.ok 
+    ensures StateNext(lvm_s0,lvm_sM)
+
 {
     reveal_lvm_code_Empty();
     reveal_eval_code();
@@ -567,6 +577,8 @@ lemma lvm_lemma_Empty(lvm_b0:lvm_codes, lvm_s0:lvm_state, lvm_sN:lvm_state)
     // assert evalCode_lax(lvm_Block(lvm_CNil()), lvm_s0, lvm_sM, o);
 
     lvm_sM := lvm_lemma_empty(lvm_s0, lvm_sM);
+    assert ValidState(lvm_sM);
+    assert lvm_s0 == lvm_sM;
 }
 
 
