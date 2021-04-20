@@ -233,8 +233,7 @@ lemma lvm_demo_challenge_prob_1(lvm_b0:lvm_codes, lvm_s0:lvm_state, lvm_sN:lvm_s
 
   assert ValidState(lvm_sM);
   assert StateNext(lvm_s11,lvm_sM);
-  // assert evalCode(lvm_cM, lvm_s0, lvm_sM);
-  // reveal_evalCodeOpaque();
+
   
 }
 

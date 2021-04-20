@@ -10,10 +10,12 @@ module other_operations_i {
 
      // eq | ne | ugt | uge | ult | ule | sgt | sge | slt | sle
 
-    function evalICMP(c:condition,size:nat,v0:Data,v1:Data): Data
+    function evalICMP(c:condition,size:nat,v0:Data,v1:Data): (out:Data)
         requires isInt(v0)
         requires isInt(v1)
         requires typesMatch(v0,v1)
+        ensures out.Int? && !out.itype.signed
+        ensures out.itype.size == 1 
     {
         match c
             case eq => boolToData(v0.val == v1.val)

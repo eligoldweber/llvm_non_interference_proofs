@@ -110,13 +110,13 @@ lemma code_state_validity(c:code, s:state, r:state)
         } else if c.IfElse? {
                 var s' :| branchRelation(s, s', c.ifCond) &&
                     if c.ifCond then
-                        evalCode(c.ifTrue, s', r)
+                        evalBlock(c.ifTrue, s', r)
                     else
-                        evalCode(c.ifFalse, s', r);
+                        evalBlock(c.ifFalse, s', r);
                 if c.ifCond {
-                    code_state_validity(c.ifTrue, s', r);
+                    block_state_validity(c.ifTrue, s', r);
                 } else {
-                    code_state_validity(c.ifFalse, s', r);
+                    block_state_validity(c.ifFalse, s', r);
                 }
             assert ValidState(r);
         } 
@@ -236,6 +236,8 @@ function lvm_get_ok(s:lvm_state):bool { ValidState(s) }
 predicate lvm_is_src_opr(o:operand, s:lvm_state) { true }
 predicate lvm_is_dst_opr(o:operand, s:lvm_state) { true }
 function method lvm_get_block(c:code):codes requires c.Block? { c.block }
+function lvm_get_ifTrue(c:code):codes requires c.IfElse? { c.ifTrue }
+function lvm_get_ifFalse(c:code):codes requires c.IfElse? { c.ifFalse }
 
 predicate lvm_state_eq(s0:lvm_state, s1:lvm_state)
 {
