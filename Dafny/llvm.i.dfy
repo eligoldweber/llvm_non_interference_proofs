@@ -333,8 +333,7 @@ module LLVM_def {
         if block.CNil? then
             r == s
         else
-            exists r' :: (evalCode(block.hd, s, r') && evalBlock(block.tl, r', r)
-            && (block.hd.Block? ==> s == r'))
+            exists r' :: (evalCode(block.hd, s, r') && evalBlock(block.tl, r', r))
     }
 
     predicate branchRelation(s:state, s':state, cond:bool)

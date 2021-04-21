@@ -22,8 +22,9 @@ To use this project, you will need the following:
 
  * To specify a `.dfy` file that you wish to verify use the following command line argument with scons `--verify-root=/path/to/dfy/file` [Note: this will also verify all dependencies of the specified file]
 			
-You can also change the default timeout used during verification with `--time-limit=[time in seconds]` 
+You can change the default timeout used during verification with `--time-limit=[time in seconds]` 
 
+Turn off trace with `--no-trace=1` 
 
 
 ## Automation

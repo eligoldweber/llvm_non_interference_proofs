@@ -223,7 +223,7 @@ lemma lvm_lemma_Load(lvm_b0:lvm_codes, lvm_s0:lvm_state, lvm_sN:lvm_state,dst:lv
   requires OperandContents(lvm_s0,op1).Ptr?;
   requires MemValid(lvm_s0.m);
   requires IsValidPtr(lvm_s0.m,OperandContents(lvm_s0,op1).bid,OperandContents(lvm_s0,op1).offset);
-  requires lvm_s0.m == lvm_sN.m;
+  // requires lvm_s0.m == lvm_sN.m;
 //   
   ensures  lvm_sM.ok ==> lvm_ensure(lvm_b0, lvm_bM, lvm_s0, lvm_sM, lvm_sN)
   ensures  lvm_sM.ok ==> lvm_get_ok(lvm_sM)
@@ -252,18 +252,20 @@ lemma lvm_lemma_Load(lvm_b0:lvm_codes, lvm_s0:lvm_state, lvm_sN:lvm_state,dst:lv
 
   assert IsValidPtr(lvm_s0.m, OperandContents(lvm_s0,lvm_b0.hd.ins.src).bid,OperandContents(lvm_s0,lvm_b0.hd.ins.src).offset);
 //   assert exists d:Data :: Load(lvm_s0.m,lvm_sN.m,OperandContents(lvm_s0,lvm_b0.hd.ins.src).bid,OperandContents(lvm_s0,lvm_b0.hd.ins.src).offset,d);
-  var d := evalLOAD(lvm_s0.m,lvm_sN.m,lvm_b0.hd.ins.t,OperandContents(lvm_s0,lvm_b0.hd.ins.src));
-  assert lvm_s0.m == lvm_sN.m;
+  // assert lvm_s0.m == lvm_sN.m;
 //   assert exists d:Data :: Load(lvm_s0.m,lvm_sN.m,OperandContents(lvm_s0,lvm_b0.hd.ins.src).bid,OperandContents(lvm_s0,lvm_b0.hd.ins.src).offset,d); 
-
 //   assert lvm_s0.ok == lvm_sN.ok;
-  assert d == evalLOAD(lvm_s0.m,lvm_sN.m,lvm_b0.hd.ins.t,OperandContents(lvm_s0,lvm_b0.hd.ins.src));
-  assert D(d).D?;
+
 
   ghost var lvm_ltmp1, lvm_cM:lvm_code, lvm_ltmp2 := lvm_lemma_block(lvm_b0, lvm_s0, lvm_sN);
   lvm_sM := lvm_ltmp1;
   lvm_bM := lvm_ltmp2;
  
+  var d := evalLOAD(lvm_s0.m,lvm_sM.m,lvm_b0.hd.ins.t,OperandContents(lvm_s0,lvm_b0.hd.ins.src));
+  assert d == evalLOAD(lvm_s0.m,lvm_sM.m,lvm_b0.hd.ins.t,OperandContents(lvm_s0,lvm_b0.hd.ins.src));
+  assert D(d).D?;
+
+  // assert evalLOAD(lvm_s0.m,lvm_sM.m,lvm_b0.hd.ins.t,OperandContents(lvm_s0,lvm_b0.hd.ins.src)).Void? ==> !lvm_sM.ok;
   assert  d.Void? ==> !lvm_sM.ok;
   assert  !d.Void? ==> lvm_sM.ok;
   assert  evalCode(lvm_b0.hd, lvm_s0, lvm_sM);

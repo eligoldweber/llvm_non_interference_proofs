@@ -104,9 +104,7 @@ function {:opaque} demo_challenge_prob_1_code(speed_value:lvm_operand_opr,s:MemS
 
 }
 
-lemma lvm_demo_simple_challenge_prob_1(lvm_b0:lvm_codes, lvm_s0:lvm_state,var_0:lvm_operand_opr,var_5:lvm_operand_opr,
-                                       var_6:lvm_operand_opr,var_7:lvm_operand_opr,var_8:lvm_operand_opr,var_10:lvm_operand_opr,
-                                       var_11:lvm_operand_opr,var_12:lvm_operand_opr,speed_value:lvm_operand_opr, var_17:lvm_operand_opr)
+lemma lvm_demo_simple_challenge_prob_1(lvm_b0:lvm_codes, lvm_s0:lvm_state,var_0:lvm_operand_opr,var_5:lvm_operand_opr,var_6:lvm_operand_opr,var_7:lvm_operand_opr,var_8:lvm_operand_opr,var_10:lvm_operand_opr,var_11:lvm_operand_opr,var_12:lvm_operand_opr,speed_value:lvm_operand_opr, var_17:lvm_operand_opr)
       returns (lvm_bM:lvm_codes, lvm_sM:lvm_state,lvm_sMs:seq<lvm_state>)
 // PRE Conditions 
   requires exists sN :: lvm_require(lvm_b0, demo_challenge_prob_1_code(speed_value,lvm_s0.m,var_0,var_5,var_10,var_17,var_6,var_7,var_8,var_11,var_12), lvm_s0, sN)
@@ -182,7 +180,7 @@ lemma lvm_demo_simple_challenge_prob_1(lvm_b0:lvm_codes, lvm_s0:lvm_state,var_0:
     var lvm_b1:lvm_codes := lvm_get_block(lvm_cM);
 
     assert lvm_b1.hd == Ins(GETELEMENTPTR(var_5,1,var_0,D(Int(3,IntType(8,false)))));
-    assert lvm_sM == lvm_s0;
+    // assert lvm_sM == lvm_s0;
 
     ghost var lvm_b2, lvm_s2 := lvm_lemma_GetElementPtr(lvm_b1, lvm_s0, lvm_sM, var_5, lvm_s0.m,1,var_0,D(Int(3,IntType(8,false))));
     assert lvm_s0.m == lvm_s2.m;

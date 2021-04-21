@@ -39,7 +39,7 @@ lemma lvm_lemma_simple_challenge1(lvm_b0:lvm_codes, lvm_s0:lvm_state, lvm_sN:lvm
             dst:lvm_operand_opr,s:MemState,t:bitWidth,op1:lvm_operand_opr,op2:lvm_operand_opr)
   returns (lvm_bM:lvm_codes, lvm_sM:lvm_state)
   
-  requires lvm_require(lvm_b0, lvm_simple_challenge1(dst,t,op1,op2), lvm_s0, lvm_sN,dst)
+  requires lvm_require(lvm_b0, lvm_simple_challenge1(dst,t,op1,op2), lvm_s0, lvm_sN)
   requires lvm_is_dst_opr(dst, lvm_s0)
   requires lvm_is_src_opr(op1, lvm_s0)
   requires lvm_get_ok(lvm_s0)
@@ -50,13 +50,13 @@ lemma lvm_lemma_simple_challenge1(lvm_b0:lvm_codes, lvm_s0:lvm_state, lvm_sN:lvm
   requires OperandContents(lvm_s0,op1).bid in lvm_s0.m.mem; //needed for IsValidBid for valid input
   requires ValidOperand(lvm_s0,dst)
 //   
-  ensures  lvm_ensure(lvm_b0, lvm_bM, lvm_s0, lvm_sM, lvm_sN,dst)
+  ensures  lvm_ensure(lvm_b0, lvm_bM, lvm_s0, lvm_sM, lvm_sN)
   ensures  lvm_get_ok(lvm_sM)
   ensures ValidOperand(lvm_sM,dst)
 
   ensures OperandContents(lvm_sM,dst).Ptr?;
   ensures  OperandContents(lvm_sM, dst) == evalGETELEMENTPTR(lvm_s0.m,1,OperandContents(lvm_s0,op1),Int(2,IntType(8,false)));
-  ensures  lvm_state_eq(lvm_sM, lvm_update_ok(lvm_sM, lvm_update_mem( lvm_sM, lvm_s0)))
+  // ensures  lvm_state_eq(lvm_sM, lvm_update_ok(lvm_sM, lvm_update_mem( lvm_sM, lvm_s0)))
 {
   reveal_lvm_simple_challenge1();
   reveal_lvm_code_Ret();
@@ -108,9 +108,9 @@ lemma lvm_lemma_simple_challenge1(lvm_b0:lvm_codes, lvm_s0:lvm_state, lvm_sN:lvm
     assert !lvm_b0.CNil?;
   // assert exists r' :: evalCode(lvm_b0.hd, lvm_s0, r',dst);
   // assert lvm_b0.hd.Ins?;
-  assert evalBlock(lvm_b0, lvm_s0, lvm_sN,dst);
+  assert evalBlock(lvm_b0, lvm_s0, lvm_sN);
 
-  ghost var lvm_ltmp1, lvm_cM:lvm_code, lvm_ltmp2 := lvm_lemma_block(lvm_b0, lvm_s0, lvm_sN,dst);
+  ghost var lvm_ltmp1, lvm_cM:lvm_code, lvm_ltmp2 := lvm_lemma_block(lvm_b0, lvm_s0, lvm_sN);
   lvm_sM := lvm_ltmp1;
   lvm_bM := lvm_ltmp2;
   var lvm_b1:lvm_codes := lvm_get_block(lvm_cM);
@@ -133,14 +133,14 @@ lemma lvm_lemma_simple_challenge1(lvm_b0:lvm_codes, lvm_s0:lvm_state, lvm_sN:lvm
   assert lvm_b2.hd.ins == RET(D(Void));
   
   ghost var lvm_b3, lvm_s3 := lvm_lemma_Ret(lvm_b2, lvm_s2, lvm_sM, dst, D(Void));
-  assert eval_code(lvm_Block(lvm_b3), lvm_s3, lvm_sM,dst);
+  assert eval_code(lvm_Block(lvm_b3), lvm_s3, lvm_sM);
 
   lvm_sM := lvm_lemma_empty(lvm_s3,lvm_sM);
 
   assert ValidState(lvm_sM);
   // lvm_sM := lvm_lemma_empty(lvm_s2,lvm_sM);
 
-  assert evalCode_lax(lvm_cM, lvm_s0, lvm_sM,dst);
+  assert evalCode_lax(lvm_cM, lvm_s0, lvm_sM);
   reveal_evalCodeOpaque();
 }
 
@@ -186,7 +186,7 @@ lemma lvm_lemma_simple_challenge1_cont(lvm_b0:lvm_codes, lvm_s0:lvm_state, lvm_s
 requires op1.d.Ptr?;
 requires IsValidBid(lvm_s0.m,op1.d.bid) ==> op1.d.offset + ((Int(2,IntType(8,false))).val * 1) < |lvm_s0.m.mem[op1.d.bid]|;
 
-  requires lvm_require(lvm_b0, lvm_simple_challenge1_cont(dst,lvm_s0.m,t,op1,op2), lvm_s0, lvm_sN,dst)
+  requires lvm_require(lvm_b0, lvm_simple_challenge1_cont(dst,lvm_s0.m,t,op1,op2), lvm_s0, lvm_sN)
   requires lvm_is_dst_opr(dst, lvm_s0)
   requires lvm_is_src_opr(op1, lvm_s0)
   requires lvm_get_ok(lvm_s0)
@@ -197,20 +197,20 @@ requires IsValidBid(lvm_s0.m,op1.d.bid) ==> op1.d.offset + ((Int(2,IntType(8,fal
   requires OperandContents(lvm_s0,op1).bid in lvm_s0.m.mem; //needed for IsValidBid for valid input
   requires ValidOperand(lvm_s0,dst);
 //   
-  ensures ValidOperand(lvm_sM,dst)
-  ensures  lvm_get_ok(lvm_sM)
+  ensures lvm_sM.ok ==> ValidOperand(lvm_sM,dst)
+  ensures  lvm_sM.ok ==> lvm_get_ok(lvm_sM)
 
-  ensures  !OperandContents(lvm_sM, dst).Void? ==> lvm_ensure(lvm_b0, lvm_bM, lvm_s0, lvm_sM, lvm_sN,dst)
+  ensures  lvm_sM.ok ==>  lvm_ensure(lvm_b0, lvm_bM, lvm_s0, lvm_sM, lvm_sN)
 
   // ensures !OperandContents(lvm_sM,dst).Ptr?;
   // ensures  OperandContents(lvm_sM, dst) == evalGETELEMENTPTR(lvm_s0.m,1,OperandContents(lvm_s0,op1),Int(2,IntType(8,false)));
-  ensures  !OperandContents(lvm_sM, dst).Void? ==> OperandContents(lvm_sM, dst).Int?;
-  ensures  !OperandContents(lvm_sM, dst).Void? ==> OperandContents(lvm_sM, dst).itype.size == 4;
-  ensures  !OperandContents(lvm_sM, dst).Void? ==> OperandContents(lvm_sM, dst).val < 0x1_0000_0000;
-  ensures  !OperandContents(lvm_sM, dst).Void? ==> OperandContents(lvm_sM, dst).val >= 0;
+  ensures  lvm_sM.ok ==>  OperandContents(lvm_sM, dst).Int?;
+  ensures  lvm_sM.ok ==>  OperandContents(lvm_sM, dst).itype.size == 4;
+  ensures  lvm_sM.ok ==>  OperandContents(lvm_sM, dst).val < 0x1_0000_0000;
+  ensures  lvm_sM.ok ==>  OperandContents(lvm_sM, dst).val >= 0;
 
 
-  ensures  !OperandContents(lvm_sM, dst).Void? ==> lvm_state_eq(lvm_sM, lvm_update_ok(lvm_sM, lvm_update_mem( lvm_sM, lvm_s0)))
+  // ensures  lvm_sM.ok ==>  lvm_state_eq(lvm_sM, lvm_update_ok(lvm_sM, lvm_update_mem( lvm_sM, lvm_s0)))
 {
   reveal_lvm_simple_challenge1_cont();
   reveal_lvm_code_Ret();
@@ -265,9 +265,9 @@ requires IsValidBid(lvm_s0.m,op1.d.bid) ==> op1.d.offset + ((Int(2,IntType(8,fal
   // assert lvm_b0.hd.Ins?;
 
  assert lvm_b0.hd.Block?;
-  assert evalBlock(lvm_b0, lvm_s0, lvm_sN,dst);
+  assert evalBlock(lvm_b0, lvm_s0, lvm_sN);
 
-  ghost var lvm_ltmp1, lvm_cM:lvm_code, lvm_ltmp2 := lvm_lemma_block(lvm_b0, lvm_s0, lvm_sN,dst);
+  ghost var lvm_ltmp1, lvm_cM:lvm_code, lvm_ltmp2 := lvm_lemma_block(lvm_b0, lvm_s0, lvm_sN);
   lvm_sM := lvm_ltmp1;
   lvm_bM := lvm_ltmp2;
   var lvm_b1:lvm_codes := lvm_get_block(lvm_cM);
@@ -280,7 +280,7 @@ requires IsValidBid(lvm_s0.m,op1.d.bid) ==> op1.d.offset + ((Int(2,IntType(8,fal
   assert lvm_b1.tl.hd.ins.LOAD?;
   var var_2:lvm_operand_opr := dst;
   assert lvm_b1.hd == Ins(GETELEMENTPTR(var_2,1,op1,D(Int(2,IntType(8,false)))));
-  assert lvm_sM == lvm_s0;
+  // assert lvm_sM == lvm_s0;
   // ghost var lvm_ltmp3, lvm_b2, lvm_s2 := lvm_lemma_block(lvm_b1, lvm_s0, lvm_sM, dst);
   ghost var lvm_b2, lvm_s2 := lvm_lemma_GetElementPtr(lvm_b1, lvm_s0, lvm_sM, var_2, s,1,op1,D(Int(2,IntType(8,false))));
   assert OperandContents(lvm_s2, var_2) 
@@ -292,17 +292,17 @@ requires IsValidBid(lvm_s0.m,op1.d.bid) ==> op1.d.offset + ((Int(2,IntType(8,fal
   assert lvm_s0.m == lvm_s2.m;
   assert IsValidBid(lvm_s2.m,OperandContents(lvm_s2,var_2).bid);
   assert IsValidPtr(lvm_s2.m,OperandContents(lvm_s2,var_2).bid,OperandContents(lvm_s2,op1).offset);
-  assert lvm_s2.m == lvm_sM.m;
+  assert lvm_s2.m == lvm_s0.m;
   // assert exists d:Data :: Load(lvm_s2.m,lvm_sM.m,OperandContents(lvm_s2,dst).bid,OperandContents(lvm_s2,dst).offset,d);
 
   ghost var lvm_b3, lvm_s3 := lvm_lemma_Load(lvm_b2, lvm_s2, lvm_sM, dst,1,var_2);
-  assert !OperandContents(lvm_s3,dst).Ptr?;
-  if (OperandContents(lvm_s3,dst).Void?) { // Load failed
+  // assert !OperandContents(lvm_s3,dst).Ptr?;
+  if (!lvm_s3.ok) { // Load failed
     lvm_sM := lvm_s3;
     return;
   } 
   else{
-  assert OperandContents(lvm_s3,dst).Int? || OperandContents(lvm_s3,dst).Bytes?;
+  assert OperandContents(lvm_s3,dst).Int?;
   // if OperandContents(lvm_s3,dst).Bytes? {
   //   assert validBitWidth(|OperandContents(lvm_s3,dst).bytes|);
   //   var byteSize:bitWidth := |OperandContents(lvm_s3,dst).bytes|;
@@ -333,11 +333,11 @@ requires IsValidBid(lvm_s0.m,op1.d.bid) ==> op1.d.offset + ((Int(2,IntType(8,fal
 //    ghost var lvm_b2, lvm_s2 := lvm_lemma_Add(lvm_b1, lvm_s0, lvm_sM, src2, size,src1,val,o);
     var largetest := D(Int(4294967295,IntType(4,false)));
 
-    ghost var lvm_b5, lvm_s5 := lvm_lemma_Add(lvm_b4, lvm_s4, lvm_sM, dst,4,dst, largetest,dst);
+    ghost var lvm_b5, lvm_s5 := lvm_lemma_Add(lvm_b4, lvm_s4, lvm_sM, dst,4,dst, largetest);
 
 
     ghost var lvm_b6, lvm_s6 := lvm_lemma_Ret(lvm_b5, lvm_s5, lvm_sM, dst, D(Void));
-      assert eval_code(lvm_Block(lvm_b6), lvm_s6, lvm_sM,dst);
+      assert eval_code(lvm_Block(lvm_b6), lvm_s6, lvm_sM);
 
     lvm_sM := lvm_lemma_empty(lvm_s6,lvm_sM);
     assert OperandContents(lvm_sM, dst).Int?;
@@ -345,7 +345,7 @@ requires IsValidBid(lvm_s0.m,op1.d.bid) ==> op1.d.offset + ((Int(2,IntType(8,fal
     assert ValidState(lvm_sM);
     // lvm_sM := lvm_lemma_empty(lvm_s2,lvm_sM);
 
-    assert evalCode_lax(lvm_cM, lvm_s0, lvm_sM,dst);
+    assert evalCode_lax(lvm_cM, lvm_s0, lvm_sM);
     reveal_evalCodeOpaque();
   }
 }
