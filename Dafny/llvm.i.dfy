@@ -294,12 +294,8 @@ module LLVM_def {
                                 && ValidData(r,evalICMP(cond,t,OperandContents(s,src1),OperandContents(s,src2)))
                                 && evalUpdate(s, dst, evalICMP(cond,t,OperandContents(s,src1),OperandContents(s,src2)),r)
                                 && OperandContents(s,src1).itype == OperandContents(r,src1).itype
-            case RET(val) => ValidState(r) && 
-                    if OperandContents(s,val).Void? then r == s
-                    else //o == val  
-                    && evalUpdate(s, val, OperandContents(s,val),r)// && r == s
-            // case RET(dst, val) => && ValidData(r,OperandContents(s,val)) 
-            //                       && if OperandContents(s,val).Void? then s == r else evalUpdate(s, dst, OperandContents(s,val),r)//evalRet(s,dst,OperandContents(s,val),r)// o == val && ValidState(r) //&& r == s
+            case RET(val) => ValidState(r) && if OperandContents(s,val).Void? then r == s
+                                            else && evalUpdate(s, val, OperandContents(s,val),r)// && r == s
             case BR(if_cond, labelTrue,labelFalse) => evalIfElse(dataToBool(OperandContents(s,if_cond)),labelTrue,labelFalse,s,r)&& ValidState(r)
             case SHL(dst,src,shiftAmt) =>//o == dst
                                 && ValidData(r,evalSHL(OperandContents(s,src),OperandContents(s,shiftAmt)))
@@ -322,9 +318,9 @@ module LLVM_def {
             case ZEXT(dst,t,src,dstSize) =>// o == dst 
                                 && ValidData(r,evalZEXT(OperandContents(s,src),dstSize))
                                 && evalUpdate(s, dst, evalZEXT(OperandContents(s,src),dstSize),r)
-            case LOAD(dst,mems,size,src) =>// o == dst 
-                                && s.m == r.m
-                                && evalUpdate(s, dst, evalLOAD(s.m,r.m,size,OperandContents(s,src)),r)
+            case LOAD(dst,mems,size,src) => && s.m == r.m 
+                                && if evalLOAD(s.m,r.m,size,OperandContents(s,src)).Void? then !r.ok else// o == dst 
+                                 evalUpdate(s, dst, evalLOAD(s.m,r.m,size,OperandContents(s,src)),r) && evalLOAD(s.m,r.m,size,OperandContents(s,src)).Int?
                                 // && evalLoad(s,o,OperandContents(s,src).bid,OperandContents(s,src).offset,r) //bid:nat, ofs:nat
             case PHI() => ValidState(r)
             case INTTOPTR() => ValidState(r)

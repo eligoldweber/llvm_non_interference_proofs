@@ -131,37 +131,30 @@ lemma lvm_demo_simple_challenge_prob_1(lvm_b0:lvm_codes, lvm_s0:lvm_state,var_0:
 
 // POST Conditions
   // end state is valid 
-  ensures ValidState(lvm_sM)
+  ensures lvm_sM.ok ==> ValidState(lvm_sM)
   // operands are valid in end state
-  ensures ValidOperand(lvm_sM,var_0);
-  ensures ValidOperand(lvm_sM,var_5);
-  ensures ValidOperand(lvm_sM,var_6);
-  ensures ValidOperand(lvm_sM,var_7);
-  ensures ValidOperand(lvm_sM,var_8);
-  ensures ValidOperand(lvm_sM,var_11);
-  ensures ValidOperand(lvm_s0,var_12);
-  ensures ValidOperand(lvm_sM,speed_value);
-  ensures ValidOperand(lvm_sM,var_10);
-  ensures ValidOperand(lvm_sM,var_17);
+  ensures lvm_sM.ok ==> ValidOperand(lvm_sM,var_0);
+  ensures lvm_sM.ok ==> ValidOperand(lvm_sM,var_5);
+  ensures lvm_sM.ok ==> ValidOperand(lvm_sM,var_6);
+  ensures lvm_sM.ok ==> ValidOperand(lvm_sM,var_7);
+  ensures lvm_sM.ok ==> ValidOperand(lvm_sM,var_8);
+  ensures lvm_sM.ok ==> ValidOperand(lvm_sM,var_11);
+  ensures lvm_sM.ok ==> ValidOperand(lvm_s0,var_12);
+  ensures lvm_sM.ok ==> ValidOperand(lvm_sM,speed_value);
+  ensures lvm_sM.ok ==> ValidOperand(lvm_sM,var_10);
+  ensures lvm_sM.ok ==> ValidOperand(lvm_sM,var_17);
 
-  ensures  (!OperandContents(lvm_sM, var_6).Void? && !OperandContents(lvm_sM, var_11).Void?) 
-               ==> OperandContents(lvm_sM, var_8).Int?;
-  ensures  (!OperandContents(lvm_sM, var_6).Void? && !OperandContents(lvm_sM, var_11).Void?) 
-              ==> OperandContents(lvm_sM, speed_value).Int?;
-  ensures  (!OperandContents(lvm_sM, var_6).Void? && !OperandContents(lvm_sM, var_11).Void?) 
-              ==> OperandContents(lvm_sM, var_17).Int?;
-  ensures  (!OperandContents(lvm_sM, var_6).Void? && !OperandContents(lvm_sM, var_11).Void?) 
-              ==> OperandContents(lvm_sM, speed_value).itype.size == 4;
-  ensures  (!OperandContents(lvm_sM, var_6).Void? && !OperandContents(lvm_sM, var_11).Void?) 
-             ==> OperandContents(lvm_sM, speed_value).val < 0x1_0000_0000;
-  ensures  (!OperandContents(lvm_sM, var_6).Void? && !OperandContents(lvm_sM, var_11).Void?) 
-             ==> OperandContents(lvm_sM, speed_value).val >= 0;
+  ensures  lvm_sM.ok ==> OperandContents(lvm_sM, var_8).Int?;
+  ensures  lvm_sM.ok ==> OperandContents(lvm_sM, speed_value).Int?;
+  ensures  lvm_sM.ok ==> OperandContents(lvm_sM, var_17).Int?;
+  ensures  lvm_sM.ok ==> OperandContents(lvm_sM, speed_value).itype.size == 4;
+  ensures  lvm_sM.ok ==> OperandContents(lvm_sM, speed_value).val < 0x1_0000_0000;
+  ensures  lvm_sM.ok ==> OperandContents(lvm_sM, speed_value).val >= 0;
   
-  ensures  (!OperandContents(lvm_sM, var_6).Void? && !OperandContents(lvm_sM, var_11).Void?) 
-              ==> (OperandContents(lvm_sM,speed_value).val > 0 ==> OperandContents(lvm_sM,var_17).val == 1);
+  ensures  lvm_sM.ok ==> (OperandContents(lvm_sM,speed_value).val > 0 ==> OperandContents(lvm_sM,var_17).val == 1);
 
-  ensures  (!OperandContents(lvm_sM, var_6).Void? && !OperandContents(lvm_sM, var_11).Void?) ==> lvm_ensure(lvm_b0, lvm_CNil(), lvm_s0, lvm_sM, lvm_sM)
-  ensures ValidStateSeq(lvm_sMs);
+  ensures  lvm_sM.ok ==> lvm_ensure(lvm_b0, lvm_CNil(), lvm_s0, lvm_sM, lvm_sM)
+  ensures lvm_sM.ok ==> ValidStateSeq(lvm_sMs);
   {
     reveal_demo_challenge_prob_1_code();
     reveal_lvm_code_Ret();
@@ -198,16 +191,17 @@ lemma lvm_demo_simple_challenge_prob_1(lvm_b0:lvm_codes, lvm_s0:lvm_state,var_0:
 
     ghost var lvm_b3, lvm_s3 := lvm_lemma_Load(lvm_b2, lvm_s2, lvm_sM, var_6,1,var_5);
     assert lvm_s3.m == lvm_s2.m;
+
+
+    if (!lvm_s3.ok) { // LOAD ins failed
+      lvm_sM := lvm_s3;
+      assert !lvm_sM.ok;
+      return;
+    }
     assert StateNext(lvm_s2,lvm_s3);
     lvm_sMs := lvm_sMs + [lvm_s3];
 
-
-    if (OperandContents(lvm_s3,var_6).Void?) { // LOAD ins failed
-      lvm_sM := lvm_s3;
-      assert OperandContents(lvm_sM, var_6).Void?;
-      return;
-    }
-
+    assert OperandContents(lvm_s3,var_6).Int?;
     ghost var lvm_b4, lvm_s4 := lvm_lemma_Zext(lvm_b3, lvm_s3, lvm_sM, var_7, 1,var_6,4);
     assert lvm_s3.m == lvm_s4.m;
     assert StateNext(lvm_s3,lvm_s4);
@@ -245,13 +239,15 @@ lemma lvm_demo_simple_challenge_prob_1(lvm_b0:lvm_codes, lvm_s0:lvm_state,var_0:
 
     ghost var lvm_b7, lvm_s7 := lvm_lemma_Load(lvm_b6, lvm_s6, lvm_sM, var_11,1,var_10);
     assert lvm_s6.m == lvm_s7.m;
-    assert StateNext(lvm_s6,lvm_s7);
-    lvm_sMs := lvm_sMs + [lvm_s7];
-    if (OperandContents(lvm_s7,var_11).Void?) { // LOAD ins failed
+    if (!lvm_s7.ok) { // LOAD ins failed
       lvm_sM := lvm_s7;
-      assert OperandContents(lvm_sM, var_11).Void?;
+      assert !lvm_sM.ok;
       return;
     }
+    assert StateNext(lvm_s6,lvm_s7);
+    lvm_sMs := lvm_sMs + [lvm_s7];
+
+    assert OperandContents(lvm_s7,var_11).Int?;
     assert operandsUnique(lvm_s6,operands);
     assert operands[5] == var_8 && operands[6] == var_11;
 

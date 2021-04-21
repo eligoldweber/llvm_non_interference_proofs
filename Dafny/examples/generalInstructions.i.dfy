@@ -225,18 +225,18 @@ lemma lvm_lemma_Load(lvm_b0:lvm_codes, lvm_s0:lvm_state, lvm_sN:lvm_state,dst:lv
   requires IsValidPtr(lvm_s0.m,OperandContents(lvm_s0,op1).bid,OperandContents(lvm_s0,op1).offset);
   requires lvm_s0.m == lvm_sN.m;
 //   
-  ensures  lvm_ensure(lvm_b0, lvm_bM, lvm_s0, lvm_sM, lvm_sN)
-  ensures  lvm_get_ok(lvm_sM)
-  ensures  ValidOperand(lvm_sM,dst);
-  ensures  !OperandContents(lvm_sM,dst).Ptr?;
-  ensures  OperandContents(lvm_sM,dst).Int? || OperandContents(lvm_sM,dst).Void?;
+  ensures  lvm_sM.ok ==> lvm_ensure(lvm_b0, lvm_bM, lvm_s0, lvm_sM, lvm_sN)
+  ensures  lvm_sM.ok ==> lvm_get_ok(lvm_sM)
+  ensures  lvm_sM.ok ==> ValidOperand(lvm_sM,dst);
+  ensures  lvm_sM.ok ==> !OperandContents(lvm_sM,dst).Ptr?;
+  ensures  lvm_sM.ok ==> OperandContents(lvm_sM,dst).Int?;
 
-  ensures OperandContents(lvm_sM,dst).Bytes? ==> validBitWidth(|OperandContents(lvm_sM,dst).bytes|)
-  ensures OperandContents(lvm_sM,dst).Int? || OperandContents(lvm_sM,dst).Bytes? || OperandContents(lvm_sM,dst).Void?;
-  ensures OperandContents(lvm_sM,dst).Int? ==> OperandContents(lvm_sM,dst).itype.size == t;
+  ensures lvm_sM.ok ==> OperandContents(lvm_sM,dst).Bytes? ==> validBitWidth(|OperandContents(lvm_sM,dst).bytes|)
+  ensures lvm_sM.ok ==> OperandContents(lvm_sM,dst).Int? || OperandContents(lvm_sM,dst).Bytes? || OperandContents(lvm_sM,dst).Void?;
+  ensures lvm_sM.ok ==> OperandContents(lvm_sM,dst).Int? ==> OperandContents(lvm_sM,dst).itype.size == t;
   ensures lvm_s0.m == lvm_sM.m;
-  ensures forall d :: ValidOperand(lvm_s0,d) && d != dst ==> ValidOperand(lvm_sM,d) && OperandContents(lvm_s0,d) == OperandContents(lvm_sM,d)
-  ensures StateNext(lvm_s0,lvm_sM)
+  ensures lvm_sM.ok ==> forall d :: ValidOperand(lvm_s0,d) && d != dst ==> ValidOperand(lvm_sM,d) && OperandContents(lvm_s0,d) == OperandContents(lvm_sM,d)
+  ensures lvm_sM.ok ==> StateNext(lvm_s0,lvm_sM)
 
 {
   reveal_lvm_LOAD();
@@ -263,20 +263,21 @@ lemma lvm_lemma_Load(lvm_b0:lvm_codes, lvm_s0:lvm_state, lvm_sN:lvm_state,dst:lv
   ghost var lvm_ltmp1, lvm_cM:lvm_code, lvm_ltmp2 := lvm_lemma_block(lvm_b0, lvm_s0, lvm_sN);
   lvm_sM := lvm_ltmp1;
   lvm_bM := lvm_ltmp2;
-
-  assert lvm_sM.ok;
+ 
+  assert  d.Void? ==> !lvm_sM.ok;
+  assert  !d.Void? ==> lvm_sM.ok;
   assert  evalCode(lvm_b0.hd, lvm_s0, lvm_sM);
   assert lvm_b0.hd == lvm_LOAD(dst,lvm_s0.m,t,op1);
   assert lvm_b0.hd.ins.LOAD?;
   assert evalIns(lvm_b0.hd.ins,lvm_s0,lvm_sM);
 
   assert lvm_b0.tl == lvm_bM;
-  assert !OperandContents(lvm_sM,dst).Ptr?;
-  assert OperandContents(lvm_sM,dst).Int? || OperandContents(lvm_sM,dst).Void?;
-  assert OperandContents(lvm_sM,dst).Int? ==> OperandContents(lvm_sM,dst).itype.size == t;
+  assert lvm_sM.ok ==> !OperandContents(lvm_sM,dst).Ptr?;
+  assert lvm_sM.ok ==> OperandContents(lvm_sM,dst).Int? || OperandContents(lvm_sM,dst).Void?;
+  assert lvm_sM.ok ==> OperandContents(lvm_sM,dst).Int? ==> OperandContents(lvm_sM,dst).itype.size == t;
   
-  assert ValidState(lvm_sM);
-  assert evalCode_lax(lvm_cM, lvm_s0, lvm_sM);
+  assert lvm_sM.ok ==> ValidState(lvm_sM);
+  assert lvm_sM.ok ==> evalCode_lax(lvm_cM, lvm_s0, lvm_sM);
 }
 
 
