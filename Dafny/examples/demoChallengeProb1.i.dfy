@@ -99,7 +99,7 @@ function {:opaque} demo_challenge_prob_1_code(speed_value:lvm_operand_opr,s:MemS
               lvm_CCons(Ins(LOAD(var_11,s,1,var_10)),                                     // %11 = load i8, i8* %10, align 1
               lvm_CCons(Ins(ZEXT(var_12,1,var_11,4)),                                     // %12 = zext i8 %11 to i32
               lvm_CCons(Ins(ADD(speed_value,4,var_8,var_12)),                             // %13 = add nsw i32 %8, %12
-              lvm_CCons(Ins(ICMP(var_17,ugt,4,speed_value,D(Int(0,IntType(4,false))))),   // %17 = icmp eq i32 %13, 0 
+              lvm_CCons(Ins(ICMP(var_17,ugt,4,speed_value,D(Int(0,IntType(4,false))))),   // %17 = icmp ugt i32 %13, 0 
               lvm_CCons(Ins(RET(D(Void))),lvm_CNil())))))))))))                           // ret void
 
 }
@@ -153,7 +153,7 @@ lemma lvm_demo_simple_challenge_prob_1(lvm_b0:lvm_codes, lvm_s0:lvm_state,var_0:
   
   ensures  lvm_sM.ok ==> (OperandContents(lvm_sM,speed_value).val > 0 ==> OperandContents(lvm_sM,var_17).val == 1);
 
-  ensures  lvm_sM.ok ==> lvm_ensure(lvm_b0, lvm_CNil(), lvm_s0, lvm_sM, lvm_sM)
+  ensures lvm_sM.ok ==> lvm_ensure(lvm_b0, lvm_CNil(), lvm_s0, lvm_sM, lvm_sM)
   ensures lvm_sM.ok ==> ValidStateSeq(lvm_sMs);
   {
     reveal_demo_challenge_prob_1_code();
