@@ -14,8 +14,12 @@ module binary_operations_i {
         requires isInt(v1)
         requires typesMatch(v0,v1)
         requires validBitWidth(v0.itype.size)
+        requires v0.itype.size == size
         ensures out.Int?
         ensures validBitWidth(out.itype.size)
+        ensures out.itype.size == size
+        ensures !out.itype.signed
+        ensures typesMatch(v0,v1)
         ensures ToTwosComp(out).val == (v0.val + v1.val) % Pow256(v0.itype.size)
     { 
         reveal_ToTwosComp();
@@ -23,6 +27,7 @@ module binary_operations_i {
         if (v0.itype.size == 1) then evalADD8(size,v0,v1) else
         if (v0.itype.size == 2) then evalADD16(size,v0,v1) else
         if (v0.itype.size == 4) then evalADD32(size,v0,v1) else
+                                     assert v0.itype.size == 8; 
                                      evalADD64(size,v0,v1)
     }
 
@@ -33,8 +38,10 @@ module binary_operations_i {
         requires isInt(v1)
         requires typesMatch(v0,v1)
         requires validBitWidth(v0.itype.size)
+        requires v0.itype.size == size
         ensures out.Int?
         ensures validBitWidth(out.itype.size)
+        ensures out.itype.size == size
         ensures ToTwosComp(out).val == (v0.val - v1.val) % Pow256(v0.itype.size)
 
     { 
@@ -43,6 +50,7 @@ module binary_operations_i {
         if (v0.itype.size == 1) then evalSUB8(size,v0,v1) else
         if (v0.itype.size == 2) then evalSUB16(size,v0,v1) else
         if (v0.itype.size == 4) then evalSUB32(size,v0,v1) else
+                                     assert v0.itype.size == 8; 
                                      evalSUB64(size,v0,v1)
 
     }

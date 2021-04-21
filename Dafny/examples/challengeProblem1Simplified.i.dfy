@@ -2,7 +2,7 @@ include "../llvm.i.dfy"
 include "../control_flow.i.dfy"
 include "generalInstructions.i.dfy"
 include "../types.dfy"
-include "../memory.dfy"
+include "../memory.i.dfy"
 
 module challenge_problem_1_simplified {
     import opened LLVM_def

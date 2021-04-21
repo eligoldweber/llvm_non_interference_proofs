@@ -16,6 +16,7 @@ module other_operations_i {
         requires typesMatch(v0,v1)
         ensures out.Int? && !out.itype.signed
         ensures out.itype.size == 1 
+        ensures out.val == 0 || out.val == 1
     {
         match c
             case eq => boolToData(v0.val == v1.val)
@@ -31,7 +32,7 @@ module other_operations_i {
     }
 
 //-----------------------------------------------------------------------------
-// INSTRICTION VALIDITY
+// Instruction VALIDITY
 //-----------------------------------------------------------------------------
 
     lemma evalICMPcheck()
@@ -59,6 +60,11 @@ module other_operations_i {
         var v8:sint16 := 4;
         var v9:sint16 := 5;
         assert evalICMP(sge,2,SInt16(v8),SInt16(v9)).val == 0;
+
+        var v10:uint16 := 65000;
+        var v11:uint16 := 0;
+        assert !(FromTwosComp(UInt16(v10)).val >= FromTwosComp(UInt16(v11)).val);
+        assert evalICMP(sge,2,UInt16(v10),UInt16(v11)).val == 0;
         
     } 
 

@@ -1,6 +1,6 @@
 include "ops.dfy"
 include "types.dfy"
-include "memory.dfy"
+include "memory.i.dfy"
 include "./Operations/conversionOperations.i.dfy"
 include "./Operations/bitwiseBinaryOperations.i.dfy"
 include "./Operations/binaryOperations.i.dfy"
@@ -43,6 +43,7 @@ module LLVM_def {
     | Ins(ins:ins)
     | Block(block:codes)
     | IfElse(ifCond:bool, ifTrue:codes, ifFalse:codes)
+    //| While(whileCond:bool, whileBlock:codes)
 
 //-----------------------------------------------------------------------------
 // Instructions
@@ -96,14 +97,9 @@ module LLVM_def {
     predicate{:opaque} ValidRegState(s:state,lvs:map<LocalVar, Data>,gvs:map<GlobalVar, Data>)
     {
         reveal_ValidData();
-        // forall l:LocalVar :: l in lvs && forall g:GlobalVar :: g in gvs
         forall l:LocalVar :: l in lvs ==> ValidData(s,lvs[l])
         && forall g:GlobalVar :: g in gvs ==> ValidData(s,gvs[g])
     }
-
-
-
-
 
     predicate ValidState(s:state)
     
@@ -123,6 +119,14 @@ module LLVM_def {
              || (s == s'))
     }
 
+    predicate ValidStateSeq(states:seq<state>)
+    {
+        (|states| <= 1 && |states| == 1 ==> ValidState(states[0])) 
+        || (&& |states| >= 2
+            && forall s :: s in states ==> ValidState(s)
+            && forall i :: 0 <= i < |states|- 1 ==> StateNext(states[i],states[i+1]))
+    }
+
     predicate ValidOperand(s:state,o:operand)
     {
         reveal_ValidData();
@@ -138,9 +142,11 @@ module LLVM_def {
             case ADD(dst,t,src1,src2) => && ValidOperand(s,dst) && ValidOperand(s,src1) && ValidOperand(s,src2)
                                          && isInt(OperandContents(s,src1)) && isInt(OperandContents(s,src2))
                                          && typesMatch(OperandContents(s,src1),OperandContents(s,src2))
+                                         && t == OperandContents(s,src1).itype.size
             case SUB(dst,t,src1,src2) => && ValidOperand(s,dst) && ValidOperand(s,src1) && ValidOperand(s,src2) 
                                          && isInt(OperandContents(s,src1)) && isInt(OperandContents(s,src2))
                                          && typesMatch(OperandContents(s,src1),OperandContents(s,src2))
+                                         && t == OperandContents(s,src1).itype.size
             case BR(if_cond, labelTrue,labelFalse) => && ValidOperand(s,if_cond)
                                                    && OperandContents(s,if_cond).Int? && !OperandContents(s,if_cond).itype.signed
                                                    && OperandContents(s,if_cond).itype.size == 1 
@@ -158,13 +164,10 @@ module LLVM_def {
             case RET(val) => && ValidOperand(s,val)//&& ValidOperand(s,dst) 
             case ZEXT(dst,t,src,dstSize) => && ValidOperand(s,dst) && ValidOperand(s,src) && isInt(OperandContents(s,src))
                                             && OperandContents(s,src).itype.size < dstSize
-                                            && isInt(OperandContents(s,dst)) 
             case SHL(dst,src,shiftAmt) =>   && ValidOperand(s,dst) && ValidOperand(s,src) && ValidOperand(s,shiftAmt)
-                                            && isInt(OperandContents(s,dst)) && isInt(OperandContents(s,src)) && isInt(OperandContents(s,shiftAmt))
+                                            && isInt(OperandContents(s,src)) && isInt(OperandContents(s,shiftAmt))
                                             && OperandContents(s,src).itype.size*8 > OperandContents(s,shiftAmt).val
-                                            && OperandContents(s,shiftAmt).val > 0
-                                            && OperandContents(s,dst).itype.signed == OperandContents(s,src).itype.signed
-            
+                                            && OperandContents(s,shiftAmt).val > 0            
             case LSHR(dst,src,shiftAmt) =>  && ValidOperand(s,dst) && ValidOperand(s,src) && ValidOperand(s,shiftAmt)
                                             && isInt(OperandContents(s,dst)) && isInt(OperandContents(s,src)) && isInt(OperandContents(s,shiftAmt))
                                             && OperandContents(s,src).itype.size*8 > OperandContents(s,shiftAmt).val
@@ -361,16 +364,17 @@ module LLVM_def {
             !r.ok
     }
 
+
     predicate evalCode(c:code, s:state, r:state)
         decreases c, 0
     {
         match c
             case Ins(ins) => evalIns(ins, s, r)
             case Block(block) => evalBlock(block, s, r)
-            case IfElse(cond, ifT, ifF) => evalIfElse(cond, ifT, ifF, s, r)
+            case IfElse(ifCond, ifT, ifF) => evalIfElse(ifCond, ifT, ifF, s, r)
     }
 
-//// utility functions
+//// utility functions 
 
     function copyIntOperand(s:Data) : (out:operand)
         requires s.Int?
@@ -425,6 +429,18 @@ module LLVM_def {
             
     //         assert i != j ==> o1 != o2;
     //     }
+
+
+
+    // predicate evalWhile(cond:bool, wBlock:codes, n:nat, s:state, r:state)
+    //     decreases wBlock, n
+    // {
+    //     if n == 0 then !cond && s == r
+    //     else exists s1:state ::
+    //         cond && evalBlock(wBlock, s, s1) && (if s1.ok then evalWhile(cond, wBlock, n - 1, s1, r) else s1 == r)
+    // }
+
+
 
 
 }

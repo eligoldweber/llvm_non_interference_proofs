@@ -2,7 +2,7 @@ include "../llvm.i.dfy"
 include "../control_flow.i.dfy"
 include "generalInstructions.i.dfy"
 include "../types.dfy"
-include "../memory.dfy"
+include "../memory.i.dfy"
 include "../Operations/binaryOperations.i.dfy"
 
 

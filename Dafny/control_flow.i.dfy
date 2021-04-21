@@ -1,6 +1,6 @@
 include "llvm.i.dfy"
 include "types.dfy"
-include "memory.dfy"
+include "memory.i.dfy"
 
 // Adapted from Vale
 module control_flow {
@@ -41,18 +41,6 @@ predicate {:opaque} eval_code(c:code, s:state, r:state)
 {
     s.ok ==> evalCode(c, s, r)
 }
-
-
-// lemma lvm_lemma_empty(s0:state, sN:state) returns(sM:state)
-//     // requires evalCode_lax(lvm_Block(lvm_CNil()), s0, sN, void_Operand())
-//         requires exists o:operand :: evalCode_lax(lvm_Block(lvm_CNil()), s0, sN, o)
-
-//     ensures  s0 == sM
-//     ensures  s0.ok ==> s0 == sN
-// {
-//     reveal_evalCodeOpaque();
-//     sM := s0;
-// }
 
 lemma lvm_lemma_empty(s0:state, sN:state) returns(sM:state)
     // requires evalCode_lax(lvm_Block(lvm_CNil()), s0, sN, void_Operand())
@@ -121,12 +109,25 @@ lemma code_state_validity(c:code, s:state, r:state)
             assert ValidState(r);
         } 
         // else if c.While? {
-        //     var n:nat :| evalWhile(c.whileCond, c.whileBody, n, s, r);
-        //     evalWhile_validity(c.whileCond, c.whileBody, n, s, r);
-        //     assert valid_state(r);
+        //     var n:nat :| evalWhile(c.whileCond, c.whileBlock, n, s, r);
+        //     evalWhile_validity(c.whileCond, c.whileBlock, n, s, r);
+        //     assert ValidState(r);
         // }
     }
 }
+
+// lemma evalWhile_validity(b:bool, c:codes, n:nat, s:state, r:state)
+//     requires evalWhile(b, c, n, s, r);
+//     decreases c, 1, n;
+//     ensures  ValidState(s) && r.ok ==> ValidState(r);
+// {
+//     if ValidState(s) && r.ok && n > 0 {
+//         var s', r' :| b && branchRelation(s, s', true) && evalBlock(c, s', r') && evalWhile(b, c, n - 1, r', r);
+//         block_state_validity(c, s', r');
+//         evalWhile_validity(b, c, n - 1, r', r);
+//         assert ValidState(r);
+//     }
+// }
 
 lemma block_state_validity(block:codes, s:state, r:state)
     requires evalBlock(block, s, r);

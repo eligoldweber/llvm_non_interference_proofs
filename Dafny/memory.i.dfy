@@ -134,7 +134,7 @@ function evalLOAD(s:MemState,s':MemState,t:bitWidth,op1:Data): (out:Data)
     requires op1.Ptr?
     // requires IsValidPtr(s,op1.bid,op1.offset)
     ensures out.Bytes? ==> validBitWidth(|out.bytes|)
-    ensures out.Int? || out.Bytes? || out.Void?;
+    ensures out.Int? || out.Void?;
     // requires exists d:Data :: Load(s,s',op1.bid,op1.offset,d)
     ensures !out.Ptr?;
     ensures out.Int? ==> out.itype.size == t;
@@ -146,7 +146,6 @@ function evalLOAD(s:MemState,s':MemState,t:bitWidth,op1:Data): (out:Data)
         d
     else Void
     // var d :| Load(s,s',op1.bid,op1.offset,d);
-    // d
 }
 
 
@@ -154,15 +153,12 @@ function evalGETELEMENTPTR(s:MemState,t:bitWidth,op1:Data,op2:Data): (out:Data)
     requires MemValid(s)
     requires op1.Ptr? //TODO: Also could be vector of Ptrs
     requires validBitWidth(t)
-    // requires IsValidPtr(s,op1.bid,op1.offset)
     requires IsValidBid(s,op1.bid)
     requires op2.Int? && !op2.itype.signed
-    // requires op1.offset + (op2.val * t) < |s.mem[op1.bid]|;
     ensures out.Ptr?
     ensures op1.offset + (op2.val * t) < |s.mem[op1.bid]| ==> IsValidPtr(s,out.bid,out.offset)
 {
     reveal_IntFits();
-    // assert  op1.offset + (op2.val * t) < |s.mem[op1.bid]|;
     assert op1.offset >= 0;
     assert op2.val >= 0;
     assert (op2.val * t) >= 0;

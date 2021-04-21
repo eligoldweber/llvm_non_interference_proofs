@@ -15,7 +15,7 @@ namespace NIP.LLVM
       public static int Main(string[] args)
       {
         Console.WriteLine("Starting NIP_LLVM");
-        DafnyFile d = new DafnyFile("../../Dafny/memory.dfy");
+        DafnyFile d = new DafnyFile("../../Dafny/memory.i.dfy");
         Console.WriteLine("memory is valid Dafny File : " + d.SourceFileName);
         int ret = 0;
         return ret;
