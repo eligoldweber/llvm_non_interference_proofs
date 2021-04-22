@@ -81,12 +81,18 @@ predicate MemValid(s:MemState) {
     && (forall bid | bid in s.mem :: BlockValid(s.mem[bid]))
 }
 
-// predicate MemStateNext(s:MemState,s':MemState)
-// {
-//     MemValid(s)
-//     && MemValid(s')
-//     && 
-// }
+// Describes valid Mem state transition 
+predicate MemStateNext(s:MemState,s':MemState)
+{
+    MemValid(s)
+    && MemValid(s')
+    && ( || s == s'
+         || exists b,n :: Alloc(s,s',b,n)
+         || exists b :: Free(s,s',b)
+         || exists b:nat,o:nat,d:Data :: && IsValidPtr(s, b, o)
+                                         && d.Int? && IntType(1, false) == d.itype
+                                         && Store(s,s',b,o,d))
+}
 // When a new block is allocated, all the previous blocks should remain the same,
 // and an unininitialized block of the appropriate size should be added with block
 // nextBlock

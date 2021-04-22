@@ -83,30 +83,33 @@ define void @rx_message_routine(i8* nocapture readonly %0) local_unnamed_addr #0
 
 function {:opaque} demo_challenge_prob_1_code(speed_value:lvm_operand_opr,s:MemState,var_0:lvm_operand_opr,
                                               var_5:lvm_operand_opr,var_10:lvm_operand_opr,var_17:lvm_operand_opr,
-                                              var_6:lvm_operand_opr,var_7:lvm_operand_opr,var_8:lvm_operand_opr,var_11:lvm_operand_opr,var_12:lvm_operand_opr):lvm_code
+                                              var_6:lvm_operand_opr,var_7:lvm_operand_opr,var_8:lvm_operand_opr,
+                                              var_11:lvm_operand_opr,var_12:lvm_operand_opr):lvm_code
 {
     reveal_IntFits();
     var index3 := D(Int(3,IntType(8,false)));
     var index2 := D(Int(2,IntType(8,false)));
-    var shl_amount := D(Int(8,IntType(1,false)));
+    var shl_amount := D(Int(8,IntType(2,false)));
 
 
     lvm_Block(lvm_CCons(Ins(GETELEMENTPTR(var_5,1,var_0,index3)),                         // %5 = getelementptr inbounds i8, i8* %0, i64 3
               lvm_CCons(Ins(LOAD(var_6,s,1,var_5)),                                       // %6 = load i8, i8* %2, align 1, !tbaa !4
-              lvm_CCons(Ins(ZEXT(var_7,1,var_6,4)),                                       // %7 = zext i8 %3 to i32
-              lvm_CCons(Ins(SHL(var_8,var_7,shl_amount)),                                 // %8 = shl i32 %7, 8
+              lvm_CCons(Ins(ZEXT(var_7,1,var_6,2)),                                       // %7 = zext i8 %3 to i16
+              lvm_CCons(Ins(SHL(var_8,var_7,shl_amount)),                                 // %8 = shl i16 %7, 8
               lvm_CCons(Ins(GETELEMENTPTR(var_10,1,var_0,index2)),                        // %10 = getelementptr inbounds i8, i8* %0, i64 2
               lvm_CCons(Ins(LOAD(var_11,s,1,var_10)),                                     // %11 = load i8, i8* %10, align 1
-              lvm_CCons(Ins(ZEXT(var_12,1,var_11,4)),                                     // %12 = zext i8 %11 to i32
-              lvm_CCons(Ins(ADD(speed_value,4,var_8,var_12)),                             // %13 = add nsw i32 %8, %12
-              lvm_CCons(Ins(ICMP(var_17,ugt,4,speed_value,D(Int(0,IntType(4,false))))),   // %17 = icmp ugt i32 %13, 0 
+              lvm_CCons(Ins(ZEXT(var_12,1,var_11,2)),                                     // %12 = zext i8 %11 to i16
+              lvm_CCons(Ins(ADD(speed_value,2,var_8,var_12)),                             // %13 = add nsw i16 %8, %12
+              lvm_CCons(Ins(ICMP(var_17,ugt,2,speed_value,D(Int(0,IntType(2,false))))),   // %17 = icmp ugt i16 %13, 0 
               lvm_CCons(Ins(RET(D(Void))),lvm_CNil())))))))))))                           // ret void
 
 }
 
-lemma lvm_demo_simple_challenge_prob_1(lvm_b0:lvm_codes, lvm_s0:lvm_state,var_0:lvm_operand_opr,var_5:lvm_operand_opr,
-                                       var_6:lvm_operand_opr,var_7:lvm_operand_opr,var_8:lvm_operand_opr,var_10:lvm_operand_opr,
-                                       var_11:lvm_operand_opr,var_12:lvm_operand_opr,speed_value:lvm_operand_opr, var_17:lvm_operand_opr)
+
+
+
+
+lemma lvm_demo_simple_challenge_prob_1(lvm_b0:lvm_codes, lvm_s0:lvm_state,var_0:lvm_operand_opr,var_5:lvm_operand_opr,var_6:lvm_operand_opr,var_7:lvm_operand_opr,var_8:lvm_operand_opr,var_10:lvm_operand_opr,var_11:lvm_operand_opr,var_12:lvm_operand_opr,speed_value:lvm_operand_opr, var_17:lvm_operand_opr)
       returns (lvm_bM:lvm_codes, lvm_sM:lvm_state,lvm_sMs:seq<lvm_state>)
 // PRE Conditions 
   requires exists sN :: lvm_require(lvm_b0, demo_challenge_prob_1_code(speed_value,lvm_s0.m,var_0,var_5,var_10,var_17,var_6,var_7,var_8,var_11,var_12), lvm_s0, sN)
@@ -147,7 +150,7 @@ lemma lvm_demo_simple_challenge_prob_1(lvm_b0:lvm_codes, lvm_s0:lvm_state,var_0:
   ensures  lvm_sM.ok ==> OperandContents(lvm_sM, var_8).Int?;
   ensures  lvm_sM.ok ==> OperandContents(lvm_sM, speed_value).Int?;
   ensures  lvm_sM.ok ==> OperandContents(lvm_sM, var_17).Int?;
-  ensures  lvm_sM.ok ==> OperandContents(lvm_sM, speed_value).itype.size == 4;
+  ensures  lvm_sM.ok ==> OperandContents(lvm_sM, speed_value).itype.size == 2;
   ensures  lvm_sM.ok ==> OperandContents(lvm_sM, speed_value).val < 0x1_0000_0000;
   ensures  lvm_sM.ok ==> OperandContents(lvm_sM, speed_value).val >= 0;
   
@@ -202,23 +205,23 @@ lemma lvm_demo_simple_challenge_prob_1(lvm_b0:lvm_codes, lvm_s0:lvm_state,var_0:
     lvm_sMs := lvm_sMs + [lvm_s3];
 
     assert OperandContents(lvm_s3,var_6).Int?;
-    ghost var lvm_b4, lvm_s4 := lvm_lemma_Zext(lvm_b3, lvm_s3, lvm_sM, var_7, 1,var_6,4);
+    ghost var lvm_b4, lvm_s4 := lvm_lemma_Zext(lvm_b3, lvm_s3, lvm_sM, var_7, 1,var_6,2);
     assert lvm_s3.m == lvm_s4.m;
     assert StateNext(lvm_s3,lvm_s4);
     lvm_sMs := lvm_sMs + [lvm_s4];
 
     assert OperandContents(lvm_s4,var_7).Int?;
-    assert OperandContents(lvm_s4,var_7).itype.size == 4;
+    assert OperandContents(lvm_s4,var_7).itype.size == 2;
 
 
-    var shl_amount := D(Int(8,IntType(1,false)));
+    var shl_amount := D(Int(8,IntType(2,false)));
     ghost var lvm_b5, lvm_s5 := lvm_lemma_Shl(lvm_b4, lvm_s4, lvm_sM, var_8,var_7,shl_amount);
     assert lvm_s4.m == lvm_s5.m;
     assert StateNext(lvm_s4,lvm_s5);
     lvm_sMs := lvm_sMs + [lvm_s5];
 
 
-    assert OperandContents(lvm_s5,var_8).itype.size == 4;
+    assert OperandContents(lvm_s5,var_8).itype.size == 2;
     assert OperandContents(lvm_s5, var_8).val >= 0;
     assert OperandContents(lvm_s5,var_8).Int?;
     assert !OperandContents(lvm_s5,var_8).itype.signed;
@@ -252,21 +255,21 @@ lemma lvm_demo_simple_challenge_prob_1(lvm_b0:lvm_codes, lvm_s0:lvm_state,var_0:
     assert operands[5] == var_8 && operands[6] == var_11;
 
     assert lvm_b7.hd.ins.ZEXT?;
-    ghost var lvm_b8, lvm_s8 := lvm_lemma_Zext(lvm_b7, lvm_s7, lvm_sM, var_12, 1,var_11,4);
+    ghost var lvm_b8, lvm_s8 := lvm_lemma_Zext(lvm_b7, lvm_s7, lvm_sM, var_12, 1,var_11,2);
     assert StateNext(lvm_s7,lvm_s8);
     lvm_sMs := lvm_sMs + [lvm_s8];
 
     assert lvm_b8.hd.ins.ADD?;
-    ghost var lvm_b9, lvm_s9 := lvm_lemma_Add(lvm_b8, lvm_s8, lvm_sM, speed_value,4,var_8,var_12);
+    ghost var lvm_b9, lvm_s9 := lvm_lemma_Add(lvm_b8, lvm_s8, lvm_sM, speed_value,2,var_8,var_12);
     assert StateNext(lvm_s8,lvm_s9);
     lvm_sMs := lvm_sMs + [lvm_s9];
 
     assert operandsUnique(lvm_s9,operands);
     assert operands[0] == speed_value && operands[1] == var_10;
     assert OperandContents(lvm_s9,speed_value).Int?;
-    assert OperandContents(lvm_s9,speed_value).itype.size == 4;
+    assert OperandContents(lvm_s9,speed_value).itype.size == 2;
 
-    ghost var lvm_b10, lvm_s10:= lvm_lemma_Icmp(lvm_b9, lvm_s9, lvm_sM, var_17,ugt,4,speed_value,D(Int(0,IntType(4,false))));
+    ghost var lvm_b10, lvm_s10:= lvm_lemma_Icmp(lvm_b9, lvm_s9, lvm_sM, var_17,ugt,2,speed_value,D(Int(0,IntType(2,false))));
     assert StateNext(lvm_s9,lvm_s10);
     lvm_sMs := lvm_sMs + [lvm_s10];
     assert OperandContents(lvm_s10,var_17).Int?;

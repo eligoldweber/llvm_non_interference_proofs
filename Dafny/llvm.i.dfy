@@ -54,7 +54,7 @@ module LLVM_def {
     | SUB(dst:operand, size:nat, src1SUB:operand, src2SUB:operand)
     | BR(if_cond:operand, labelTrue:codes,labelFalse:codes)
     | CALL(dst:operand,fnc:code)
-    | GETELEMENTPTR(dst:operand,t:bitWidth,op1:operand,op2:operand) //needs work VV
+    | GETELEMENTPTR(dst:operand,t:bitWidth,op1:operand,op2:operand)
     | ICMP(dst:operand,cond:condition,size:nat,src1:operand,src2:operand)
     | RET(val:operand)
     | ZEXT(dst:operand,size:nat,src:operand,dstSize:bitWidth)
@@ -65,9 +65,10 @@ module LLVM_def {
     | TRUN(dst:operand,size:nat,src:operand,dstSize:bitWidth)
     | SEXT(dst:operand,size:nat,src:operand,dstSize:bitWidth)
     | LOAD(dst:operand,mems:MemState,t:bitWidth,src:operand) //o:operand, bid:nat, ofs:nat,
+    | STORE(valueToStore:operand,ptr:operand,mems:MemState)
+    | INTTOPTR(dst:operand,intSrc:operand,ptrType:operand)
+    | PTRTOINT(dst:operand,ptrSrc:operand,intType:operand)
     | PHI()
-    | INTTOPTR()
-    | PTRTOINT()
     | EXTRACTVALUE()
     
 
@@ -115,6 +116,7 @@ module LLVM_def {
     {
         && ValidState(s)
         && ValidState(s')
+        && MemStateNext(s.m,s'.m)
         &&  (|| (exists ins :: (ValidInstruction(s,ins) && evalIns(ins, s, s')))
              || (s == s'))
     }
@@ -194,11 +196,18 @@ module LLVM_def {
             case LOAD(dst,mems,size,src) => && ValidOperand(s,dst) && ValidOperand(s,src) 
                                             && MemValid(mems) && OperandContents(s,src).Ptr? 
                                             && IsValidPtr(mems,OperandContents(s,src).bid,OperandContents(s,src).offset)
-
-            case PHI() => true //TODO
-            case INTTOPTR() => true //TODO
-            case PTRTOINT() => true //TODO
+            case STORE(valueToStore,ptr,mems) => && ValidOperand(s,valueToStore) && ValidOperand(s,ptr)
+                                                 && OperandContents(s,valueToStore).Int? && (IntType(1, false) == OperandContents(s,valueToStore).itype)
+                                                 && MemValid(mems) && OperandContents(s,ptr).Ptr? 
+                                                 && IsValidPtr(mems,OperandContents(s,ptr).bid,OperandContents(s,ptr).offset)
+            case INTTOPTR(dst:operand,intSrc:operand,ptrType:operand) => && ValidOperand(s,dst) && ValidOperand(s,intSrc) && ValidOperand(s,ptrType)
+                                                                         && isInt(OperandContents(s,intSrc)) 
+                                                                         && OperandContents(s,ptrType).Ptr? && OperandContents(s,dst).Ptr?
+            case PTRTOINT(dst:operand,ptrSrc:operand,intType:operand) => && ValidOperand(s,dst) && ValidOperand(s,ptrSrc) && ValidOperand(s,intType)
+                                                                         && isInt(OperandContents(s,intType)) 
+                                                                         && OperandContents(s,ptrSrc).Ptr? && OperandContents(s,dst).Int?
             case EXTRACTVALUE() => true    //TODO 
+            case PHI() => true //TODO
     }
 
     //EVAL//
@@ -322,10 +331,12 @@ module LLVM_def {
                                 && if evalLOAD(s.m,r.m,size,OperandContents(s,src)).Void? then !r.ok else// o == dst 
                                  evalUpdate(s, dst, evalLOAD(s.m,r.m,size,OperandContents(s,src)),r) && evalLOAD(s.m,r.m,size,OperandContents(s,src)).Int?
                                 // && evalLoad(s,o,OperandContents(s,src).bid,OperandContents(s,src).offset,r) //bid:nat, ofs:nat
-            case PHI() => ValidState(r)
-            case INTTOPTR() => ValidState(r)
-            case PTRTOINT() => ValidState(r)
-            case EXTRACTVALUE() => ValidState(r)   
+            case STORE(valueToStore,ptr,mems) => mems == s.m && Store(s.m,r.m,OperandContents(s,ptr).bid,OperandContents(s,ptr).offset,OperandContents(s,valueToStore))
+                                                 && (MemValid(r.m))   
+            case INTTOPTR(dst,intSrc,ptrType) => ValidState(r)
+            case PTRTOINT(dst,ptrSrc,intType) => ValidState(r)
+            case EXTRACTVALUE() => ValidState(r)
+            case PHI() => ValidState(r)   
     }
 
     predicate evalBlock(block:codes, s:state, r:state)
