@@ -153,10 +153,9 @@ lemma lvm_demo_simple_challenge_prob_1(lvm_b0:lvm_codes, lvm_s0:lvm_state,var_0:
   ensures  lvm_sM.ok ==> OperandContents(lvm_sM, speed_value).itype.size == 2;
   ensures  lvm_sM.ok ==> OperandContents(lvm_sM, speed_value).val < 0x1_0000_0000;
   ensures  lvm_sM.ok ==> OperandContents(lvm_sM, speed_value).val >= 0;
-  
-  ensures  lvm_sM.ok ==> (OperandContents(lvm_sM,speed_value).val > 0 ==> OperandContents(lvm_sM,var_17).val == 1);
-
   ensures lvm_sM.ok ==> lvm_ensure(lvm_b0, lvm_CNil(), lvm_s0, lvm_sM, lvm_sM)
+
+  ensures  lvm_sM.ok ==> (OperandContents(lvm_sM,speed_value).val > 0 ==> OperandContents(lvm_sM,var_17).val == 1);
   ensures lvm_sM.ok ==> ValidStateSeq(lvm_sMs);
   {
     reveal_demo_challenge_prob_1_code();
@@ -185,12 +184,13 @@ lemma lvm_demo_simple_challenge_prob_1(lvm_b0:lvm_codes, lvm_s0:lvm_state,var_0:
     var lvm_b1:lvm_codes := lvm_get_block(lvm_cM);
 
     assert lvm_b1.hd == Ins(GETELEMENTPTR(var_5,1,var_0,D(Int(3,IntType(8,false)))));
-    // assert lvm_sM == lvm_s0;
+
 
     ghost var lvm_b2, lvm_s2 := lvm_lemma_GetElementPtr(lvm_b1, lvm_s0, lvm_sM, var_5, lvm_s0.m,1,var_0,D(Int(3,IntType(8,false))));
     assert lvm_s0.m == lvm_s2.m;
     assert StateNext(lvm_s0,lvm_s2);
     lvm_sMs := lvm_sMs + [lvm_s2];
+    assert ValidStateSeq(lvm_sMs);
 
     ghost var lvm_b3, lvm_s3 := lvm_lemma_Load(lvm_b2, lvm_s2, lvm_sM, var_6,1,var_5);
     assert lvm_s3.m == lvm_s2.m;
@@ -209,6 +209,7 @@ lemma lvm_demo_simple_challenge_prob_1(lvm_b0:lvm_codes, lvm_s0:lvm_state,var_0:
     assert lvm_s3.m == lvm_s4.m;
     assert StateNext(lvm_s3,lvm_s4);
     lvm_sMs := lvm_sMs + [lvm_s4];
+    assert ValidStateSeq(lvm_sMs);
 
     assert OperandContents(lvm_s4,var_7).Int?;
     assert OperandContents(lvm_s4,var_7).itype.size == 2;
@@ -219,6 +220,7 @@ lemma lvm_demo_simple_challenge_prob_1(lvm_b0:lvm_codes, lvm_s0:lvm_state,var_0:
     assert lvm_s4.m == lvm_s5.m;
     assert StateNext(lvm_s4,lvm_s5);
     lvm_sMs := lvm_sMs + [lvm_s5];
+    assert ValidStateSeq(lvm_sMs);
 
 
     assert OperandContents(lvm_s5,var_8).itype.size == 2;
@@ -233,6 +235,7 @@ lemma lvm_demo_simple_challenge_prob_1(lvm_b0:lvm_codes, lvm_s0:lvm_state,var_0:
     assert lvm_s5.m == lvm_s6.m;
     assert StateNext(lvm_s5,lvm_s6);
     lvm_sMs := lvm_sMs + [lvm_s6];
+    assert ValidStateSeq(lvm_sMs);
 
       // LOAD now
     assert operandsUnique(lvm_s6,operands);
@@ -249,6 +252,7 @@ lemma lvm_demo_simple_challenge_prob_1(lvm_b0:lvm_codes, lvm_s0:lvm_state,var_0:
     }
     assert StateNext(lvm_s6,lvm_s7);
     lvm_sMs := lvm_sMs + [lvm_s7];
+    assert ValidStateSeq(lvm_sMs);
 
     assert OperandContents(lvm_s7,var_11).Int?;
     assert operandsUnique(lvm_s6,operands);
@@ -258,11 +262,13 @@ lemma lvm_demo_simple_challenge_prob_1(lvm_b0:lvm_codes, lvm_s0:lvm_state,var_0:
     ghost var lvm_b8, lvm_s8 := lvm_lemma_Zext(lvm_b7, lvm_s7, lvm_sM, var_12, 1,var_11,2);
     assert StateNext(lvm_s7,lvm_s8);
     lvm_sMs := lvm_sMs + [lvm_s8];
+    assert ValidStateSeq(lvm_sMs);
 
     assert lvm_b8.hd.ins.ADD?;
     ghost var lvm_b9, lvm_s9 := lvm_lemma_Add(lvm_b8, lvm_s8, lvm_sM, speed_value,2,var_8,var_12);
     assert StateNext(lvm_s8,lvm_s9);
     lvm_sMs := lvm_sMs + [lvm_s9];
+    assert ValidStateSeq(lvm_sMs);
 
     assert operandsUnique(lvm_s9,operands);
     assert operands[0] == speed_value && operands[1] == var_10;
@@ -272,6 +278,7 @@ lemma lvm_demo_simple_challenge_prob_1(lvm_b0:lvm_codes, lvm_s0:lvm_state,var_0:
     ghost var lvm_b10, lvm_s10:= lvm_lemma_Icmp(lvm_b9, lvm_s9, lvm_sM, var_17,ugt,2,speed_value,D(Int(0,IntType(2,false))));
     assert StateNext(lvm_s9,lvm_s10);
     lvm_sMs := lvm_sMs + [lvm_s10];
+    assert ValidStateSeq(lvm_sMs);
     assert OperandContents(lvm_s10,var_17).Int?;
     assert !OperandContents(lvm_s10,var_17).itype.signed;
     assert OperandContents(lvm_s10,var_17).itype.size == 1;
@@ -280,6 +287,7 @@ lemma lvm_demo_simple_challenge_prob_1(lvm_b0:lvm_codes, lvm_s0:lvm_state,var_0:
     ghost var lvm_b11, lvm_s11:= lvm_lemma_Ret(lvm_b10, lvm_s10, lvm_sM, speed_value, D(Void));
     assert StateNext(lvm_s10,lvm_s11);
     lvm_sMs := lvm_sMs + [lvm_s11];
+    assert ValidStateSeq(lvm_sMs);
 
     assert lvm_b11 == (lvm_CNil());
     assert eval_code(lvm_Block(lvm_b11), lvm_s10, lvm_sM);

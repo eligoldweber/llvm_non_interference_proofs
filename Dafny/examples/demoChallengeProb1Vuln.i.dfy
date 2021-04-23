@@ -158,7 +158,6 @@ lemma lvm_demo_simple_challenge_prob_1(lvm_b0:lvm_codes, lvm_s0:lvm_state,var_0:
   ensures lvm_sM.ok ==> lvm_ensure(lvm_b0, lvm_CNil(), lvm_s0, lvm_sM, lvm_sM)
 
   ensures lvm_sM.ok ==> (OperandContents(lvm_sM,speed_value).val > 0 ==> OperandContents(lvm_sM,var_17).val == 1);
-
   ensures lvm_sM.ok ==> ValidStateSeq(lvm_sMs); // [S0 -> S1 -> ..... -> SN]
   {
     reveal_demo_challenge_prob_1_code();
@@ -187,7 +186,7 @@ lemma lvm_demo_simple_challenge_prob_1(lvm_b0:lvm_codes, lvm_s0:lvm_state,var_0:
     var lvm_b1:lvm_codes := lvm_get_block(lvm_cM);
 
     assert lvm_b1.hd == Ins(GETELEMENTPTR(var_5,1,var_0,D(Int(3,IntType(8,false)))));
-    // assert lvm_sM == lvm_s0;
+   
 
     ghost var lvm_b2, lvm_s2 := lvm_lemma_GetElementPtr(lvm_b1, lvm_s0, lvm_sM, var_5, lvm_s0.m,1,var_0,D(Int(3,IntType(8,false))));
     assert lvm_s0.m == lvm_s2.m;
