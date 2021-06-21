@@ -68,6 +68,7 @@ module LLVM_def {
     | STORE(valueToStore:operand,ptr:operand,mems:MemState)
     | INTTOPTR(dst:operand,intSrc:operand,ptrType:operand)
     | PTRTOINT(dst:operand,ptrSrc:operand,intType:operand)
+    | BITCAST()
     | PHI()
     | EXTRACTVALUE()
     
@@ -206,6 +207,7 @@ module LLVM_def {
             case PTRTOINT(dst:operand,ptrSrc:operand,intType:operand) => && ValidOperand(s,dst) && ValidOperand(s,ptrSrc) && ValidOperand(s,intType)
                                                                          && isInt(OperandContents(s,intType)) 
                                                                          && OperandContents(s,ptrSrc).Ptr? && OperandContents(s,dst).Int?
+            case BITCAST() => true
             case EXTRACTVALUE() => true    //TODO 
             case PHI() => true //TODO
     }
@@ -335,6 +337,7 @@ module LLVM_def {
                                                  && (MemValid(r.m))   
             case INTTOPTR(dst,intSrc,ptrType) => ValidState(r)
             case PTRTOINT(dst,ptrSrc,intType) => ValidState(r)
+            case BITCAST() => ValidState(r)
             case EXTRACTVALUE() => ValidState(r)
             case PHI() => ValidState(r)   
     }

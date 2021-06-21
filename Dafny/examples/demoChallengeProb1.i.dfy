@@ -100,7 +100,7 @@ function {:opaque} demo_challenge_prob_1_code(speed_value:lvm_operand_opr,s:MemS
               lvm_CCons(Ins(LOAD(var_11,s,1,var_10)),                                     // %11 = load i8, i8* %10, align 1
               lvm_CCons(Ins(ZEXT(var_12,1,var_11,2)),                                     // %12 = zext i8 %11 to i16
               lvm_CCons(Ins(ADD(speed_value,2,var_8,var_12)),                             // %13 = add nsw i16 %8, %12
-              lvm_CCons(Ins(ICMP(var_17,ugt,2,speed_value,D(Int(0,IntType(2,false))))),   // %17 = icmp ugt i16 %13, 0 
+              lvm_CCons(Ins(ICMP(var_17,ugt,2,speed_value,D(Int(0,IntType(2,false))))),   // %17 = icmp ugt i16 %13, 0  <--------
               lvm_CCons(Ins(RET(D(Void))),lvm_CNil())))))))))))                           // ret void
 
 }
