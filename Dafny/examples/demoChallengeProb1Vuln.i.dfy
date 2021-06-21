@@ -3,6 +3,7 @@ include "../control_flow.i.dfy"
 include "generalInstructions.i.dfy"
 include "../types.dfy"
 include "../memory.i.dfy"
+include "../Operations/otherOperations.i.dfy"
 
 module demo_challenge_prob_1_Vuln {
     import opened LLVM_def
@@ -10,6 +11,7 @@ module demo_challenge_prob_1_Vuln {
     import opened general_instructions
     import opened types
     import opened memory
+    import opened other_operations_i
 
 //####################################################################
 //
@@ -158,6 +160,9 @@ lemma lvm_demo_simple_challenge_prob_1(lvm_b0:lvm_codes, lvm_s0:lvm_state,var_0:
   ensures lvm_sM.ok ==> lvm_ensure(lvm_b0, lvm_CNil(), lvm_s0, lvm_sM, lvm_sM)
 
   ensures lvm_sM.ok ==> (OperandContents(lvm_sM,speed_value).val > 0 ==> OperandContents(lvm_sM,var_17).val == 1);
+  ensures lvm_sM.ok ==> (forall s:state :: s.ok && ValidState(s) && ValidOperand(s,speed_value) && OperandContents(s,speed_value).Int? 
+                        && OperandContents(s,speed_value).val > 0 && typesMatch(OperandContents(s,speed_value),Int(0,IntType(2,false)))
+                          ==> (evalICMP(ugt,2,OperandContents(s,speed_value),Int(0,IntType(2,false))).val == 1)); 
   ensures lvm_sM.ok ==> ValidStateSeq(lvm_sMs); // [S0 -> S1 -> ..... -> SN]
   {
     reveal_demo_challenge_prob_1_code();
