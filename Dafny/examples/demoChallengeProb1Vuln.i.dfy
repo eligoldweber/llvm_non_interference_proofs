@@ -1,9 +1,9 @@
-include "../llvm.i.dfy"
-include "../control_flow.i.dfy"
+include "../LLVM/llvm.i.dfy"
+include "../LLVM/control_flow.i.dfy"
 include "generalInstructions.i.dfy"
-include "../types.dfy"
-include "../memory.i.dfy"
-include "../Operations/otherOperations.i.dfy"
+include "../LLVM/types.dfy"
+include "../LLVM/memory.i.dfy"
+include "../LLVM/Operations/otherOperations.i.dfy"
 
 module demo_challenge_prob_1_Vuln {
     import opened LLVM_def

@@ -1,11 +1,11 @@
-include "../llvm.i.dfy"
-include "../control_flow.i.dfy"
-include "../types.dfy"
-include "../memory.i.dfy"
-include "../Operations/binaryOperations.i.dfy"
-include "../Operations/conversionOperations.i.dfy"
-include "../Operations/bitwiseBinaryOperations.i.dfy"
-include "../Operations/otherOperations.i.dfy"
+include "../LLVM/llvm.i.dfy"
+include "../LLVM/control_flow.i.dfy"
+include "../LLVM/types.dfy"
+include "../LLVM/memory.i.dfy"
+include "../LLVM/Operations/binaryOperations.i.dfy"
+include "../LLVM/Operations/conversionOperations.i.dfy"
+include "../LLVM/Operations/bitwiseBinaryOperations.i.dfy"
+include "../LLVM/Operations/otherOperations.i.dfy"
 
 module general_instructions {
     import opened LLVM_def

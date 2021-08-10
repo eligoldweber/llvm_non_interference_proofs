@@ -3,5 +3,6 @@
 *.vdfy
 *.tmp
 
+Binaries/* 
 Source/*/bin/
 Source/*/obj/
