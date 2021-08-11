@@ -6,7 +6,9 @@ The repo contains operational semantics for LLVM defined in Dafny. Additionally,
  > **Note:** Non-Interference proofs coming soon.
 
 
-This README outlines the steps necessaty for building and verifying dafny files using scons. [See the NuBuild Directory for instructions on building and using the NuBuild tool (This still works but is DEPRECATED - see [here](./NuBuild/README.md) for more info)]
+This README outlines the steps necessaty for building and verifying dafny files using [scons](https://scons.org/). 
+
+-- See the NuBuild Directory for instructions on building and using the NuBuild tool (This still works but is DEPRECATED - see [here](./NuBuild/README.md) for more info)
 
 
 # Setup
@@ -18,7 +20,7 @@ To use this project, you will need the following dependencies:
  3. python 2 or 3 (needed for running scons)
  4. scons (installable by running `pip install scons`)
 
-# Verifying Files
+# Verifying Dafny Files
 
  1. Use `scons --dafny-path=/path/to/directory/with/dafny/`
  
