@@ -1,6 +1,6 @@
 include "../LLVM/llvm.i.dfy"
 include "../LLVM/control_flow.i.dfy"
-include "generalInstructions.i.dfy"
+include "../LLVM/generalInstructions.i.dfy"
 include "../LLVM/types.dfy"
 include "../LLVM/memory.i.dfy"
 
@@ -20,7 +20,7 @@ module challenge_problem_1_simplified {
 //   ret i32 %5
 // }
 
-function method{:opaque} lvm_simple_challenge1(dst:lvm_operand_opr,t:bitWidth,op1:lvm_operand_opr,op2:lvm_operand_opr):lvm_code
+function method{:opaque} lvm_super_simple_challenge1(dst:lvm_operand_opr,t:bitWidth,op1:lvm_operand_opr,op2:lvm_operand_opr):lvm_code
 {
     //getelementptr
     reveal_IntFits();
@@ -39,7 +39,7 @@ lemma lvm_lemma_simple_challenge1(lvm_b0:lvm_codes, lvm_s0:lvm_state, lvm_sN:lvm
             dst:lvm_operand_opr,s:MemState,t:bitWidth,op1:lvm_operand_opr,op2:lvm_operand_opr)
   returns (lvm_bM:lvm_codes, lvm_sM:lvm_state)
   
-  requires lvm_require(lvm_b0, lvm_simple_challenge1(dst,t,op1,op2), lvm_s0, lvm_sN)
+  requires lvm_require(lvm_b0, lvm_super_simple_challenge1(dst,t,op1,op2), lvm_s0, lvm_sN)
   requires lvm_is_dst_opr(dst, lvm_s0)
   requires lvm_is_src_opr(op1, lvm_s0)
   requires lvm_get_ok(lvm_s0)
@@ -58,16 +58,16 @@ lemma lvm_lemma_simple_challenge1(lvm_b0:lvm_codes, lvm_s0:lvm_state, lvm_sN:lvm
   ensures  OperandContents(lvm_sM, dst) == evalGETELEMENTPTR(lvm_s0.m,1,OperandContents(lvm_s0,op1),Int(2,IntType(8,false)));
   // ensures  lvm_state_eq(lvm_sM, lvm_update_ok(lvm_sM, lvm_update_mem( lvm_sM, lvm_s0)))
 {
-  reveal_lvm_simple_challenge1();
+  reveal_lvm_super_simple_challenge1();
   reveal_lvm_code_Ret();
   reveal_ValidData();
   reveal_evalCodeOpaque();
   reveal_lvm_code_GetElementPtr();
   reveal_eval_code();
 
-  assert lvm_simple_challenge1(dst,t,op1,op2).Block?;
-  var getelementins := lvm_simple_challenge1(dst,t,op1,op2).block.hd.ins;
-  assert lvm_simple_challenge1(dst,t,op1,op2) == lvm_b0.hd;
+  assert lvm_super_simple_challenge1(dst,t,op1,op2).Block?;
+  var getelementins := lvm_super_simple_challenge1(dst,t,op1,op2).block.hd.ins;
+  assert lvm_super_simple_challenge1(dst,t,op1,op2) == lvm_b0.hd;
   // Check getelementins validity
   assert getelementins.GETELEMENTPTR?;
   assert ValidState(lvm_s0); 
@@ -155,7 +155,7 @@ lemma lvm_lemma_simple_challenge1(lvm_b0:lvm_codes, lvm_s0:lvm_state, lvm_sN:lvm
 //   ret i32 %5
 // }
 
-function method{:opaque} lvm_simple_challenge1_cont(dst:lvm_operand_opr,s:MemState,t:bitWidth,op1:lvm_operand_opr,op2:lvm_operand_opr):lvm_code
+function method{:opaque} lvm_super_simple_challenge1_cont(dst:lvm_operand_opr,s:MemState,t:bitWidth,op1:lvm_operand_opr,op2:lvm_operand_opr):lvm_code
 // requires op1.D?;
 // requires op1.d.Ptr?;
 // requires IsValidBid(s,op1.d.bid) ==> op1.d.offset + ((Int(2,IntType(8,false))).val * 1) < |s.mem[op1.d.bid]|;
@@ -186,7 +186,7 @@ lemma lvm_lemma_simple_challenge1_cont(lvm_b0:lvm_codes, lvm_s0:lvm_state, lvm_s
 requires op1.d.Ptr?;
 requires IsValidBid(lvm_s0.m,op1.d.bid) ==> op1.d.offset + ((Int(2,IntType(8,false))).val * 1) < |lvm_s0.m.mem[op1.d.bid]|;
 
-  requires lvm_require(lvm_b0, lvm_simple_challenge1_cont(dst,lvm_s0.m,t,op1,op2), lvm_s0, lvm_sN)
+  requires lvm_require(lvm_b0, lvm_super_simple_challenge1_cont(dst,lvm_s0.m,t,op1,op2), lvm_s0, lvm_sN)
   requires lvm_is_dst_opr(dst, lvm_s0)
   requires lvm_is_src_opr(op1, lvm_s0)
   requires lvm_get_ok(lvm_s0)
@@ -212,7 +212,7 @@ requires IsValidBid(lvm_s0.m,op1.d.bid) ==> op1.d.offset + ((Int(2,IntType(8,fal
 
   // ensures  lvm_sM.ok ==>  lvm_state_eq(lvm_sM, lvm_update_ok(lvm_sM, lvm_update_mem( lvm_sM, lvm_s0)))
 {
-  reveal_lvm_simple_challenge1_cont();
+  reveal_lvm_super_simple_challenge1_cont();
   reveal_lvm_code_Ret();
   reveal_lvm_LOAD();
   reveal_lvm_code_Add();
@@ -223,9 +223,9 @@ requires IsValidBid(lvm_s0.m,op1.d.bid) ==> op1.d.offset + ((Int(2,IntType(8,fal
   reveal_lvm_code_GetElementPtr();
   reveal_eval_code();
 
-  assert lvm_simple_challenge1_cont(dst,lvm_s0.m,t,op1,op2).Block?;
-  var getelementins := lvm_simple_challenge1_cont(dst,lvm_s0.m,t,op1,op2).block.hd.ins;
-  assert lvm_simple_challenge1_cont(dst,lvm_s0.m,t,op1,op2) == lvm_b0.hd;
+  assert lvm_super_simple_challenge1_cont(dst,lvm_s0.m,t,op1,op2).Block?;
+  var getelementins := lvm_super_simple_challenge1_cont(dst,lvm_s0.m,t,op1,op2).block.hd.ins;
+  assert lvm_super_simple_challenge1_cont(dst,lvm_s0.m,t,op1,op2) == lvm_b0.hd;
   // Check getelementins validity
   assert getelementins.GETELEMENTPTR?;
   assert ValidState(lvm_s0); 

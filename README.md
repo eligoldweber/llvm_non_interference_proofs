@@ -1,7 +1,7 @@
 # Verifying Non-Interference Properties For Software Patches
 This repo contains the ongoing work to produce non-interference proofs for software patches.
 
-The repo contains operational semantics for LLVM defined in Dafny. Additionally, there is defined instruction level state transitions for a subset of LLVM instructions. Lastly there is a collection of examples of how to represent an LLVM program in terms of the operational semantics in a state machine format, and proofs of safety for these programs 
+The repo contains operational semantics for LLVM defined in Dafny. Additionally, there is defined instruction level state transitions for a subset of LLVM instructions. Lastly there is a collection of examples of how to represent an LLVM program in terms of the operational semantics in a state machine format, and proofs of safety for these programs.
 
  > **Note:** Non-Interference proofs coming soon.
 
@@ -33,7 +33,7 @@ To use this project, you will need the following dependencies:
 
 * Turn off trace with: `--no-trace=1` 
 
-To remove all cached verification results use: `./cleanCachedResults.sh`
+To remove all cached verification results use: `./scripts/cleanCachedResults.sh`
 
  > **Note:** To verify files without the help of the scons tool use: `dotnet /path/to/directory/with/dafny/ [dafny parameters ie. /compile:0 /timeLimit:60 /trace /arith:5 noCheating:1] /path/to/dafnyFile`
 
@@ -44,6 +44,10 @@ To remove all cached verification results use: `./cleanCachedResults.sh`
 Building the automation tool `dotnet build Source/NIP_LLVM.sln`
 
 Running the automation tool `dotnet Binaries/net5.0/NIPLLVM.dll`
+
+## Notes
+
+`Dafny/examples/demoChallengeProblem1.i.dfy` is a good example to look at
 
 ## Questions and Issues
 

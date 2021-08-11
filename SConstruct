@@ -326,7 +326,6 @@ if verify_root is None:
   print("==> No .dfy root specified, verifying all .dfy files in Dafny/examples folder")
   run_directory('Dafny/examples',["challengeProblem1Simplified",
                                       "simple",
-                                      "generalInstructions",
                                       "demoChallengeProb1"])
 else:
   verify_dafny_file(str(GetOption('verify_root')))
