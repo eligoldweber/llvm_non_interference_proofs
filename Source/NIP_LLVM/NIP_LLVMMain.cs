@@ -21,40 +21,40 @@ namespace NIP.LLVM
       return sourceFiles;
     }
 
-    // public DafnyFile(string filePath) {
-    //   FilePath = filePath;
-    //   BaseName = Path.GetFileName(filePath);
+    public DafnyFile(string filePath) {
+      FilePath = filePath;
+      BaseName = Path.GetFileName(filePath);
 
-    //   var extension = Path.GetExtension(filePath);
-    //   if (extension != null) { extension = extension.ToLower(); }
+      var extension = Path.GetExtension(filePath);
+      if (extension != null) { extension = extension.ToLower(); }
 
-    //   if (extension == ".dfy" || extension == ".dfyi" || extension == ".cdfy" || extension == ".arm") {
-    //     isPrecompiled = false;
-    //     SourceFileName = filePath;
-    //   } else if (extension == ".dll") {
-    //     isPrecompiled = true;
-    //     Assembly.ReflectionOnlyLoad("DafnyRuntime");
-    //     var asm = Assembly.ReflectionOnlyLoadFrom(filePath);
-    //     string sourceText = null;
-    //     foreach (var adata in asm.GetCustomAttributesData()) {
-    //       if (adata.Constructor.DeclaringType.Name == "DafnySourceAttribute") {
-    //         foreach (var args in adata.ConstructorArguments) {
-    //           if (args.ArgumentType == System.Type.GetType("System.String")) {
-    //             sourceText = (string)args.Value;
-    //           }
-    //         }
-    //       }
-    //     }
+      if (extension == ".dfy" || extension == ".dfyi" || extension == ".cdfy" || extension == ".arm") {
+        isPrecompiled = false;
+        SourceFileName = filePath;
+      } else if (extension == ".dll") {
+        isPrecompiled = true;
+        Assembly.ReflectionOnlyLoad("DafnyRuntime");
+        var asm = Assembly.ReflectionOnlyLoadFrom(filePath);
+        string sourceText = null;
+        foreach (var adata in asm.GetCustomAttributesData()) {
+          if (adata.Constructor.DeclaringType.Name == "DafnySourceAttribute") {
+            foreach (var args in adata.ConstructorArguments) {
+              if (args.ArgumentType == System.Type.GetType("System.String")) {
+                sourceText = (string)args.Value;
+              }
+            }
+          }
+        }
 
-    //     if (sourceText == null) { throw new IllegalDafnyFile(); }
-    //     SourceFileName = Path.GetTempFileName();
-    //     File.WriteAllText(SourceFileName, sourceText);
+        if (sourceText == null) { throw new IllegalDafnyFile(); }
+        SourceFileName = Path.GetTempFileName();
+        File.WriteAllText(SourceFileName, sourceText);
 
-    //   } else {
-    //     throw new IllegalDafnyFile();
-    //   }
+      } else {
+        throw new IllegalDafnyFile();
+      }
 
 
-    // }
+    }
   }
 }
