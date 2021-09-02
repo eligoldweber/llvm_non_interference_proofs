@@ -16,7 +16,7 @@ This README outlines the steps necessaty for building and verifying dafny files 
 To use this project, you will need the following dependencies:
 
  1. .NET 5.0 SDK (available at `https://dotnet.microsoft.com/download`)
- 2. Dafny v3.0.0 (verifier, available at `https://github.com/dafny-lang/dafny`)
+ 2. Dafny v3.0.0 or higher (verifier, available at `https://github.com/dafny-lang/dafny`)
  3. python 2 or 3 (needed for running scons)
  4. scons (installable by running `pip install scons`)
 

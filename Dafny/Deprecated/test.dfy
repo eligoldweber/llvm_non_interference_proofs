@@ -67,7 +67,7 @@ lemma block_state_validity(block:codes, s:state, r:state, o:operand)
     decreases block, 0;
     ensures  r.ok ==> ValidState(r);
 {
-    if block.lvm_CCons? {
+    if block.lvm_Codes? {
         var r':state :| evalCode(block.hd, s, r', o) && evalBlock(block.tl, r', r, o);
         code_state_validity(block.hd, s, r', o);
         if r'.ok {
@@ -120,9 +120,9 @@ lemma code_state_validity(c:code, s:state, r:state, o:operand)
 }
 
 lemma lvm_lemma_block_lax(b0:lvm_codes, s0:state, sN:state,o:operand) returns(s1:state, c1:lvm_code, b1:lvm_codes)
-    requires b0.lvm_CCons?
+    requires b0.lvm_Codes?
     requires evalCode_lax(lvm_Block(b0), s0, sN,o)
-    ensures  b0 == lvm_CCons(c1, b1)
+    ensures  b0 == lvm_Codes(c1, b1)
     ensures  evalCode_lax(c1, s0, s1,o)
     ensures  evalCode_lax(lvm_Block(b1), s1, sN,o)
 {
@@ -147,9 +147,9 @@ lemma lvm_lemma_block_lax(b0:lvm_codes, s0:state, sN:state,o:operand) returns(s1
 }
 
 lemma lvm_lemma_block(b:codes, s0:lvm_state, r:lvm_state,o:operand) returns(r1:lvm_state, c0:code, b1:codes)
-    requires b.lvm_CCons?
+    requires b.lvm_Codes?
     requires eval_code(Block(b), s0, r,o)
-    ensures  b == lvm_CCons(c0, b1)
+    ensures  b == lvm_Codes(c0, b1)
     ensures  ValidState(s0) && r1.ok ==> ValidState(r1);
     ensures  eval_code(c0, s0, r1,o)
     ensures  eval_code(Block(b1), r1, r,o)
@@ -172,7 +172,7 @@ lemma lvm_lemma_block(b:codes, s0:lvm_state, r:lvm_state,o:operand) returns(r1:l
 
 predicate lvm_require(block0:lvm_codes, c:lvm_code, s0:lvm_state, sN:lvm_state,o:operand)
 {
-    block0.lvm_CCons?
+    block0.lvm_Codes?
  && block0.hd == c
  && evalCode_lax(lvm_Block(block0), s0, sN,o)
  && ValidState(s0)
@@ -180,7 +180,7 @@ predicate lvm_require(block0:lvm_codes, c:lvm_code, s0:lvm_state, sN:lvm_state,o
 
 predicate lvm_ensure(b0:lvm_codes, b1:lvm_codes, s0:lvm_state, s1:lvm_state, sN:lvm_state,o:operand)
 {
-    b0.lvm_CCons?
+    b0.lvm_Codes?
  && b0.tl == b1
  && (s1.ok ==> evalCode_lax(b0.hd, s0, s1,o))
  && evalCode_lax(lvm_Block(b1), s1, sN,o)
@@ -259,7 +259,7 @@ function method{:opaque} lvm_code_Add(dst:lvm_operand_opr, size:nat, src1:lvm_op
     var val := D(Int(4,IntType(1,false)));
     assert val.d.Int?;
     var void := D(Void);
-    lvm_Block(lvm_CCons(Ins(ADD(dst, size,src1,val)),lvm_CCons(Ins(RET(void)),lvm_CNil())))
+    lvm_Block(lvm_Codes(Ins(ADD(dst, size,src1,val)),lvm_Codes(Ins(RET(void)),lvm_CNil())))
 
 }
 

@@ -28,10 +28,10 @@ function method{:opaque} lvm_super_simple_challenge1(dst:lvm_operand_opr,t:bitWi
     var ptrVar:lvm_operand_opr := D(Void);
     var index := D(Int(2,IntType(8,false)));
 
-    lvm_Block(lvm_CCons(Ins(GETELEMENTPTR(dst,1,op1,index)),
-              lvm_CCons(Ins(RET(void)),lvm_CNil())))
-    // lvm_Block(lvm_CCons(Ins(GETELEMENTPTR(dst,t,op1,op2)),
-    //           lvm_CCons(Ins(RET(void)),lvm_CNil())))
+    lvm_Block(lvm_Codes(Ins(GETELEMENTPTR(dst,1,op1,index)),
+              lvm_Codes(Ins(RET(void)),lvm_CNil())))
+    // lvm_Block(lvm_Codes(Ins(GETELEMENTPTR(dst,t,op1,op2)),
+    //           lvm_Codes(Ins(RET(void)),lvm_CNil())))
 
 }
 
@@ -114,11 +114,11 @@ lemma lvm_lemma_simple_challenge1(lvm_b0:lvm_codes, lvm_s0:lvm_state, lvm_sN:lvm
   lvm_sM := lvm_ltmp1;
   lvm_bM := lvm_ltmp2;
   var lvm_b1:lvm_codes := lvm_get_block(lvm_cM);
-  assert lvm_b1.lvm_CCons?;
+  assert lvm_b1.lvm_Codes?;
   assert lvm_b1.hd.Ins?;
   assert lvm_b1.hd.ins.GETELEMENTPTR?;
-  // assert lvm_bM.lvm_CCons?;
-  assert lvm_b1.tl.lvm_CCons?;
+  // assert lvm_bM.lvm_Codes?;
+  assert lvm_b1.tl.lvm_Codes?;
   assert lvm_b1.tl.hd.Ins?;
   assert lvm_b1.tl.hd.ins.RET?;
   assert lvm_b1.hd == Ins(GETELEMENTPTR(dst,1,op1,D(Int(2,IntType(8,false)))));
@@ -171,11 +171,11 @@ function method{:opaque} lvm_super_simple_challenge1_cont(dst:lvm_operand_opr,s:
 
     var var_2:lvm_operand_opr := dst;
 
-    lvm_Block(lvm_CCons(Ins(GETELEMENTPTR(var_2,1,op1,index)),
-              lvm_CCons(Ins(LOAD(dst,s,1,var_2)),
-              lvm_CCons(Ins(ZEXT(dst,t,dst,4)),
-              lvm_CCons(Ins(ADD(dst,4,dst,largetest)),
-              lvm_CCons(Ins(RET(void)),lvm_CNil()))))))
+    lvm_Block(lvm_Codes(Ins(GETELEMENTPTR(var_2,1,op1,index)),
+              lvm_Codes(Ins(LOAD(dst,s,1,var_2)),
+              lvm_Codes(Ins(ZEXT(dst,t,dst,4)),
+              lvm_Codes(Ins(ADD(dst,4,dst,largetest)),
+              lvm_Codes(Ins(RET(void)),lvm_CNil()))))))
 
 }
 
@@ -271,11 +271,11 @@ requires IsValidBid(lvm_s0.m,op1.d.bid) ==> op1.d.offset + ((Int(2,IntType(8,fal
   lvm_sM := lvm_ltmp1;
   lvm_bM := lvm_ltmp2;
   var lvm_b1:lvm_codes := lvm_get_block(lvm_cM);
-  assert lvm_b1.lvm_CCons?;
+  assert lvm_b1.lvm_Codes?;
   assert lvm_b1.hd.Ins?;
   assert lvm_b1.hd.ins.GETELEMENTPTR?;
-  // assert lvm_bM.lvm_CCons?;
-  assert lvm_b1.tl.lvm_CCons?;
+  // assert lvm_bM.lvm_Codes?;
+  assert lvm_b1.tl.lvm_Codes?;
   assert lvm_b1.tl.hd.Ins?;
   assert lvm_b1.tl.hd.ins.LOAD?;
   var var_2:lvm_operand_opr := dst;
@@ -311,7 +311,7 @@ requires IsValidBid(lvm_s0.m,op1.d.bid) ==> op1.d.offset + ((Int(2,IntType(8,fal
     assert lvm_b3.hd.Ins?;
     assert lvm_b3.hd.ins.ZEXT?;
     assert lvm_b3.hd.ins == ZEXT(dst,t,dst,4);
-    assert lvm_b3.tl.lvm_CCons?;
+    assert lvm_b3.tl.lvm_Codes?;
     assert lvm_b3.tl.hd.Ins?;
     assert lvm_b3.tl.hd.ins.ADD?;
     assert OperandContents(lvm_s3,dst).Int?; //   requires OperandContents(lvm_s0,op1).Int?;

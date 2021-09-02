@@ -29,8 +29,8 @@ function method{:opaque} lvm_code_Add_single(dst:lvm_operand_opr, size:nat, src1
     var val := D(Int(4,IntType(1,false)));
     assert val.d.Int?;
     var void := D(Void);
-    lvm_Block(lvm_CCons(Ins(ADD(dst, size,src1,val)),lvm_CNil()))
-    // lvm_Block(lvm_CCons(Ins(ADD(dst, size,src1,val)),lvm_CCons(Ins(RET(void)),lvm_CNil())))
+    lvm_Block(lvm_Codes(Ins(ADD(dst, size,src1,val)),lvm_CNil()))
+    // lvm_Block(lvm_Codes(Ins(ADD(dst, size,src1,val)),lvm_Codes(Ins(RET(void)),lvm_CNil())))
 
 }
 
@@ -111,7 +111,7 @@ function method {:opaque} lvm_code_Add_Multiple(dst:lvm_operand_opr, size:nat, s
     requires src2.D?;
     requires src2.d.Int?;
     ensures out.Block?;
-    ensures out.block.lvm_CCons?;
+    ensures out.block.lvm_Codes?;
     ensures out.block.hd.Ins?;
 
 {
@@ -123,9 +123,9 @@ function method {:opaque} lvm_code_Add_Multiple(dst:lvm_operand_opr, size:nat, s
       var val2 := D(Int(5,src2.d.itype));
       assert val.d.Int?;
 
-      lvm_Block(lvm_CCons(Ins(ADD(src2,size,src1,val)),
-                lvm_CCons(Ins(ADD(dst,size,src2,val2)),
-                lvm_CCons(Ins(RET(void)),lvm_CNil()))))
+      lvm_Block(lvm_Codes(Ins(ADD(src2,size,src1,val)),
+                lvm_Codes(Ins(ADD(dst,size,src2,val2)),
+                lvm_Codes(Ins(RET(void)),lvm_CNil()))))
 
 }
 
@@ -182,7 +182,7 @@ lemma lvm_lemma_Add_Multiple(lvm_b0:lvm_codes, lvm_s0:lvm_state, lvm_sN:lvm_stat
     lvm_sM := lvm_ltmp1;
     lvm_bM := lvm_ltmp2;
     var lvm_b1:lvm_codes := lvm_get_block(lvm_cM);
-    assert lvm_b1.lvm_CCons?;
+    assert lvm_b1.lvm_Codes?;
     reveal_IntFits();
     var val := D(Int(4,src1.d.itype));
     assert val.d.Int?;
@@ -258,7 +258,7 @@ lemma lvm_lemma_Add_Multiple(lvm_b0:lvm_codes, lvm_s0:lvm_state, lvm_sN:lvm_stat
 //     requires src1.D?;
 //     requires src1.d.Int?;
 //     ensures out.Block?;
-//     ensures out.block.lvm_CCons?;
+//     ensures out.block.lvm_Codes?;
 //     ensures out.block.hd.Ins?;
 
 // {
@@ -270,9 +270,9 @@ lemma lvm_lemma_Add_Multiple(lvm_b0:lvm_codes, lvm_s0:lvm_state, lvm_sN:lvm_stat
 //       var val2 := D(Int(5,src1.d.itype));
 //       assert val.d.Int?;
 
-//           lvm_Block(lvm_CCons(Ins(ADD(dst,size,src1,val)),
-//                 lvm_CCons(Ins(ADD(dst,size,src1,val2)),
-//                 lvm_CCons(Ins(RET(void)),lvm_CNil()))))
+//           lvm_Block(lvm_Codes(Ins(ADD(dst,size,src1,val)),
+//                 lvm_Codes(Ins(ADD(dst,size,src1,val2)),
+//                 lvm_Codes(Ins(RET(void)),lvm_CNil()))))
 
 // }
 
@@ -322,7 +322,7 @@ lemma lvm_lemma_Add_Multiple(lvm_b0:lvm_codes, lvm_s0:lvm_state, lvm_sN:lvm_stat
 //     lvm_sM := lvm_ltmp1;
 //     lvm_bM := lvm_ltmp2;
 //     var lvm_b1:lvm_codes := lvm_get_block(lvm_cM);
-//     assert lvm_b1.lvm_CCons?;
+//     assert lvm_b1.lvm_Codes?;
 //     reveal_IntFits();
 //     var val := D(Int(4,src1.d.itype));
 //     assert val.d.Int?;

@@ -36,13 +36,14 @@ module LLVM_def {
 
     datatype operand = D(d:Data) | LV(l:LocalVar) | GV(g:GlobalVar)
     
-    datatype codes = CNil | lvm_CCons(hd:code, tl:codes)
+    datatype codes = CNil | lvm_Codes(hd:code, tl:codes)
     datatype obool = OCmp(cmp:condition, o1:operand, o2:operand)
 
     datatype code =
     | Ins(ins:ins)
     | Block(block:codes)
     | IfElse(ifCond:bool, ifTrue:codes, ifFalse:codes)
+    // | IfElseOp(ifCondOp:operand, ifTrue:codes, ifFalse:codes)
     //| While(whileCond:bool, whileBlock:codes)
 
 //-----------------------------------------------------------------------------
@@ -53,6 +54,7 @@ module LLVM_def {
     | ADD(dst:operand, size:nat, src1ADD:operand, src2ADD:operand)
     | SUB(dst:operand, size:nat, src1SUB:operand, src2SUB:operand)
     | BR(if_cond:operand, labelTrue:codes,labelFalse:codes)
+    | UNCONDBR(goToLabel:codes)
     | CALL(dst:operand,fnc:code)
     | GETELEMENTPTR(dst:operand,t:bitWidth,op1:operand,op2:operand)
     | ICMP(dst:operand,cond:condition,size:nat,src1:operand,src2:operand)
@@ -93,6 +95,11 @@ module LLVM_def {
             // case Ptr(block,bid,offset) => && IsValidPtr(s.m,bid,offset) 
             //                               && block in s.m.mem 
             //                               && BlockValid(s.m.mem[block])
+    }
+
+    predicate equalState(s:state,t:state)
+    {
+        s == t
     }
 
 
@@ -153,6 +160,7 @@ module LLVM_def {
             case BR(if_cond, labelTrue,labelFalse) => && ValidOperand(s,if_cond)
                                                    && OperandContents(s,if_cond).Int? && !OperandContents(s,if_cond).itype.signed
                                                    && OperandContents(s,if_cond).itype.size == 1 
+             case UNCONDBR(goToLabel) => true
             case CALL(dst,fnc) => ValidOperand(s,dst)
             case GETELEMENTPTR(dst,t,op1,op2) => MemValid(s.m) && ValidOperand(s,dst) && ValidOperand(s,op1) && ValidOperand(s,op2)
                                                    && OperandContents(s,op1).Ptr? && OperandContents(s,op2).Int?
@@ -209,6 +217,7 @@ module LLVM_def {
             case BITCAST() => true //TODO
             case EXTRACTVALUE() => true    //TODO 
             case PHI() => true //TODO
+           
     }
 
     //EVAL LLVM//
@@ -335,7 +344,8 @@ module LLVM_def {
             case PTRTOINT(dst,ptrSrc,intType) => ValidState(r)
             case BITCAST() => ValidState(r)
             case EXTRACTVALUE() => ValidState(r)
-            case PHI() => ValidState(r)   
+            case PHI() => ValidState(r)
+            case UNCONDBR(goToLabel) => evalBlock(goToLabel,s,r) && ValidState(r)
     }
 
     predicate evalBlock(block:codes, s:state, r:state)

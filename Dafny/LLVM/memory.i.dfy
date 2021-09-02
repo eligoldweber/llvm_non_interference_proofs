@@ -129,7 +129,6 @@ predicate Store(s:MemState, s':MemState, bid:nat, offset:nat, data:Data)
     requires IsValidPtr(s, bid, offset)
     requires data.Int? && IntType(1, false) == data.itype;
 {
-    // true
     && s'.nextBlock == s.nextBlock
     && s'.mem == s.mem[bid := s.mem[bid][offset := mb(data.itype.size, DataToUInt8(data))]]
 }

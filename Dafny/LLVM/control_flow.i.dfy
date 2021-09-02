@@ -135,7 +135,7 @@ lemma block_state_validity(block:codes, s:state, r:state)
     decreases block, 0;
     ensures  r.ok ==> ValidState(r);
 {
-    if block.lvm_CCons? {
+    if block.lvm_Codes? {
         var r':state :| evalCode(block.hd, s, r') && evalBlock(block.tl, r', r);
         code_state_validity(block.hd, s, r');
         if r'.ok {
@@ -150,9 +150,9 @@ lemma block_state_validity(block:codes, s:state, r:state)
 
 lemma lvm_lemma_block_lax(b0:lvm_codes, s0:state, sN:state) 
                 returns(s1:state, c1:lvm_code, b1:lvm_codes)
-    requires b0.lvm_CCons?
+    requires b0.lvm_Codes?
     requires evalCode_lax(lvm_Block(b0), s0, sN)
-    ensures  b0 == lvm_CCons(c1, b1)
+    ensures  b0 == lvm_Codes(c1, b1)
     ensures  evalCode_lax(c1, s0, s1)
     ensures  evalCode_lax(lvm_Block(b1), s1, sN)
     // ensures StateNext(s0,s1)
@@ -179,9 +179,9 @@ lemma lvm_lemma_block_lax(b0:lvm_codes, s0:state, sN:state)
 
 lemma lvm_lemma_block(b:codes, s0:lvm_state, r:lvm_state) 
                 returns(r1:lvm_state, c0:code, b1:codes)
-    requires b.lvm_CCons?
+    requires b.lvm_Codes?
     requires eval_code(Block(b), s0, r)
-    ensures  b == lvm_CCons(c0, b1)
+    ensures  b == lvm_Codes(c0, b1)
     ensures  ValidState(s0) && r1.ok ==> ValidState(r1);
     ensures  eval_code(c0, s0, r1)
     ensures  eval_code(Block(b1), r1, r)
@@ -209,7 +209,7 @@ lemma lvm_lemma_block(b:codes, s0:lvm_state, r:lvm_state)
 
 predicate lvm_require(block0:lvm_codes, c:lvm_code, s0:lvm_state, sN:lvm_state)
 {
-    block0.lvm_CCons?
+    block0.lvm_Codes?
  && block0.hd == c
  && evalCode_lax(lvm_Block(block0), s0, sN)
  && ValidState(s0)
@@ -217,7 +217,7 @@ predicate lvm_require(block0:lvm_codes, c:lvm_code, s0:lvm_state, sN:lvm_state)
 
 predicate lvm_ensure(b0:lvm_codes, b1:lvm_codes, s0:lvm_state, s1:lvm_state, sN:lvm_state)
 {
-    b0.lvm_CCons?
+    b0.lvm_Codes?
  && b0.tl == b1
  && (s1.ok ==> evalCode_lax(b0.hd, s0, s1))
  && evalCode_lax(lvm_Block(b1), s1, sN)
