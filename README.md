@@ -20,6 +20,8 @@ To use this project, you will need the following dependencies:
  3. python 2 or 3 (needed for running scons)
  4. scons (installable by running `pip install scons`)
 
+ > **Note:** Docker Instructions Below (v)
+
 # Verifying Dafny Files
 
  1. Use `scons --dafny-path=/path/to/directory/with/dafny/`
@@ -46,6 +48,18 @@ To remove all cached verification results use: `./scripts/cleanCachedResults.sh`
 Building the automation tool `dotnet build Source/NIP_LLVM.sln`
 
 Running the automation tool `dotnet Binaries/net5.0/NIPLLVM.dll`
+
+# Running With Docker
+
+Use the included Dockerfile to create an image with the appropriate dependencies and run in interactive mode to execute proofs:
+
+1. `docker build -t dafny_iron_patch .`
+2. `docker run -it --rm -v [FULL/PATH/TO/CLONED/REPO]:/src dafny_iron_patch`
+3. `cd src`
+4. Run like Normal -- ie (`scons --dafny-path=/path/to/directory/with/dafny/`)
+
+ > **Note:** Dafny is installed in `/opt/dafny` so to run the above command: `scons --dafny-path=/opt/dafny`
+
 
 ## Notes
 
