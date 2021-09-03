@@ -60,6 +60,8 @@ Use the included Dockerfile to create an image with the appropriate dependencies
 
  > **Note:** Dafny is installed in `/opt/dafny` so to run the above command: `scons --dafny-path=/opt/dafny`
 
+ It is recomended to use the --time-limit flag when using docker set to at least 100 seconds. This is due to memory restrictions in the docker image. 
+
 
 ## Notes
 

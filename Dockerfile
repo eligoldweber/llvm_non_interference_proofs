@@ -1,4 +1,3 @@
-# FROM ubuntu:18.04 and python3.7
 FROM ubuntu:18.04
 
 # update package list to include microsoft dotnet
@@ -35,9 +34,7 @@ RUN pip3 install -U pytest
 RUN pip3 install pipenv
 RUN pip install scons
 
-# ADD ./
-# RUN git clone https://github.com/eligoldweber/llvm_non_interference_proofs.git
+
 # Define paths to executubles
 ENV PATH /usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/opt/dafny:/opt/dafny/z3/bin
 
-# CMD ["bash"]
