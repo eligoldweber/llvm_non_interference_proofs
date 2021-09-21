@@ -6,7 +6,7 @@ include "../LLVM/memory.i.dfy"
 include "../LLVM/Operations/otherOperations.i.dfy"
 
 
-module musings {
+module challenge4 {
     import opened LLVM_def
     import opened control_flow
     import opened general_instructions
@@ -72,12 +72,12 @@ module musings {
 // }
 
 
-function {:opaque} demo_challenge_prob_4(s:MemState,current_index:lvm_operand_opr,
-                                         iterations:lvm_operand_opr,avail_addrs:lvm_operand_opr,cmp17:lvm_operand_opr):lvm_code
+function {:opaque} demo_challenge_prob_4_code(s:MemState,current_index:lvm_operand_opr,
+                                         iterations:lvm_operand_opr,avail_addrs:lvm_operand_opr,cmp17:lvm_operand_opr,current_sa:lvm_operand_opr):lvm_code
 {
-    reveal_IntFits();
+    
     var remaining := D(Int(255,IntType(4,false)));
-    var current_sa := D(Ptr(0,0,0));
+    // var current_sa := D(Ptr(0,0,0));
  
     var returnLabel:code := lvm_Block(lvm_Codes(Ins(RET(D(Void))),lvm_CNil()));         // return: 
                                                                                         //   ret void
@@ -93,6 +93,30 @@ function {:opaque} demo_challenge_prob_4(s:MemState,current_index:lvm_operand_op
               lvm_Codes(Ins(RET(D(Void))),lvm_CNil()))))                           
 
 }
+
+lemma lvm_demo_simple_challenge_prob_4(lvm_b0:lvm_codes, lvm_s0:lvm_state)
+      returns (lvm_bM:lvm_codes, lvm_sM:lvm_state,lvm_sMs:seq<lvm_state>)
+      
+      // Starting state has required initial state
+      requires "current_index" in lvm_s0.lvs;
+      requires "iterations" in lvm_s0.lvs;
+      requires "avail_addrs" in lvm_s0.lvs;
+      requires "cmp17" in lvm_s0.lvs;
+      requires "current_sa" in lvm_s0.lvs;
+      requires ValidState(lvm_s0)
+      requires ValidLocalVars(lvm_s0)
+      
+      // Connection to code ^ 
+      requires exists sN :: lvm_require(lvm_b0, demo_challenge_prob_4_code(lvm_s0.m,lvm_data_operand(lvm_s0.lvs["current_index"]),lvm_data_operand(lvm_s0.lvs["iterations"]),lvm_data_operand(lvm_s0.lvs["avail_addrs"]),lvm_data_operand(lvm_s0.lvs["cmp17"]),lvm_data_operand(lvm_s0.lvs["current_sa"])), lvm_s0, sN)
+      requires lvm_b0.tl.CNil?
+      
+      {
+          reveal_demo_challenge_prob_4_code();
+
+          lvm_bM := lvm_b0;
+          lvm_sM := lvm_s0;
+          lvm_sMs := [lvm_s0];
+      }
 
 }
 

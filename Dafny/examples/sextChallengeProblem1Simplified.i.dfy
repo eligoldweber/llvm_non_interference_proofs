@@ -31,7 +31,7 @@ requires IsValidBid(s,op1.d.bid) ==> op1.d.offset + ((Int(2,IntType(8,false))).v
 
 {
     //getelementptr
-    reveal_IntFits();
+    
     var void := D(Void);
     var ptrVar:lvm_operand_opr := D(Void);
     var index := D(Int(2,IntType(8,false)));
@@ -82,15 +82,11 @@ requires IsValidBid(lvm_s0.m,op1.d.bid) ==> op1.d.offset + ((Int(2,IntType(8,fal
   ensures  !OperandContents(lvm_sM, dst).Void? ==> lvm_state_eq(lvm_sM, lvm_update_ok(lvm_sM, lvm_update_mem( lvm_sM, lvm_s0)))
 {
   reveal_lvm_simple_challenge1_cont();
-  reveal_lvm_code_Ret();
-  reveal_lvm_LOAD();
-  reveal_lvm_code_Add();
-  reveal_lvm_code_SEXT();
-  reveal_ValidData();
-  reveal_evalCodeOpaque();
-  reveal_IntFromBytes();
-  reveal_lvm_code_GetElementPtr();
-  reveal_eval_code();
+  
+  
+  
+  
+
 
   assert lvm_simple_challenge1_cont(dst,lvm_s0.m,t,op1,op2).Block?;
   var getelementins := lvm_simple_challenge1_cont(dst,lvm_s0.m,t,op1,op2).block.hd.ins;
@@ -220,7 +216,6 @@ requires IsValidBid(lvm_s0.m,op1.d.bid) ==> op1.d.offset + ((Int(2,IntType(8,fal
     // assert OperandContents(lvm_sM, dst).val <= 0;
 
     assert evalCode_lax(lvm_cM, lvm_s0, lvm_sM,dst);
-    reveal_evalCodeOpaque();
   // }
   }
 }

@@ -20,8 +20,7 @@ module binary_operations_helper_i {
         ensures (v0.itype.signed) ==> ToTwosComp(out).val == (v0.val + v1.val) % 0x100
         
         {
-            reveal_ToTwosComp();
-            reveal_FromTwosComp();
+            
             UInt8(BitwiseAdd8(DataToUInt8(ToTwosComp(v0)),DataToUInt8(ToTwosComp(v1)))) 
             // if (!v0.itype.signed) then UInt8(BitwiseAdd8(DataToUInt8(ToTwosComp(v0)),DataToUInt8(ToTwosComp(v1)))) else 
             //                            FromTwosComp(UInt8(BitwiseAdd8(DataToUInt8(ToTwosComp(v1)),DataToUInt8(ToTwosComp(v0)))))  
@@ -41,8 +40,7 @@ module binary_operations_helper_i {
         ensures (v0.itype.signed) ==> ToTwosComp(out).val == (v0.val + v1.val) % 0x10000
         
         {
-            reveal_ToTwosComp();
-            reveal_FromTwosComp();
+            
             UInt16(BitwiseAdd16(DataToUInt16(ToTwosComp(v0)),DataToUInt16(ToTwosComp(v1))))
         }
 
@@ -60,8 +58,7 @@ module binary_operations_helper_i {
         ensures (v0.itype.signed) ==> ToTwosComp(out).val == (v0.val + v1.val) % 0x1_0000_0000
         
         {
-            reveal_ToTwosComp();
-            reveal_FromTwosComp();
+            
             UInt32(BitwiseAdd32(DataToUInt32(ToTwosComp(v0)),DataToUInt32(ToTwosComp(v1)))) 
         }
 
@@ -79,8 +76,7 @@ module binary_operations_helper_i {
         ensures (v0.itype.signed) ==> ToTwosComp(out).val == (v0.val + v1.val) % 0x1_0000_0000_0000_0000
         
         {
-            reveal_ToTwosComp();
-            reveal_FromTwosComp();
+            
             UInt64(BitwiseAdd64(DataToUInt64(ToTwosComp(v0)),DataToUInt64(ToTwosComp(v1))))
         }
 
@@ -97,8 +93,7 @@ module binary_operations_helper_i {
         ensures  ToTwosComp(out).val == (v0.val - v1.val) % 0x100
         
         {
-            reveal_ToTwosComp();
-            reveal_FromTwosComp();
+            
             if (!v0.itype.signed) then UInt8(BitwiseSub8(DataToUInt8(ToTwosComp(v0)),DataToUInt8(ToTwosComp(v1)))) else 
                                        FromTwosComp(UInt8(BitwiseSub8(DataToUInt8(ToTwosComp(v0)),DataToUInt8(ToTwosComp(v1)))))  
         }
@@ -115,8 +110,7 @@ module binary_operations_helper_i {
         ensures  ToTwosComp(out).val == (v0.val - v1.val) % 0x10000
         
         {
-            reveal_ToTwosComp();
-            reveal_FromTwosComp();
+            
             if (!v0.itype.signed) then UInt16(BitwiseSub16(DataToUInt16(ToTwosComp(v0)),DataToUInt16(ToTwosComp(v1)))) else 
                                        FromTwosComp(UInt16(BitwiseSub16(DataToUInt16(ToTwosComp(v0)),DataToUInt16(ToTwosComp(v1)))))  
         }
@@ -133,8 +127,7 @@ module binary_operations_helper_i {
         ensures  ToTwosComp(out).val == (v0.val - v1.val) % 0x1_0000_0000
         
         {
-            reveal_ToTwosComp();
-            reveal_FromTwosComp();
+            
             if (!v0.itype.signed) then UInt32(BitwiseSub32(DataToUInt32(ToTwosComp(v0)),DataToUInt32(ToTwosComp(v1)))) else 
                                        FromTwosComp(UInt32(BitwiseSub32(DataToUInt32(ToTwosComp(v0)),DataToUInt32(ToTwosComp(v1)))))   
         }
@@ -151,8 +144,7 @@ module binary_operations_helper_i {
         ensures  ToTwosComp(out).val == (v0.val - v1.val) % 0x1_0000_0000_0000_0000
         
         {
-            reveal_ToTwosComp();
-            reveal_FromTwosComp();
+            
             if (!v0.itype.signed) then UInt64(BitwiseSub64(DataToUInt64(ToTwosComp(v0)),DataToUInt64(ToTwosComp(v1)))) else 
                                        FromTwosComp(UInt64(BitwiseSub64(DataToUInt64(ToTwosComp(v0)),DataToUInt64(ToTwosComp(v1)))))   
         }

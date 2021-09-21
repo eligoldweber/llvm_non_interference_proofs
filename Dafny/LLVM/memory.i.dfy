@@ -20,7 +20,7 @@ datatype MemState = MemState(mem:MemMap, nextBlock:nat)
 
 // A newly-initialized block should start out uninitialized, meaning all its
 // members are muninit
-predicate {:opaque} IsUninit(b:Block) {
+predicate IsUninit(b:Block) {
     forall offset | 0 <= offset < |b| :: b[offset].muninit?
 }
 
@@ -29,7 +29,6 @@ function UninitBlock(size:nat) : (b:Block)
     ensures |b| == size
     decreases size
 {
-    reveal_IsUninit();
     if size == 0 then []
     else UninitBlock(size - 1) + [muninit()]
 }
@@ -140,7 +139,6 @@ function evalLOAD(s:MemState,s':MemState,t:bitWidth,op1:Data): (out:Data)
     // requires IsValidPtr(s,op1.bid,op1.offset)
     ensures out.Bytes? ==> validBitWidth(|out.bytes|)
     ensures out.Int? || out.Void?;
-    // requires exists d:Data :: Load(s,s',op1.bid,op1.offset,d)
     ensures !out.Ptr?;
     ensures out.Int? ==> out.itype.size == t;
 {
@@ -150,7 +148,6 @@ function evalLOAD(s:MemState,s':MemState,t:bitWidth,op1:Data): (out:Data)
         assert d.Int? ==> d.itype.size == t;
         d
     else Void
-    // var d :| Load(s,s',op1.bid,op1.offset,d);
 }
 
 
@@ -163,7 +160,7 @@ function evalGETELEMENTPTR(s:MemState,t:bitWidth,op1:Data,op2:Data): (out:Data)
     ensures out.Ptr?
     ensures op1.offset + (op2.val * t) < |s.mem[op1.bid]| ==> IsValidPtr(s,out.bid,out.offset)
 {
-    reveal_IntFits();
+    
     assert op1.offset >= 0;
     assert op2.val >= 0;
     assert (op2.val * t) >= 0;

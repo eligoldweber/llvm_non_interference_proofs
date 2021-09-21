@@ -25,7 +25,7 @@ module simple_functions {
 ///
 function method{:opaque} lvm_code_Add_single(dst:lvm_operand_opr, size:nat, src1:lvm_operand_opr):lvm_code
 {
-    reveal_IntFits();
+    
     var val := D(Int(4,IntType(1,false)));
     assert val.d.Int?;
     var void := D(Void);
@@ -64,10 +64,7 @@ lemma lvm_lemma_Add_single(lvm_b0:lvm_codes, lvm_s0:lvm_state, lvm_sN:lvm_state,
 
 {
     reveal_lvm_code_Add_single();
-    reveal_ValidData();
-    reveal_evalCodeOpaque();
-    reveal_eval_code();
-    reveal_lvm_code_Add();
+
     lvm_sMs := [lvm_s0];
     assert lvm_code_Add_single(dst,size,src1).block.hd.Ins?;
     assert ValidState(lvm_s0);
@@ -99,7 +96,6 @@ lemma lvm_lemma_Add_single(lvm_b0:lvm_codes, lvm_s0:lvm_state, lvm_sN:lvm_state,
 
 
     assert evalCode_lax(lvm_cM, lvm_s0, lvm_sM);
-    reveal_evalCodeOpaque();
 }
 
 
@@ -115,7 +111,7 @@ function method {:opaque} lvm_code_Add_Multiple(dst:lvm_operand_opr, size:nat, s
     ensures out.block.hd.Ins?;
 
 {
-      reveal_IntFits();
+      
       var val := D(Int(4,src1.d.itype));
       assert val.d.Int?;
       var void := D(Void);
@@ -165,10 +161,7 @@ lemma lvm_lemma_Add_Multiple(lvm_b0:lvm_codes, lvm_s0:lvm_state, lvm_sN:lvm_stat
 
 {
     reveal_lvm_code_Add_Multiple();
-    reveal_eval_code();
-    reveal_evalCodeOpaque();
-    reveal_lvm_code_Add();
-    reveal_lvm_code_Ret();
+    
     lvm_sMs := [lvm_s0];
 
     assert lvm_code_Add_Multiple(dst, size,src1,src2).block.hd.Ins?;
@@ -183,7 +176,7 @@ lemma lvm_lemma_Add_Multiple(lvm_b0:lvm_codes, lvm_s0:lvm_state, lvm_sN:lvm_stat
     lvm_bM := lvm_ltmp2;
     var lvm_b1:lvm_codes := lvm_get_block(lvm_cM);
     assert lvm_b1.lvm_Codes?;
-    reveal_IntFits();
+    
     var val := D(Int(4,src1.d.itype));
     assert val.d.Int?;
     assert lvm_b1.hd == lvm_code_Add(src2, size,src1,val);
@@ -250,7 +243,6 @@ lemma lvm_lemma_Add_Multiple(lvm_b0:lvm_codes, lvm_s0:lvm_state, lvm_sN:lvm_stat
     assert  OperandContents(lvm_sM, dst).val == evalADD(OperandContents(lvm_s0,src1).itype.size,OperandContents(lvm_s0,src2),val2.d).val;
     assert ValidState(lvm_sM);
 
-    reveal_evalCodeOpaque();
 }
 // Old example // 
 
@@ -309,7 +301,7 @@ lemma lvm_lemma_Add_Multiple(lvm_b0:lvm_codes, lvm_s0:lvm_state, lvm_sN:lvm_stat
 //     reveal_eval_code();
 //     reveal_evalCodeOpaque();
 //     reveal_lvm_code_Add();
-//     reveal_lvm_code_Ret();
+//     
 
 //     assert lvm_code_Add_Multiple(dst, size,src1).block.hd.Ins?;
 

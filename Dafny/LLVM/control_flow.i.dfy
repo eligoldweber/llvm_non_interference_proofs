@@ -8,7 +8,7 @@ module control_flow {
     import opened types
     import opened memory
 
-predicate{:opaque} evalCodeOpaque(c:code, s0:state, sN:state) 
+predicate evalCodeOpaque(c:code, s0:state, sN:state) 
     { evalCode(c, s0, sN) }
 
 predicate evalCode_lax(c:code, s0:state, sN:state) 
@@ -37,7 +37,7 @@ function lvm_update_all(sM:lvm_state, sK:lvm_state):lvm_state{
        lvs := sM.lvs)
 }
 
-predicate {:opaque} eval_code(c:code, s:state, r:state)
+predicate eval_code(c:code, s:state, r:state)
 {
     s.ok ==> evalCode(c, s, r)
 }
@@ -49,8 +49,6 @@ lemma lvm_lemma_empty(s0:state, sN:state) returns(sM:state)
     ensures  sM == s0
     ensures  s0.ok ==> sN == s0
 {
-    reveal_eval_code();
-    reveal_evalCodeOpaque();
     sM := s0;
 }
 
@@ -59,7 +57,7 @@ lemma lemma_FailurePreservedByBlock(block:codes, s:state, r:state)
     ensures  !s.ok ==> !r.ok;
     decreases block;
 {
-    if !block.CNil? {
+    if !block.CNil?  && !block.ForeignFunction?{
         var r' :| evalCode(block.hd, s, r') && evalBlock(block.tl, r', r);
         lemma_FailurePreservedByCode(block.hd, s, r');
         lemma_FailurePreservedByBlock(block.tl, r', r);
@@ -74,6 +72,14 @@ lemma lemma_FailurePreservedByCode(c:code, s:state, r:state)
         lemma_FailurePreservedByBlock(c.block, s, r);
     }
 }
+lemma a(c:code, s:state, r:state)
+    requires evalCode(c, s, r);
+    requires ValidState(s);
+    requires c.Ins?;
+    requires r.ok;
+{
+ assert ValidInstruction(s,c.ins) ==> ValidState(r);
+}
 
 lemma code_state_validity(c:code, s:state, r:state)
     requires evalCode(c, s, r);
@@ -82,14 +88,15 @@ lemma code_state_validity(c:code, s:state, r:state)
     ensures  r.ok ==> ValidState(r);
 {
     if r.ok {
+        assert s.ok;
         if c.Ins? {
-            assert !s.ok ==> !r.ok;
+            // assert !s.ok ==> !r.ok;
             assert evalIns(c.ins,s,r);
             assert s.ok;
             assert ValidInstruction(s,c.ins);
             assert r.ok;
             assert evalIns(c.ins,s,r);
-            assert c.ins.RET? ==> ValidState(r);
+            // assert c.ins.RET? ==> ValidState(r);
 
             assert MemValid(r.m);
             assert ValidState(r);
@@ -157,7 +164,6 @@ lemma lvm_lemma_block_lax(b0:lvm_codes, s0:state, sN:state)
     ensures  evalCode_lax(lvm_Block(b1), s1, sN)
     // ensures StateNext(s0,s1)
 {
-    reveal_evalCodeOpaque();
     c1 := b0.hd;
     b1 := b0.tl;
     if (s0.ok)
@@ -188,7 +194,6 @@ lemma lvm_lemma_block(b:codes, s0:lvm_state, r:lvm_state)
     ensures s0.ok ==> evalCode(b.hd, s0, r1) && evalBlock(b.tl, r1, r);
     // ensures s0.ok && b.hd.Block? ==> r1 == s0;
 {
-    reveal_eval_code();
     c0 := b.hd;
     b1 := b.tl;
     if s0.ok {
@@ -233,6 +238,7 @@ type lvm_operand_opr = operand
 type lvm_data = Data
 type lvm_cond = condition
 
+function lvm_data_operand(d:Data):operand {D(d)}
 function lvm_get_ok(s:lvm_state):bool { ValidState(s) }
 predicate lvm_is_src_opr(o:operand, s:lvm_state) { true }
 predicate lvm_is_dst_opr(o:operand, s:lvm_state) { true }

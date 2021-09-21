@@ -37,8 +37,7 @@ module other_operations_i {
 
     lemma evalICMPcheck()
     {
-        reveal_ToTwosComp();
-        reveal_FromTwosComp();
+        
         //<result> = icmp eq i32 4, 5          ; yields: result=false
         var v0:sint32 := 4;
         var v1:sint32 := 5;

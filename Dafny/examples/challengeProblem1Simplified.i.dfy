@@ -23,7 +23,7 @@ module challenge_problem_1_simplified {
 function method{:opaque} lvm_super_simple_challenge1(dst:lvm_operand_opr,t:bitWidth,op1:lvm_operand_opr,op2:lvm_operand_opr):lvm_code
 {
     //getelementptr
-    reveal_IntFits();
+    
     var void := D(Void);
     var ptrVar:lvm_operand_opr := D(Void);
     var index := D(Int(2,IntType(8,false)));
@@ -59,11 +59,8 @@ lemma lvm_lemma_simple_challenge1(lvm_b0:lvm_codes, lvm_s0:lvm_state, lvm_sN:lvm
   // ensures  lvm_state_eq(lvm_sM, lvm_update_ok(lvm_sM, lvm_update_mem( lvm_sM, lvm_s0)))
 {
   reveal_lvm_super_simple_challenge1();
-  reveal_lvm_code_Ret();
-  reveal_ValidData();
-  reveal_evalCodeOpaque();
-  reveal_lvm_code_GetElementPtr();
-  reveal_eval_code();
+  
+  
 
   assert lvm_super_simple_challenge1(dst,t,op1,op2).Block?;
   var getelementins := lvm_super_simple_challenge1(dst,t,op1,op2).block.hd.ins;
@@ -141,7 +138,6 @@ lemma lvm_lemma_simple_challenge1(lvm_b0:lvm_codes, lvm_s0:lvm_state, lvm_sN:lvm
   // lvm_sM := lvm_lemma_empty(lvm_s2,lvm_sM);
 
   assert evalCode_lax(lvm_cM, lvm_s0, lvm_sM);
-  reveal_evalCodeOpaque();
 }
 
 
@@ -163,7 +159,7 @@ function method{:opaque} lvm_super_simple_challenge1_cont(dst:lvm_operand_opr,s:
 
 {
     //getelementptr
-    reveal_IntFits();
+    
     var void := D(Void);
     var ptrVar:lvm_operand_opr := D(Void);
     var index := D(Int(2,IntType(8,false)));
@@ -213,15 +209,10 @@ requires IsValidBid(lvm_s0.m,op1.d.bid) ==> op1.d.offset + ((Int(2,IntType(8,fal
   // ensures  lvm_sM.ok ==>  lvm_state_eq(lvm_sM, lvm_update_ok(lvm_sM, lvm_update_mem( lvm_sM, lvm_s0)))
 {
   reveal_lvm_super_simple_challenge1_cont();
-  reveal_lvm_code_Ret();
-  reveal_lvm_LOAD();
-  reveal_lvm_code_Add();
-  reveal_lvm_code_ZEXT();
-  reveal_ValidData();
-  reveal_evalCodeOpaque();
-  reveal_IntFromBytes();
-  reveal_lvm_code_GetElementPtr();
-  reveal_eval_code();
+  
+  
+  
+  
 
   assert lvm_super_simple_challenge1_cont(dst,lvm_s0.m,t,op1,op2).Block?;
   var getelementins := lvm_super_simple_challenge1_cont(dst,lvm_s0.m,t,op1,op2).block.hd.ins;
@@ -346,7 +337,6 @@ requires IsValidBid(lvm_s0.m,op1.d.bid) ==> op1.d.offset + ((Int(2,IntType(8,fal
     // lvm_sM := lvm_lemma_empty(lvm_s2,lvm_sM);
 
     assert evalCode_lax(lvm_cM, lvm_s0, lvm_sM);
-    reveal_evalCodeOpaque();
   }
 }
 

@@ -1,5 +1,6 @@
 module types {
 
+
 datatype condition = eq | ne | ugt | uge | ult | ule | sgt | sge | slt | sle
 
 /////////////////
@@ -46,7 +47,7 @@ type Data = d:Data_ | (d.Int? ==> IntFits(d.val, d.itype)) ghost witness Bytes([
 
 // Specifies whether the given integer value fits in the given IntType; used for the
 // validity specification of Data
-predicate {:opaque} IntFits(val:int, itype:IntType) {
+predicate IntFits(val:int, itype:IntType) {
     var bound := Pow256(itype.size);
     if itype.signed then (-bound/2 <= val < bound/2)
     else (0 <= val < bound)
@@ -82,14 +83,14 @@ predicate validBitWidth(s:nat)
 }
 // Functions to return a Data of the given integer type given the appropriate integer
 // value
-function UInt8(val:uint8) : Data { reveal_IntFits(); Int(val, IntType(1, false)) }
-function UInt16(val:uint16) : Data { reveal_IntFits(); Int(val, IntType(2, false)) }
-function UInt32(val:uint32) : Data { reveal_IntFits(); Int(val, IntType(4, false)) }
-function UInt64(val:uint64) : Data { reveal_IntFits(); Int(val, IntType(8, false)) }
-function SInt8(val:sint8) : Data { reveal_IntFits(); Int(val, IntType(1, true)) }
-function SInt16(val:sint16) : Data { reveal_IntFits(); Int(val, IntType(2, true)) }
-function SInt32(val:sint32) : Data { reveal_IntFits(); Int(val, IntType(4, true)) }
-function SInt64(val:sint64) : Data { reveal_IntFits(); Int(val, IntType(8, true)) }
+function UInt8(val:uint8) : Data {  Int(val, IntType(1, false)) }
+function UInt16(val:uint16) : Data {  Int(val, IntType(2, false)) }
+function UInt32(val:uint32) : Data {  Int(val, IntType(4, false)) }
+function UInt64(val:uint64) : Data {  Int(val, IntType(8, false)) }
+function SInt8(val:sint8) : Data {  Int(val, IntType(1, true)) }
+function SInt16(val:sint16) : Data {  Int(val, IntType(2, true)) }
+function SInt32(val:sint32) : Data {  Int(val, IntType(4, true)) }
+function SInt64(val:sint64) : Data {  Int(val, IntType(8, true)) }
 
 
 predicate isInt(data:Data)
@@ -145,7 +146,7 @@ function boolToData(b:bool) : (out:Data)
     ensures out.Int? && !out.itype.signed 
     ensures out.itype.size == 1
 {
-    reveal_IntFits();
+    
     var val:int := (if b then 1 else 0);
     var size:bitWidth := 1;
     Int(val, IntType(size, false))
@@ -155,7 +156,7 @@ function dataToBool(b:Data) : (out:bool)
     requires b.Int? && !b.itype.signed 
     requires b.itype.size == 1
 {
-    reveal_IntFits();
+    
     var val:int := b.val;
     if val == 1 then true else false
 }
@@ -166,7 +167,7 @@ function ValToData(val:int, size:bitWidth, sign:bool ) : (out:Data)
     ensures out.itype.signed == sign
     ensures out.itype.size == size
 {
-    reveal_IntFits();
+    
     var iType:IntType := IntType(size, sign);
     Int(val, iType) 
 }
@@ -177,12 +178,12 @@ function ValToData(val:int, size:bitWidth, sign:bool ) : (out:Data)
 
 // Converts a signed integer to its unsigned representation in two's complement so it
 // can be converted into bytes and stored in memory
-function {:opaque} ToTwosComp(data:Data) : (out:Data)
+function ToTwosComp(data:Data) : (out:Data)
     requires data.Int?
     ensures out.Int? && !out.itype.signed
     ensures out.itype.size == data.itype.size
 {
-    reveal_IntFits();
+    
     var newval := (if data.val >= 0 then data.val else data.val + Pow256(data.itype.size));
     Int(newval, IntType(data.itype.size, false))
 }
@@ -192,33 +193,30 @@ lemma UnsignedToTwosComp(data:Data)
     requires !data.itype.signed
     ensures data == ToTwosComp(data)
 {
-    reveal_ToTwosComp();
     assert data == ToTwosComp(data);
 }
 // Converts an unsigned two's complement number back to its signed representation for
 // returning from a sequence of bytes back to a normal integer
-function {:opaque} FromTwosComp(data:Data) : (out:Data)
+function FromTwosComp(data:Data) : (out:Data)
     requires data.Int? 
     ensures out.Int? && out.itype.signed
     ensures out.itype.size == data.itype.size
 {
-    reveal_IntFits();
+    
     var bound := Pow256(data.itype.size);
     var newval := (if data.val < bound/2 then data.val else data.val - bound);
     Int(newval, IntType(data.itype.size, true))
 }
 
 // Makes sure that sending numbers through two's complement and back doesn't change them
-lemma {:opaque} TwosCompIdentity(data:Data)
+lemma TwosCompIdentity(data:Data)
     requires data.Int? && data.itype.signed
     ensures FromTwosComp(ToTwosComp(data)) == data
 {
-    reveal_ToTwosComp();
-    reveal_FromTwosComp();
 }
 
 //Unsigned Byte extension to size dst
-function {:opaque} ExtendZeroBytes(src:Bytes,dst:nat) : (bytes:Bytes)
+function ExtendZeroBytes(src:Bytes,dst:nat) : (bytes:Bytes)
     requires dst >= |src|
     ensures |bytes| == dst
     ensures bytes ==  src + zeroArray(dst - |src|) 
@@ -228,7 +226,7 @@ function {:opaque} ExtendZeroBytes(src:Bytes,dst:nat) : (bytes:Bytes)
 }
 
 // outputs Byte seq of length s with all values eqaul to 0
-function {:opaque} zeroArray(s:nat) : (bytes:seq<Byte>)
+function zeroArray(s:nat) : (bytes:seq<Byte>)
     requires s >= 0
     ensures |bytes| == s
     ensures forall b :: b in bytes ==> b == 0;
@@ -240,7 +238,7 @@ function {:opaque} zeroArray(s:nat) : (bytes:seq<Byte>)
 
 
 // Signed Byte extension to size dst
-function {:opaque} ExtendSignedBytes(src:Bytes,dst:nat) : (bytes:Bytes)
+function ExtendSignedBytes(src:Bytes,dst:nat) : (bytes:Bytes)
     requires dst >= |src|
     ensures |bytes| == dst
     ensures bytes ==  src + oneArray(dst - |src|) 
@@ -250,7 +248,7 @@ function {:opaque} ExtendSignedBytes(src:Bytes,dst:nat) : (bytes:Bytes)
 }
 
 // outputs Byte seq of length s with all values eqaul to 1
-function {:opaque} oneArray(s:nat) : (bytes:seq<Byte>)
+function oneArray(s:nat) : (bytes:seq<Byte>)
     requires s >= 0
     ensures |bytes| == s
     ensures forall b :: b in bytes ==> b == 1;
@@ -261,7 +259,7 @@ function {:opaque} oneArray(s:nat) : (bytes:seq<Byte>)
 }
 
 // Truncates Bytes seq to size s
-function {:opaque} TruncateBytes(b:Bytes,s:nat) : (bytes:seq<Byte>)
+function TruncateBytes(b:Bytes,s:nat) : (bytes:seq<Byte>)
     requires s >= 0
     requires |b| > 0
     ensures |bytes| == s
@@ -274,18 +272,18 @@ function {:opaque} TruncateBytes(b:Bytes,s:nat) : (bytes:seq<Byte>)
 }
 
 // Transforms data that is in some arbitrary int form into a sequence of bytes
-function {:opaque} IntToBytes(data:Data) : (bytes:Bytes)
+function IntToBytes(data:Data) : (bytes:Bytes)
     requires data.Int?
     ensures |bytes| == data.itype.size
 {
-    reveal_IntFits();
+    
     var val := if data.itype.signed then ToTwosComp(data).val else data.val;
     RecurseIntToBytes(val, data.itype.size)
 }
 
 // Helper function for IntToBytes() that performs the operation on specifically unsigned
 // integers recursively
-function {:opaque} RecurseIntToBytes(val:nat, size:nat) : (bytes:Bytes)
+function RecurseIntToBytes(val:nat, size:nat) : (bytes:Bytes)
     requires size > 0
     requires val < Pow256(size)
     ensures |bytes| == size
@@ -296,12 +294,12 @@ function {:opaque} RecurseIntToBytes(val:nat, size:nat) : (bytes:Bytes)
 }
 
 // Transforms a list of bytes back into the given integer format
-function {:opaque} IntFromBytes(bytes:Bytes, itype:IntType) : (data:Data)
+function IntFromBytes(bytes:Bytes, itype:IntType) : (data:Data)
     requires |bytes| == itype.size
     ensures data.Int?
     ensures data.itype == itype
 {
-    reveal_IntFits();
+    
     var udata := Int(RecurseIntFromBytes(bytes), IntType(itype.size, false));
     if itype.signed then FromTwosComp(udata)
     else udata
@@ -309,7 +307,7 @@ function {:opaque} IntFromBytes(bytes:Bytes, itype:IntType) : (data:Data)
 
 // Helper function for IntFromBytes that performs the operation for specifically unsigned
 // integers recursively
-function {:opaque} RecurseIntFromBytes(bytes:Bytes) : (val:nat)
+function RecurseIntFromBytes(bytes:Bytes) : (val:nat)
     ensures val < Pow256(|bytes|)
     decreases bytes
 {
@@ -318,27 +316,19 @@ function {:opaque} RecurseIntFromBytes(bytes:Bytes) : (val:nat)
 }
 
 // Starting small, we'll do the recursive identity
-lemma {:opaque} {:induction val, size} RecursiveIdentity(val:nat, size:nat)
+lemma {:induction val, size} RecursiveIdentity(val:nat, size:nat)
     requires size > 0
     requires val < Pow256(size)
     ensures RecurseIntFromBytes(RecurseIntToBytes(val, size)) == val
 {
-    reveal_IntToBytes();
-    reveal_IntFromBytes();
-    reveal_RecurseIntToBytes();
-    reveal_RecurseIntFromBytes();
 }
 
 // Now, we make sure that converting data to/from bytes doesn't change it
-lemma {:opaque} IntBytesIdentity(data:Data)
+lemma IntBytesIdentity(data:Data)
     requires data.Int?
     ensures IntFromBytes(IntToBytes(data), data.itype) == data
 {
-    reveal_IntFits();
-    reveal_IntToBytes();
-    reveal_IntFromBytes();
-    reveal_RecurseIntToBytes();
-    reveal_RecurseIntFromBytes();
+    
     if (data.itype.signed) {
         var udata := ToTwosComp(data);
         TwosCompIdentity(data);
@@ -377,8 +367,8 @@ function byte_to_bits(b:uint8) : BitsOfByte
 /////////////////
 // Bit vectors
 /////////////////
-function method {:opaque} BitsToByte(b:bv8) : uint8 { b as uint8 }
-function method {:opaque} ByteToBits(w:uint8) : bv8 { w as bv8 }
+function method BitsToByte(b:bv8) : uint8 { b as uint8 }
+function method ByteToBits(w:uint8) : bv8 { w as bv8 }
 
 lemma {:axiom} lemma_BitsToByteToByte(b:bv8)
     ensures ByteToBits(BitsToByte(b)) == b;
@@ -387,8 +377,8 @@ lemma {:axiom} lemma_ByteToBitsToByte(w:uint8)
     ensures BitsToByte(ByteToBits(w)) == w;
 
 
-function method {:opaque} BitsToHalfWord(b:bv16) : uint16 { b as uint16 }
-function method {:opaque} HalfWordToBits(w:uint16) : bv16 { w as bv16 }
+function method BitsToHalfWord(b:bv16) : uint16 { b as uint16 }
+function method HalfWordToBits(w:uint16) : bv16 { w as bv16 }
 
 lemma {:axiom} lemma_BitsToWordToHalfBits(b:bv16)
     ensures HalfWordToBits(BitsToHalfWord(b)) == b;
@@ -396,8 +386,8 @@ lemma {:axiom} lemma_BitsToWordToHalfBits(b:bv16)
 lemma {:axiom} lemma_HalfWordToBitsToHalfWord(w:uint16)
     ensures BitsToHalfWord(HalfWordToBits(w)) == w;
 
-function method {:opaque} BitsToWord(b:bv32) : uint32 { b as uint32 }
-function method {:opaque} WordToBits(w:uint32) : bv32 { w as bv32 }
+function method BitsToWord(b:bv32) : uint32 { b as uint32 }
+function method WordToBits(w:uint32) : bv32 { w as bv32 }
 
 lemma {:axiom} lemma_BitsToWordToBits(b:bv32)
     ensures WordToBits(BitsToWord(b)) == b;
@@ -405,8 +395,8 @@ lemma {:axiom} lemma_BitsToWordToBits(b:bv32)
 lemma {:axiom} lemma_WordToBitsToWord(w:uint32)
     ensures BitsToWord(WordToBits(w)) == w;
 
-function method {:opaque} BitsToWord64(b:bv64) : uint64 { b as uint64 }
-function method {:opaque} WordToBits64(w:uint64) : bv64 { w as bv64 }
+function method BitsToWord64(b:bv64) : uint64 { b as uint64 }
+function method WordToBits64(w:uint64) : bv64 { w as bv64 }
 
 lemma {:axiom} lemma_BitsToWordToBits64(b:bv64)
     ensures WordToBits64(BitsToWord64(b)) == b;

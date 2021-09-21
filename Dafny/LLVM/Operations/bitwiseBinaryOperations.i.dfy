@@ -15,8 +15,7 @@ module bitwise_binary_operations_i {
         ensures out.Int?;
         ensures out.itype.size == op1.itype.size && !out.itype.signed;
     {
-        reveal_BitsToWord();
-        reveal_WordToBits();
+
         if op1.itype.size == 1 then evalLSHR8(op1,op2) else 
         if op1.itype.size == 2 then evalLSHR16(op1,op2) else 
         if op1.itype.size == 4 then evalLSHR32(op1,op2) else 
@@ -31,8 +30,6 @@ module bitwise_binary_operations_i {
         ensures out.itype.size == op1.itype.size 
         ensures out.itype.signed == op1.itype.signed
     {
-        reveal_BitsToWord();
-        reveal_WordToBits();
         if op1.itype.size == 1 then evalSHL8(op1,op2) else 
         if op1.itype.size == 2 then evalSHL16(op1,op2) else 
         if op1.itype.size == 4 then evalSHL32(op1,op2) else 
@@ -55,7 +52,7 @@ module bitwise_binary_operations_i {
     //     ValToData(result,op1.itype.size,false)
 
     //  }
-    function {:opaque} rightShift(val:int,shift:int) : (result:int)
+    function rightShift(val:int,shift:int) : (result:int)
         requires shift >= 1
         requires val >= 0
         ensures result <= val
@@ -75,8 +72,6 @@ module bitwise_binary_operations_i {
         ensures out.itype.size == dstSize && !out.itype.signed;
     {
         reveal_BitAnd();
-        reveal_BitsToWord();
-        reveal_WordToBits();
         if dstSize == 1 then evalAND8(dstSize,op1,op2) else 
         if dstSize == 2 then evalAND16(dstSize,op1,op2) else 
         if dstSize == 4 then evalAND32(dstSize,op1,op2) else 
@@ -92,8 +87,6 @@ module bitwise_binary_operations_i {
         ensures out.itype.size == dstSize && !out.itype.signed
     {
         reveal_BitOr();
-        reveal_BitsToWord();
-        reveal_WordToBits();
         if dstSize == 1 then evalOR8(dstSize,op1,op2) else 
         if dstSize == 2 then evalOR16(dstSize,op1,op2) else 
         if dstSize == 4 then evalOR32(dstSize,op1,op2) else 
@@ -110,8 +103,8 @@ function evalLSHR8(op1:Data,op2:Data): (out:Data)
         ensures out.Int?;
         ensures out.itype.size == op1.itype.size && !out.itype.signed;
      {
-        reveal_ToTwosComp(); 
-        reveal_IntFits();
+         
+        
         reveal_BitShiftRight8();
         var result := RightShiftByte(ToTwosComp(op1).val,ToTwosComp(op2).val);
         ValToData(result,1,false)      
@@ -124,8 +117,8 @@ function evalLSHR16(op1:Data,op2:Data): (out:Data)
         ensures out.Int?;
         ensures out.itype.size == op1.itype.size && !out.itype.signed;
      {
-        reveal_ToTwosComp(); 
-        reveal_IntFits();
+         
+        
         reveal_BitShiftRight16();
         var result := RightShiftHalfWord(ToTwosComp(op1).val,ToTwosComp(op2).val);
         ValToData(result,2,false)      
@@ -138,8 +131,8 @@ function evalLSHR32(op1:Data,op2:Data): (out:Data)
         ensures out.Int?;
         ensures out.itype.size == op1.itype.size && !out.itype.signed;
      {
-        reveal_ToTwosComp(); 
-        reveal_IntFits();
+         
+        
         reveal_BitShiftRight();
         var result := RightShift(ToTwosComp(op1).val,ToTwosComp(op2).val);
         ValToData(result,4,false)      
@@ -152,8 +145,8 @@ function evalLSHR64(op1:Data,op2:Data): (out:Data)
         ensures out.Int?;
         ensures out.itype.size == op1.itype.size && !out.itype.signed;
      {
-        reveal_ToTwosComp(); 
-        reveal_IntFits();
+         
+        
         reveal_BitShr64();
         var result := BitwiseShr64(ToTwosComp(op1).val,ToTwosComp(op2).val);
         ValToData(result,8,false)      
@@ -169,8 +162,8 @@ function evalSHL8(op1:Data,op2:Data): (out:Data)
         ensures out.itype.size == op1.itype.size
          ensures out.itype.signed == op1.itype.signed
      {
-        reveal_ToTwosComp(); 
-        reveal_IntFits();
+         
+        
         reveal_BitShiftLeft8();
         var result := LeftShiftByte(ToTwosComp(op1).val,ToTwosComp(op2).val);
         var unsigned := ValToData(result,1,false);
@@ -186,8 +179,8 @@ function evalSHL16(op1:Data,op2:Data): (out:Data)
         ensures out.itype.size == op1.itype.size 
          ensures out.itype.signed == op1.itype.signed
      {
-        reveal_ToTwosComp(); 
-        reveal_IntFits();
+         
+        
         reveal_BitShiftLeft16();
         var result := LeftShiftHalfWord(ToTwosComp(op1).val,ToTwosComp(op2).val);
         var unsigned := ValToData(result,2,false);  
@@ -203,8 +196,8 @@ function evalSHL32(op1:Data,op2:Data): (out:Data)
         ensures out.itype.size == op1.itype.size
         ensures out.itype.signed == op1.itype.signed
      {
-        reveal_ToTwosComp(); 
-        reveal_IntFits();
+         
+        
         reveal_BitShiftLeft();
         var result := LeftShift(ToTwosComp(op1).val,ToTwosComp(op2).val);
         var unsigned := ValToData(result,4,false);
@@ -220,8 +213,8 @@ function evalSHL64(op1:Data,op2:Data): (out:Data)
         ensures out.itype.size == op1.itype.size
         ensures out.itype.signed == op1.itype.signed
      {
-        reveal_ToTwosComp(); 
-        reveal_IntFits();
+         
+        
         reveal_BitShl64();
         var result := BitwiseShl64(ToTwosComp(op1).val,ToTwosComp(op2).val);
         // if op1.itype.signed then ValToData(result,8,false)   
@@ -238,8 +231,8 @@ function evalAND8(dstSize:bitWidth,op1:Data,op2:Data): (out:Data)
       ensures out.Int?;
       ensures out.itype.size == dstSize && !out.itype.signed;
      {
-        reveal_ToTwosComp(); 
-        reveal_IntFits();
+         
+        
         var result := BitwiseAndBytes(ToTwosComp(op1).val,ToTwosComp(op2).val);
         ValToData(result,1,false)      
      }     
@@ -252,8 +245,8 @@ function evalAND16(dstSize:bitWidth,op1:Data,op2:Data): (out:Data)
       ensures out.Int?;
       ensures out.itype.size == dstSize && !out.itype.signed;
      {
-        reveal_ToTwosComp(); 
-        reveal_IntFits();
+         
+        
         var result := BitwiseAndHalfWord(ToTwosComp(op1).val,ToTwosComp(op2).val);
         ValToData(result,2,false)      
      }
@@ -266,8 +259,8 @@ function evalAND32(dstSize:bitWidth,op1:Data,op2:Data): (out:Data)
       ensures out.Int?;
       ensures out.itype.size == dstSize && !out.itype.signed;
      {
-        reveal_ToTwosComp(); 
-        reveal_IntFits();
+         
+        
         var result := BitwiseAnd(ToTwosComp(op1).val,ToTwosComp(op2).val);
         ValToData(result,4,false)      
      }
@@ -280,8 +273,8 @@ function evalAND64(dstSize:bitWidth,op1:Data,op2:Data): (out:Data)
       ensures out.Int?;
       ensures out.itype.size == dstSize && !out.itype.signed;
      {
-        reveal_ToTwosComp(); 
-        reveal_IntFits();
+         
+        
         var result := BitwiseAnd64(ToTwosComp(op1).val,ToTwosComp(op2).val);
         ValToData(result,8,false)      
      }
@@ -295,8 +288,8 @@ function evalOR8(dstSize:bitWidth,op1:Data,op2:Data): (out:Data)
       ensures out.Int?;
       ensures out.itype.size == dstSize && !out.itype.signed;
      {
-        reveal_ToTwosComp(); 
-        reveal_IntFits();
+         
+        
         var result := BitwiseOrBytes(ToTwosComp(op1).val,ToTwosComp(op2).val);
         ValToData(result,1,false)      
      }     
@@ -309,8 +302,8 @@ function evalOR16(dstSize:bitWidth,op1:Data,op2:Data): (out:Data)
       ensures out.Int?;
       ensures out.itype.size == dstSize && !out.itype.signed;
      {
-        reveal_ToTwosComp(); 
-        reveal_IntFits();
+         
+        
         var result := BitwiseOrHalfWord(ToTwosComp(op1).val,ToTwosComp(op2).val);
         ValToData(result,2,false)      
      }
@@ -323,8 +316,8 @@ function evalOR32(dstSize:bitWidth,op1:Data,op2:Data): (out:Data)
       ensures out.Int?;
       ensures out.itype.size == dstSize && !out.itype.signed;
      {
-        reveal_ToTwosComp(); 
-        reveal_IntFits();
+         
+        
         var result := BitwiseOr(ToTwosComp(op1).val,ToTwosComp(op2).val);
         ValToData(result,4,false)      
      }
@@ -337,8 +330,8 @@ function evalOR64(dstSize:bitWidth,op1:Data,op2:Data): (out:Data)
       ensures out.Int?;
       ensures out.itype.size == dstSize && !out.itype.signed;
      {
-        reveal_ToTwosComp(); 
-        reveal_IntFits();
+         
+        
         var result := BitwiseOr64(ToTwosComp(op1).val,ToTwosComp(op2).val);
         ValToData(result,8,false)      
      }
@@ -349,11 +342,6 @@ function evalOR64(dstSize:bitWidth,op1:Data,op2:Data): (out:Data)
         reveal_BitShiftLeft();
         reveal_BitShiftLeft16();
         reveal_BitShiftLeft8();
-        reveal_BitsToWord();
-        reveal_WordToBits();
-        reveal_ByteToBits();
-        reveal_BitsToByte();
-        reveal_FromTwosComp();
         // <<result> = shl i32 4, 2      ; yields i32: 16
          var v0:uint32 := 4;
          var v1:uint32 := 2;
@@ -391,10 +379,6 @@ function evalOR64(dstSize:bitWidth,op1:Data,op2:Data): (out:Data)
         reveal_BitShiftRight();
         reveal_BitShiftRight16();
         reveal_BitShiftRight8();
-        reveal_BitsToWord();
-        reveal_WordToBits();
-        reveal_ByteToBits();
-        reveal_BitsToByte();
         // <result> = lshr i32 4, 1   ; yields i32:result = 2
          var v0:uint32 := 4;
          var v1:uint32 := 1;
@@ -454,10 +438,7 @@ function evalOR64(dstSize:bitWidth,op1:Data,op2:Data): (out:Data)
     {
          reveal_BitAnd();
          reveal_BitAnd16();
-         reveal_BitAnd8();
          reveal_BitAnd64();
-         reveal_BitsToWord();
-         reveal_WordToBits();
 
         //<result> = and i32 15, 40     ; yields i32:result = 8
          var v0:uint32 := 15;
@@ -487,8 +468,6 @@ function evalOR64(dstSize:bitWidth,op1:Data,op2:Data): (out:Data)
          reveal_BitOr16();
          reveal_BitOr8();
          reveal_BitOr64();
-         reveal_BitsToWord();
-         reveal_WordToBits();
 
         //<result> = and i32 15, 40     ; yields i32:result = 47
          var v0:uint32 := 15;

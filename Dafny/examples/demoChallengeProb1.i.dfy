@@ -89,7 +89,7 @@ function {:opaque} demo_challenge_prob_1_code(speed_value:lvm_operand_opr,s:MemS
                                               var_6:lvm_operand_opr,var_7:lvm_operand_opr,var_8:lvm_operand_opr,
                                               var_11:lvm_operand_opr,var_12:lvm_operand_opr):lvm_code
 {
-    reveal_IntFits();
+    
     var index3 := D(Int(3,IntType(8,false)));
     var index2 := D(Int(2,IntType(8,false)));
     var shl_amount := D(Int(8,IntType(2,false)));
@@ -161,19 +161,10 @@ lemma lvm_demo_simple_challenge_prob_1(lvm_b0:lvm_codes, lvm_s0:lvm_state,var_0:
                         && OperandContents(s,speed_value).val > 0 && typesMatch(OperandContents(s,speed_value),Int(0,IntType(2,false)))
                           ==> (evalICMP(ugt,2,OperandContents(s,speed_value),Int(0,IntType(2,false))).val == 1)); 
   ensures lvm_sM.ok ==> ValidStateSeq(lvm_sMs); // [S0 -> S1 -> ..... -> SN]
+  ensures lvm_sM.ok  ==> StateSeqEvalsCode(demo_challenge_prob_1_code(speed_value,lvm_s0.m,var_0,var_5,var_10,var_17,var_6,var_7,var_8,var_11,var_12),lvm_sMs)
   {
     reveal_demo_challenge_prob_1_code();
-    reveal_lvm_code_Ret();
-    reveal_lvm_LOAD();
-    reveal_lvm_code_Add();
-    reveal_lvm_code_ZEXT();
-    reveal_lvm_code_SHL();
-    reveal_lvm_code_ICMP();
-    reveal_lvm_code_Empty();
-    reveal_lvm_code_GetElementPtr();
-    reveal_ValidData();
-    reveal_evalCodeOpaque();
-    reveal_eval_code();
+
     lvm_sMs := [lvm_s0];
     var operands :=[speed_value,var_10,var_5,var_6,var_7,var_8,var_11,var_12,var_17];
 

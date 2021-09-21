@@ -17,7 +17,7 @@ module general_instructions {
     import opened bitwise_binary_operations_i
     import opened other_operations_i
 
-function method{:opaque}lvm_code_Add(dst:lvm_operand_opr, size:nat, src1:lvm_operand_opr,src2:lvm_operand_opr):lvm_code
+function method lvm_code_Add(dst:lvm_operand_opr, size:nat, src1:lvm_operand_opr,src2:lvm_operand_opr):lvm_code
 
 {
    Ins(ADD(dst, size,src1,src2))
@@ -66,9 +66,6 @@ lemma lvm_lemma_Add(lvm_b0:lvm_codes, lvm_s0:lvm_state, lvm_sN:lvm_state,
   ensures forall d :: ValidOperand(lvm_s0,d) && d != dst ==> ValidOperand(lvm_sM,d) && OperandContents(lvm_s0,d) == OperandContents(lvm_sM,d)
   ensures StateNext(lvm_s0,lvm_sM)
 {
-    reveal_lvm_code_Add();
-    reveal_evalCodeOpaque();
-    reveal_eval_code();
     assert lvm_code_Add(dst, size,src1,src2).Ins?;
     var addIns := lvm_code_Add(dst, size,src1,src2).ins;
     assert ValidInstruction(lvm_s0,addIns);
@@ -96,13 +93,12 @@ lemma lvm_lemma_Add(lvm_b0:lvm_codes, lvm_s0:lvm_state, lvm_sN:lvm_state,
     assert (forall d :: ValidOperand(lvm_s0,d) && d != dst ==> ValidOperand(lvm_sM,d) && OperandContents(lvm_s0,d) == OperandContents(lvm_sM,d));
     // assert ValidData(lvm_sM,evalADD(OperandContents(lvm_s0,dst).itype.size,OperandContents(lvm_s0,src1),OperandContents(lvm_s0,src2)));
     assert OperandContents(lvm_sM, dst).val == evalADD(OperandContents(lvm_s0,src1).itype.size,OperandContents(lvm_s0,src1),OperandContents(lvm_s0,src2)).val;
-    reveal_evalCodeOpaque();
 }
 
-function method{:opaque} lvm_code_GetElementPtr(dst:lvm_operand_opr,t:bitWidth,op1:lvm_operand_opr,op2:lvm_operand_opr):lvm_code
+function method lvm_code_GetElementPtr(dst:lvm_operand_opr,t:bitWidth,op1:lvm_operand_opr,op2:lvm_operand_opr):lvm_code
 {
     //getelementptr
-    reveal_IntFits();
+    
     Ins(GETELEMENTPTR(dst,t,op1,op2))
 
 }
@@ -137,11 +133,7 @@ ensures lvm_s0.m == lvm_sM.m;
   ensures StateNext(lvm_s0,lvm_sM)
 
 {
-  reveal_lvm_code_GetElementPtr();
-  reveal_ValidData();
-  reveal_evalCodeOpaque();
-  reveal_eval_code();
-
+  
   assert evalBlock(lvm_b0, lvm_s0, lvm_sN);
 
   ghost var lvm_ltmp1, lvm_cM:lvm_code, lvm_ltmp2 := lvm_lemma_block(lvm_b0, lvm_s0, lvm_sN);
@@ -153,14 +145,13 @@ ensures lvm_s0.m == lvm_sM.m;
 
   assert ValidState(lvm_sM);
   assert evalCode_lax(lvm_cM, lvm_s0, lvm_sM);
-  reveal_evalCodeOpaque();
 }
 
 
-function method{:opaque} lvm_code_Ret(op1:lvm_operand_opr):lvm_code
+function method lvm_code_Ret(op1:lvm_operand_opr):lvm_code
 {
     //getelementptr
-    reveal_IntFits();
+    
     Ins(RET(op1))
 
 }
@@ -185,10 +176,8 @@ lemma lvm_lemma_Ret(lvm_b0:lvm_codes, lvm_s0:lvm_state, lvm_sN:lvm_state,dst:lvm
   ensures StateNext(lvm_s0,lvm_sM)
 
 {
-  reveal_lvm_code_Ret();
-  reveal_ValidData();
-  reveal_evalCodeOpaque();
-  reveal_eval_code();
+  
+  
 
   assert evalBlock(lvm_b0, lvm_s0, lvm_sN);
 
@@ -200,13 +189,12 @@ lemma lvm_lemma_Ret(lvm_b0:lvm_codes, lvm_s0:lvm_state, lvm_sN:lvm_state,dst:lvm
 
   assert ValidState(lvm_sM);
   assert evalCode(lvm_cM, lvm_s0, lvm_sM);
-  reveal_evalCodeOpaque();
 }
 
 
-function method{:opaque} lvm_LOAD(dst:lvm_operand_opr,s:MemState,t:bitWidth,op1:lvm_operand_opr):lvm_code
+function method lvm_LOAD(dst:lvm_operand_opr,s:MemState,t:bitWidth,op1:lvm_operand_opr):lvm_code
 {
-    reveal_IntFits();
+    
     Ins(LOAD(dst,s,t,op1))
 }
 
@@ -239,12 +227,9 @@ lemma lvm_lemma_Load(lvm_b0:lvm_codes, lvm_s0:lvm_state, lvm_sN:lvm_state,dst:lv
   ensures lvm_sM.ok ==> StateNext(lvm_s0,lvm_sM)
 
 {
-  reveal_lvm_LOAD();
-  reveal_ValidData();
-  reveal_evalCodeOpaque();
-  reveal_eval_code();
-  reveal_ValidRegState();
-  reveal_ValidData();
+  
+  
+  
 
   assert evalBlock(lvm_b0, lvm_s0, lvm_sN);
   assert lvm_s0.ok;
@@ -284,10 +269,10 @@ lemma lvm_lemma_Load(lvm_b0:lvm_codes, lvm_s0:lvm_state, lvm_sN:lvm_state,dst:lv
 
 
 
-function method{:opaque} lvm_code_ZEXT(dst:lvm_operand_opr,t:bitWidth,op1:lvm_operand_opr,dstSize:bitWidth):(out:lvm_code)
+function method lvm_code_ZEXT(dst:lvm_operand_opr,t:bitWidth,op1:lvm_operand_opr,dstSize:bitWidth):(out:lvm_code)
     ensures out.Ins?;
 {
-    reveal_IntFits();
+    
     Ins(ZEXT(dst,t,op1,dstSize))
 }
 
@@ -320,9 +305,7 @@ lemma lvm_lemma_Zext(lvm_b0:lvm_codes, lvm_s0:lvm_state, lvm_sN:lvm_state,
   ensures StateNext(lvm_s0,lvm_sM)
 
 {
-    reveal_lvm_code_ZEXT();
-    reveal_evalCodeOpaque();
-    reveal_eval_code();
+    
     assert lvm_code_ZEXT(dst,t,op1,dstSize).Ins?;
 
     assert ValidInstruction(lvm_s0, lvm_code_ZEXT(dst,t,op1,dstSize).ins);
@@ -340,14 +323,13 @@ lemma lvm_lemma_Zext(lvm_b0:lvm_codes, lvm_s0:lvm_state, lvm_sN:lvm_state,
 
   assert ValidState(lvm_sM);
   assert evalCode_lax(lvm_cM, lvm_s0, lvm_sM);
-  reveal_evalCodeOpaque();
 }
 
 
-function method{:opaque} lvm_code_SEXT(dst:lvm_operand_opr,t:bitWidth,op1:lvm_operand_opr,dstSize:bitWidth):(out:lvm_code)
+function method lvm_code_SEXT(dst:lvm_operand_opr,t:bitWidth,op1:lvm_operand_opr,dstSize:bitWidth):(out:lvm_code)
     ensures out.Ins?;
 {
-    reveal_IntFits();
+    
     Ins(SEXT(dst,t,op1,dstSize))
 }
 
@@ -381,9 +363,7 @@ lemma lvm_lemma_Sext(lvm_b0:lvm_codes, lvm_s0:lvm_state, lvm_sN:lvm_state,
   ensures StateNext(lvm_s0,lvm_sM)
 
 {
-    reveal_lvm_code_SEXT();
-    reveal_evalCodeOpaque();
-    reveal_eval_code();
+    
     assert lvm_code_SEXT(dst,t,op1,dstSize).Ins?;
 
     assert ValidInstruction(lvm_s0, lvm_code_SEXT(dst,t,op1,dstSize).ins);
@@ -401,13 +381,12 @@ lemma lvm_lemma_Sext(lvm_b0:lvm_codes, lvm_s0:lvm_state, lvm_sN:lvm_state,
 
     assert ValidState(lvm_sM);
     assert evalCode_lax(lvm_cM, lvm_s0, lvm_sM);
-    reveal_evalCodeOpaque();
 }
 
-function method{:opaque} lvm_code_SHL(dst:lvm_operand_opr,src:lvm_operand_opr,shiftAmt:lvm_operand_opr):(out:lvm_code)
+function method lvm_code_SHL(dst:lvm_operand_opr,src:lvm_operand_opr,shiftAmt:lvm_operand_opr):(out:lvm_code)
     ensures out.Ins?;
 {
-    reveal_IntFits();
+    
     Ins(SHL(dst,src,shiftAmt))
 }
 
@@ -448,9 +427,7 @@ lemma lvm_lemma_Shl(lvm_b0:lvm_codes, lvm_s0:lvm_state, lvm_sN:lvm_state,
   ensures StateNext(lvm_s0,lvm_sM)
 
 {
-    reveal_lvm_code_SHL();
-    reveal_evalCodeOpaque();
-    reveal_eval_code();
+    
     assert lvm_code_SHL(dst,src,shiftAmt).Ins?;
 
     assert ValidInstruction(lvm_s0, lvm_code_SHL(dst,src,shiftAmt).ins);
@@ -466,12 +443,11 @@ lemma lvm_lemma_Shl(lvm_b0:lvm_codes, lvm_s0:lvm_state, lvm_sN:lvm_state,
 
     assert ValidState(lvm_sM);
     assert evalCode_lax(lvm_cM, lvm_s0, lvm_sM);
-    reveal_evalCodeOpaque();
 }
 
-function method{:opaque} lvm_code_ICMP(dst:lvm_operand_opr,cond:lvm_cond,size:nat,op1:lvm_operand_opr,op2:lvm_operand_opr):(out:lvm_code)
+function method lvm_code_ICMP(dst:lvm_operand_opr,cond:lvm_cond,size:nat,op1:lvm_operand_opr,op2:lvm_operand_opr):(out:lvm_code)
 {
-    reveal_IntFits();
+    
     Ins(ICMP(dst,cond,size,op1,op2))
 }
 
@@ -507,9 +483,7 @@ lemma lvm_lemma_Icmp(lvm_b0:lvm_codes, lvm_s0:lvm_state, lvm_sN:lvm_state,
   ensures StateNext(lvm_s0,lvm_sM)
 
 {
-    reveal_lvm_code_ICMP();
-    reveal_eval_code();
-    reveal_evalCodeOpaque();
+    
 
     assert lvm_code_ICMP(dst,cond,size,op1,op2).Ins?;
     assert ValidInstruction(lvm_s0,lvm_code_ICMP(dst,cond,size,op1,op2).ins);
@@ -525,11 +499,10 @@ lemma lvm_lemma_Icmp(lvm_b0:lvm_codes, lvm_s0:lvm_state, lvm_sN:lvm_state,
 
     assert ValidState(lvm_sM);
     assert evalCode_lax(lvm_cM, lvm_s0, lvm_sM);
-    reveal_evalCodeOpaque();
 
 }
 
-function method{:opaque} lvm_code_Empty():lvm_code
+function method lvm_code_Empty():lvm_code
 {   
     lvm_Block(lvm_CNil())
 }       
@@ -546,9 +519,7 @@ lemma lvm_lemma_Empty(lvm_b0:lvm_codes, lvm_s0:lvm_state, lvm_sN:lvm_state)
     ensures StateNext(lvm_s0,lvm_sM)
 
 {
-    reveal_lvm_code_Empty();
-    reveal_eval_code();
-    reveal_evalCodeOpaque();
+    
 
     var lvm_old_s:lvm_state := lvm_s0;
 

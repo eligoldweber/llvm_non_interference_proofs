@@ -65,6 +65,8 @@ Use the included Dockerfile to create an image with the appropriate dependencies
 
 ## Notes
 
+If the following error occurs `ValueError : unsupported pickle protocol: 4` try deleting the `.sconsign.dblite` file and run the command again. 
+
 `Dafny/examples/demoChallengeProblem1.i.dfy` is a good example to look at
 
 ## Questions and Issues

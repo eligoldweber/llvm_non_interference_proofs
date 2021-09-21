@@ -13,12 +13,7 @@ module conversion_operations_i {
         ensures out.Int?;
         ensures out.itype.size == dstSize;
     {
-        reveal_IntFits();
-        reveal_IntFromBytes();
-        reveal_IntToBytes();
-        reveal_ExtendZeroBytes();
-        reveal_TruncateBytes();
-
+        
         var bytes := IntToBytes(src);
         var slice:seq<Byte> := TruncateBytes(bytes,dstSize);
         IntFromBytes(slice,IntType(dstSize, false))
@@ -31,10 +26,7 @@ module conversion_operations_i {
         ensures out.Int?;
         ensures out.itype.size == dstSize && !out.itype.signed;
     {
-        reveal_IntFits();
-        reveal_IntFromBytes();
-        reveal_IntToBytes();
-        reveal_ExtendZeroBytes();
+        
 
         var bytes := IntToBytes(src);
         var extendedBytes := ExtendZeroBytes(bytes,dstSize);
@@ -49,10 +41,7 @@ module conversion_operations_i {
         ensures out.Int?;
         ensures out.itype.size == dstSize && out.itype.signed;
     {
-        reveal_IntFits();
-        reveal_IntFromBytes();
-        reveal_IntToBytes();
-        reveal_ExtendSignedBytes();
+        
         var bytes := IntToBytes(src);
         var extendedBytes := ExtendSignedBytes(bytes,dstSize);
         assert |extendedBytes| == |bytes| + (dstSize - |bytes|);
@@ -78,11 +67,7 @@ module conversion_operations_i {
 // --  Lemmas for correctness checking -----
     lemma evalTRUNCIsValid()
     {
-        reveal_IntFits();
-        reveal_IntFromBytes();
-        reveal_IntToBytes();
-        reveal_ExtendZeroBytes();
-        reveal_TruncateBytes();
+        
         
         // %X = trunc i32 257 to i8                        ; yields i8:1
         var v0:sint32 := 257;
@@ -112,12 +97,6 @@ module conversion_operations_i {
 
     lemma evalZEXTIsValid()
     {
-        reveal_IntFromBytes();
-        reveal_RecurseIntFromBytes();
-        reveal_IntToBytes();
-        reveal_RecurseIntToBytes();
-        reveal_ExtendZeroBytes();
-        reveal_zeroArray();
         var v0:uint16 := 42;
         var d0:uint32 := 42;
         var out:Data := evalZEXT(UInt16(v0),4);
@@ -143,13 +122,8 @@ module conversion_operations_i {
 
     lemma evalSEXTIsValid()
     {
-        reveal_IntFits();
-        reveal_IntFromBytes();
-        reveal_IntToBytes();
-        reveal_ExtendSignedBytes();
-        reveal_ToTwosComp();
-        reveal_RecurseIntToBytes();
-        reveal_oneArray();
+        
+        
         var v0:sint8 := -1;
         var d0:sint16 := -1;
         var out:Data := evalSEXT(SInt8(v0),2);
