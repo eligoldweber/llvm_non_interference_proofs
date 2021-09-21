@@ -41,8 +41,9 @@ type Bytes = b:seq<Byte> | |b| > 0 ghost witness [0]
 // a pointer (in block/index form), or an integer. The validity of these is built into
 // the "Data" type
 datatype Data_ = Bytes(bytes:Bytes) |
-                 Ptr(block:nat, bid:nat, offset:nat) |
-                 Int(val:int, itype:IntType) | Void
+                 Ptr(block:nat, bid:nat, offset:nat, size:bitWidth) |
+                 Int(val:int, itype:IntType) | 
+                 Void
 type Data = d:Data_ | (d.Int? ==> IntFits(d.val, d.itype)) ghost witness Bytes([0])
 
 // Specifies whether the given integer value fits in the given IntType; used for the
@@ -136,10 +137,13 @@ function DataToSInt64(data:Data) : sint64
 
 
 predicate typesMatch(x:Data, y:Data)
-    requires isInt(x)
-    requires isInt(y)
+    requires (isInt(x) && isInt(y)) || (x.Ptr? && y.Ptr?)
 {
-    x.itype.size == y.itype.size && x.itype.signed == y.itype.signed
+    if isInt(x) then 
+        x.itype.size == y.itype.size && x.itype.signed == y.itype.signed
+    else
+        x.size == y.size
+
 }
 
 function boolToData(b:bool) : (out:Data)

@@ -61,8 +61,24 @@ module conversion_operations_i {
     //     ensures out.itype.size == dstSize
     // {
     // }
-    // function evalBITCAST(src:Data,dstSize:bitWidth): (out:Data)
-    // {}
+    function evalBITCAST(src:Data,castType:Data): (out:Data)
+        // requires validBitWidth(dstSize)
+        requires (src.Int? && castType.Int?) || (src.Ptr? && castType.Ptr?);
+        ensures (src.Int? && out.Int?) || (src.Ptr? && out.Ptr?);
+    {
+        if src.Ptr? then    
+            var o:Data := Ptr(src.block, src.bid, src.offset, castType.size);
+            o
+        else
+            if src.itype.size <= castType.itype.size then 
+                assert IntFits(src.val, IntType(castType.itype.size,src.itype.signed)); 
+                var o:Data := Int(src.val,IntType(castType.itype.size,src.itype.signed)); 
+                o
+            else 
+                var o:Data := evalTRUNC(src,castType.itype.size); 
+                o
+
+    }
 
 // --  Lemmas for correctness checking -----
     lemma evalTRUNCIsValid()

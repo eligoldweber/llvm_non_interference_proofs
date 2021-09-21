@@ -43,9 +43,10 @@ predicate byteRangeIsValid(i:int,s:int)
 predicate IsValidBid(s:MemState, bid:nat) {
     bid in s.mem
 }
-predicate IsValidPtr(s:MemState, bid:nat, offset:nat) {
+predicate IsValidPtr(s:MemState, bid:nat, offset:nat, size:bitWidth) {
     && bid in s.mem
     && offset < |s.mem[bid]|
+    && validBitWidth(size)
 }
 
 // On initialization, the memory state is empty and contains no blocks
@@ -88,9 +89,9 @@ predicate MemStateNext(s:MemState,s':MemState)
     && ( || s == s'
          || exists b,n :: Alloc(s,s',b,n)
          || exists b :: Free(s,s',b)
-         || exists b:nat,o:nat,d:Data :: && IsValidPtr(s, b, o)
-                                         && d.Int? && IntType(1, false) == d.itype
-                                         && Store(s,s',b,o,d))
+         || exists b:nat,o:nat,d:Data,n:bitWidth :: && IsValidPtr(s, b, o,n)
+                                                    && d.Int? && IntType(1, false) == d.itype
+                                                    && Store(s,s',b,o,d))
 }
 // When a new block is allocated, all the previous blocks should remain the same,
 // and an unininitialized block of the appropriate size should be added with block
@@ -111,7 +112,7 @@ predicate Free(s:MemState, s':MemState, bid:nat) {
 
 // TODO: Support reading and writing more than one byte at a time
 predicate Load(s:MemState, s':MemState, bid:nat, offset:nat, data:Data) {
-    if !IsValidPtr(s, bid, offset) || data.Ptr?  || data.Void? then false
+    if !IsValidPtr(s, bid, offset,1) || data.Ptr?  || data.Void? then false
     else
         var bytes := (if data.Bytes? then data.bytes else IntToBytes(data));
         && (s' == s)
@@ -125,7 +126,7 @@ predicate Load(s:MemState, s':MemState, bid:nat, offset:nat, data:Data) {
 
 // TODO: Support reading and writing more than one byte at a time
 predicate Store(s:MemState, s':MemState, bid:nat, offset:nat, data:Data)
-    requires IsValidPtr(s, bid, offset)
+    requires IsValidPtr(s, bid, offset,1)
     requires data.Int? && IntType(1, false) == data.itype;
 {
     && s'.nextBlock == s.nextBlock
@@ -158,14 +159,14 @@ function evalGETELEMENTPTR(s:MemState,t:bitWidth,op1:Data,op2:Data): (out:Data)
     requires IsValidBid(s,op1.bid)
     requires op2.Int? && !op2.itype.signed
     ensures out.Ptr?
-    ensures op1.offset + (op2.val * t) < |s.mem[op1.bid]| ==> IsValidPtr(s,out.bid,out.offset)
+    ensures op1.offset + (op2.val * t) < |s.mem[op1.bid]| ==> IsValidPtr(s,out.bid,out.offset,t)
 {
     
     assert op1.offset >= 0;
     assert op2.val >= 0;
     assert (op2.val * t) >= 0;
     var newOffset:nat := op1.offset + (op2.val * t);
-    Ptr(op1.block,op1.bid,newOffset)
+    Ptr(op1.block,op1.bid,newOffset,t)
 }
 
 

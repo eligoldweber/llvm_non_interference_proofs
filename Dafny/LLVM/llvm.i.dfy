@@ -71,7 +71,7 @@ module LLVM_def {
     | ALLOCA(dst:operand,mems:MemState,t:bitWidth)
     | INTTOPTR(dst:operand,intSrc:operand,ptrType:operand)
     | PTRTOINT(dst:operand,ptrSrc:operand,intType:operand)
-    | BITCAST()
+    | BITCAST(dst:operand,src:operand,castType:operand)
     | PHI()
     | EXTRACTVALUE()
     
@@ -86,21 +86,17 @@ module LLVM_def {
     }
     
     predicate ValidData(s:state, d:Data)
-    {
-        
+    {    
         match d
             case Void => true
             case Int(val,itype) => IntFits(val,itype)
             case Bytes(bytes) => |bytes| > 0 && forall b :: b in bytes ==> 0 <= b < 0x100
-            case Ptr(block,bid,offset) => && IsValidPtr(s.m,bid,offset) 
-            //                               && block in s.m.mem 
-            //                               && BlockValid(s.m.mem[block])
+            case Ptr(block,bid,offset,size) => && IsValidPtr(s.m,bid,offset,size) 
     }
 
 
     predicate ValidRegState(s:state,lvs:map<LocalVar, Data>,gvs:map<GlobalVar, Data>)
     {
-        
         forall l:LocalVar :: l in lvs ==> ValidData(s,lvs[l])
         && forall g:GlobalVar :: g in gvs ==> ValidData(s,gvs[g])
     }
@@ -108,9 +104,7 @@ module LLVM_def {
     predicate ValidState(s:state)
     
     {
-        
-
-           ValidRegState(s,s.lvs,s.gvs) 
+        && ValidRegState(s,s.lvs,s.gvs) 
         && MemValid(s.m) 
         && s.ok
     }
@@ -151,7 +145,6 @@ module LLVM_def {
 
     predicate ValidOperand(s:state,o:operand)
     {
-        
         match o
             case D(d) => ValidData(s,d)
             case LV(l) => l in s.lvs && ValidData(s,s.lvs[l])
@@ -225,11 +218,11 @@ module LLVM_def {
                                             && isInt(OperandContents(s,dst)) 
             case LOAD(dst,mems,size,src) => && ValidOperand(s,dst) && ValidOperand(s,src) 
                                             && MemValid(mems) && OperandContents(s,src).Ptr? 
-                                            && IsValidPtr(mems,OperandContents(s,src).bid,OperandContents(s,src).offset)
+                                            && IsValidPtr(mems,OperandContents(s,src).bid,OperandContents(s,src).offset,size)
             case STORE(valueToStore,ptr,mems) => && ValidOperand(s,valueToStore) && ValidOperand(s,ptr)
                                                  && OperandContents(s,valueToStore).Int? && (IntType(1, false) == OperandContents(s,valueToStore).itype)
                                                  && MemValid(mems) && OperandContents(s,ptr).Ptr? 
-                                                 && IsValidPtr(mems,OperandContents(s,ptr).bid,OperandContents(s,ptr).offset)
+                                                 && IsValidPtr(mems,OperandContents(s,ptr).bid,OperandContents(s,ptr).offset,1)
             case ALLOCA(dst,mems,t) => && ValidOperand(s,dst) && MemValid(mems) && OperandContents(s,dst).Ptr? 
             case INTTOPTR(dst:operand,intSrc:operand,ptrType:operand) => && ValidOperand(s,dst) && ValidOperand(s,intSrc) && ValidOperand(s,ptrType)
                                                                          && isInt(OperandContents(s,intSrc)) 
@@ -237,7 +230,11 @@ module LLVM_def {
             case PTRTOINT(dst:operand,ptrSrc:operand,intType:operand) => && ValidOperand(s,dst) && ValidOperand(s,ptrSrc) && ValidOperand(s,intType)
                                                                          && isInt(OperandContents(s,intType)) 
                                                                          && OperandContents(s,ptrSrc).Ptr? && OperandContents(s,dst).Int?
-            case BITCAST() => true //TODO
+            case BITCAST(dst:operand,src:operand,castType:operand) => && ValidOperand(s,dst) && ValidOperand(s,src) && ValidOperand(s,castType)
+                                                                      && ValidOperand(s,dst) 
+                                                                      && ( (OperandContents(s,src).Int? && OperandContents(s,castType).Int?) || (OperandContents(s,src).Ptr? && OperandContents(s,castType).Ptr?))
+                                                                      && ( (OperandContents(s,dst).Int? && OperandContents(s,castType).Int?) || (OperandContents(s,dst).Ptr? && OperandContents(s,castType).Ptr?))
+                                                                      && typesMatch(OperandContents(s,dst),OperandContents(s,castType))
             case EXTRACTVALUE() => true    //TODO 
             case PHI() => true //TODO
            
@@ -367,7 +364,9 @@ module LLVM_def {
             case ALLOCA(dst,mems,t) =>  ValidState(r) && mems == s.m && exists b,n :: Alloc(s.m,r.m,b,n)
             case INTTOPTR(dst,intSrc,ptrType) => ValidState(r)
             case PTRTOINT(dst,ptrSrc,intType) => ValidState(r)
-            case BITCAST() => ValidState(r)
+            case BITCAST(dst,src,castType) => ValidState(r)
+                                            && ValidData(r,evalBITCAST(OperandContents(s,src),OperandContents(s,castType)))    
+                                            && evalUpdate(s, dst, evalBITCAST(OperandContents(s,src),OperandContents(s,castType)),r)
             case EXTRACTVALUE() => ValidState(r)
             case PHI() => ValidState(r)
             case UNCONDBR(goToLabel) => evalBlock(goToLabel,s,r) && ValidState(r)
@@ -433,8 +432,9 @@ module LLVM_def {
         ensures out.d.block == s.block 
         ensures out.d.bid == s.bid
         ensures out.d.offset == s.offset;
+        ensures out.d.size == s.size;
     {
-        var x:operand := D(Ptr(s.block, s.bid, s.offset));
+        var x:operand := D(Ptr(s.block, s.bid, s.offset,s.size));
         x
     }
 
