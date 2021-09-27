@@ -43,6 +43,7 @@ module challenge5 refines AbstractNonInterferenceProof {
     }
 
 
+
     predicate MiniSpecCH_P1Double(s:LLVM_def.state, s':LLVM_def.state)
     {
         && MiniSpecCH_P1Single(s)

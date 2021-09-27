@@ -65,7 +65,7 @@ predicate ByteMemValid(b:Block, offset:nat)
 {
     var cell := b[offset];
     lemma_mod_auto(offset);
-    var align := offset - offset % cell.size;
+    var align := offset - (offset % cell.size);
     forall i :: (align <= i < (align + cell.size) && i < |b| && i>=0) ==> (i < |b| && b[i].mb? && b[i].size == cell.size)
 }
 
@@ -106,11 +106,11 @@ predicate Alloc(s:MemState, s':MemState, bid:nat, size:nat) {
 predicate Free(s:MemState, s':MemState, bid:nat) {
     && s'.nextBlock == s.nextBlock 
     && IsValidBid(s, bid)
-    &&! IsValidBid(s', bid)
+    && !IsValidBid(s', bid)
     && s.mem == s'.mem[bid:= s.mem[bid]]
 }
 
-// TODO: Support reading and writing more than one byte at a time
+// 
 predicate Load(s:MemState, s':MemState, bid:nat, offset:nat, data:Data) {
     if !IsValidPtr(s, bid, offset,1) || data.Ptr?  || data.Void? then false
     else
@@ -124,7 +124,7 @@ predicate Load(s:MemState, s':MemState, bid:nat, offset:nat, data:Data) {
 }
 
 
-// TODO: Support reading and writing more than one byte at a time
+// 
 predicate Store(s:MemState, s':MemState, bid:nat, offset:nat, data:Data)
     requires IsValidPtr(s, bid, offset,1)
     requires data.Int? && IntType(1, false) == data.itype;

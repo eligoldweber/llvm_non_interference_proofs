@@ -36,9 +36,10 @@ abstract module AbstractNonInterferenceProof {
     what is the MiniSpec?
     MiniSpec is a single state predicate that describes incorrect behavior (that is supposedly fixed by the patch)
 
-        This would preclude all exections where there is a state that enters a 'danger' state. but not 
-        > necessarily 'act' on it
+        This would describe/preclude all exections where there is a state that enters a 'danger' or buggy state. but not 
+        > necessarily 'acts' on it
 
+/////
     MiniSpec is a two-state predicate (s,s') that describes both the incorrect behavior and that incorrect behavior 
     > dictates the state transition from s to s'
         

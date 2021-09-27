@@ -91,6 +91,7 @@ lemma lvm_lemma_Add_single(lvm_b0:lvm_codes, lvm_s0:lvm_state, lvm_sN:lvm_state,
     assert eval_code(lvm_Block(lvm_b2), lvm_s2, lvm_sM);
     lvm_sM := lvm_lemma_empty(lvm_s2,lvm_sM);
     assert ValidState(lvm_sM);
+    assert NextStep(lvm_s2,lvm_sM,stutterStep());
     assert StateNext(lvm_s2,lvm_sM);
     lvm_sMs := lvm_sMs + [lvm_sM];
 

@@ -6,6 +6,7 @@ include "./Operations/bitwiseBinaryOperations.i.dfy"
 include "./Operations/binaryOperations.i.dfy"
 include "./Operations/otherOperations.i.dfy"
 include "../Libraries/SeqIsUniqueDef.i.dfy"
+include "./llvmIntrinsic.i.dfy"
 
 module LLVM_def {
 
@@ -68,13 +69,13 @@ module LLVM_def {
     | SEXT(dst:operand,size:nat,src:operand,dstSize:bitWidth)
     | LOAD(dst:operand,mems:MemState,t:bitWidth,src:operand) //o:operand, bid:nat, ofs:nat,
     | STORE(valueToStore:operand,ptr:operand,mems:MemState)
-    | ALLOCA(dst:operand,mems:MemState,t:bitWidth)
+    | ALLOCA(dst:operand,t:bitWidth)
     | INTTOPTR(dst:operand,intSrc:operand,ptrType:operand)
     | PTRTOINT(dst:operand,ptrSrc:operand,intType:operand)
     | BITCAST(dst:operand,src:operand,castType:operand)
     | PHI()
     | EXTRACTVALUE()
-    
+    | LLVM_MEMCPY(dst:operand,src:operand,len:bitWidth,volatile:bool)
 
 
     predicate State_Init(s:state)
@@ -109,14 +110,39 @@ module LLVM_def {
         && s.ok
     }
 
-    predicate StateNext(s:state,s':state)
+    datatype Step = 
+        | evalInsStep(ins:ins)
+        | stutterStep()
+
+    predicate stutter(s:state,s':state)
     {
-        && ValidState(s)
-        && ValidState(s')
-        && MemStateNext(s.m,s'.m)
-        &&  (|| (exists ins :: (ValidInstruction(s,ins) && evalIns(ins, s, s')))
-             || (s == s'))
+        s == s'
     }
+
+    predicate NextStep(s:state, s':state, step:Step)
+    {
+        match step  
+            case evalInsStep(ins) => evalIns(ins,s,s')
+            case stutterStep() => stutter(s,s')
+    }
+
+    // predicate StateNext(s:state,s':state)
+    // {
+    //     && ValidState(s)
+    //     // && ValidState(s')
+    //     && MemStateNext(s.m,s'.m)
+    //     &&  (|| (exists ins :: (evalIns(ins, s, s')))
+    //          || (s == s'))
+    // }
+
+        predicate StateNext(s:state,s':state)
+    {
+        && exists step :: NextStep(s,s',step)
+        && ValidState(s)
+        && MemStateNext(s.m,s'.m)
+        
+    }
+
 
     lemma ValidStateSeqImpliesCode(s:state, s':state,code:code){
         assert forall stateSeqS:seq<state> ::
@@ -138,9 +164,9 @@ module LLVM_def {
         |states| >= 2 && evalCode(c,states[0],states[|states|-1])
     }
 
-    predicate startAndEndState(s:state,r:state,states:seq<state>)
+    predicate startAndEndState(s:state,s':state,states:seq<state>)
     {
-        |states| >= 2 && states[0] == s && states[|states|-1] == r
+        |states| >= 2 && states[0] == s && states[|states|-1] == s'
     }
 
     predicate ValidOperand(s:state,o:operand)
@@ -223,20 +249,23 @@ module LLVM_def {
                                                  && OperandContents(s,valueToStore).Int? && (IntType(1, false) == OperandContents(s,valueToStore).itype)
                                                  && MemValid(mems) && OperandContents(s,ptr).Ptr? 
                                                  && IsValidPtr(mems,OperandContents(s,ptr).bid,OperandContents(s,ptr).offset,1)
-            case ALLOCA(dst,mems,t) => && ValidOperand(s,dst) && MemValid(mems) && OperandContents(s,dst).Ptr? 
-            case INTTOPTR(dst:operand,intSrc:operand,ptrType:operand) => && ValidOperand(s,dst) && ValidOperand(s,intSrc) && ValidOperand(s,ptrType)
+            case ALLOCA(dst,t) => && ValidOperand(s,dst) && MemValid(s.m) && OperandContents(s,dst).Ptr? && validBitWidth(t)
+            case INTTOPTR(dst,intSrc,ptrType) => && ValidOperand(s,dst) && ValidOperand(s,intSrc) && ValidOperand(s,ptrType)
                                                                          && isInt(OperandContents(s,intSrc)) 
                                                                          && OperandContents(s,ptrType).Ptr? && OperandContents(s,dst).Ptr?
-            case PTRTOINT(dst:operand,ptrSrc:operand,intType:operand) => && ValidOperand(s,dst) && ValidOperand(s,ptrSrc) && ValidOperand(s,intType)
+            case PTRTOINT(dst,ptrSrc,intType) => && ValidOperand(s,dst) && ValidOperand(s,ptrSrc) && ValidOperand(s,intType)
                                                                          && isInt(OperandContents(s,intType)) 
                                                                          && OperandContents(s,ptrSrc).Ptr? && OperandContents(s,dst).Int?
-            case BITCAST(dst:operand,src:operand,castType:operand) => && ValidOperand(s,dst) && ValidOperand(s,src) && ValidOperand(s,castType)
+            case BITCAST(dst,src,castType) => && ValidOperand(s,dst) && ValidOperand(s,src) && ValidOperand(s,castType)
                                                                       && ValidOperand(s,dst) 
                                                                       && ( (OperandContents(s,src).Int? && OperandContents(s,castType).Int?) || (OperandContents(s,src).Ptr? && OperandContents(s,castType).Ptr?))
                                                                       && ( (OperandContents(s,dst).Int? && OperandContents(s,castType).Int?) || (OperandContents(s,dst).Ptr? && OperandContents(s,castType).Ptr?))
                                                                       && typesMatch(OperandContents(s,dst),OperandContents(s,castType))
             case EXTRACTVALUE() => true    //TODO 
             case PHI() => true //TODO
+            case LLVM_MEMCPY(dst,src,len,volatile) => && ValidOperand(s,dst) && ValidOperand(s,src) && OperandContents(s,dst).Ptr?
+                                                     && OperandContents(s,src).Ptr? && OperandContents(s,dst).size >= OperandContents(s,src).size
+                                                     && validBitWidth(len) && !volatile // dont support volatile right now
            
     }
 
@@ -259,125 +288,127 @@ module LLVM_def {
            
     }
 
-    predicate evalUpdate(s:state, o:operand, data:Data, r:state)
+    predicate evalUpdate(s:state, o:operand, data:Data, s':state)
         requires ValidState(s)
         requires ValidRegOperand(s,o)
-        requires ValidData(r,data)
-        ensures evalUpdate(s, o, data, r) ==> ValidState(r)
-        ensures evalUpdate(s, o, data, r) ==> ValidData(r,data)
-        ensures evalUpdate(s, o, data, r) ==> ValidRegOperand(r,o)
-        ensures evalUpdate(s, o, data, r) ==> ValidOperand(r,o)
-        ensures evalUpdate(s, o, data, r) ==> 
-        (forall d :: ValidOperand(s,d) && d != o ==> ValidOperand(r,d) && OperandContents(s,d) == OperandContents(r,d));
+        requires ValidData(s',data)
+        ensures evalUpdate(s, o, data, s') ==> ValidState(s')
+        ensures evalUpdate(s, o, data, s') ==> ValidData(s',data)
+        ensures evalUpdate(s, o, data, s') ==> ValidRegOperand(s',o)
+        ensures evalUpdate(s, o, data, s') ==> ValidOperand(s',o)
+        ensures evalUpdate(s, o, data, s') ==> 
+        (forall d :: ValidOperand(s,d) && d != o ==> ValidOperand(s',d) && OperandContents(s,d) == OperandContents(s',d));
 
     {
         
         
         match o
-            case D(d) => data == d && r == s 
-            case GV(g) => r == s.(gvs := s.gvs[g := data]) 
-            case LV(l) => r == s.(lvs := s.lvs[l := data]) 
+            case D(d) => data == d && s' == s 
+            case GV(g) => s' == s.(gvs := s.gvs[g := data]) 
+            case LV(l) => s' == s.(lvs := s.lvs[l := data]) 
             
     }
 
-    predicate evalLoad(s:state, o:operand, bid:nat, ofs:nat, r:state)
+    predicate evalLoad(s:state, o:operand, bid:nat, ofs:nat, s':state)
         requires ValidState(s)
         requires ValidOperand(s,o)
-        requires exists d:Data :: Load(s.m,r.m,bid,ofs,d)
-        ensures  evalLoad(s, o, bid, ofs, r) ==> ValidState(r)
+        requires exists d:Data :: Load(s.m,s'.m,bid,ofs,d)
+        ensures  evalLoad(s, o, bid, ofs, s') ==> ValidState(s')
 
         
     {
         
         
-        var d :| Load(s.m,r.m,bid,ofs,d);
+        var d :| Load(s.m,s'.m,bid,ofs,d);
         match o
-            case D(data) => data == d && r == s 
-            case GV(g) => r == s.(gvs := s.gvs[g := d]) 
-            case LV(l) => r == s.(lvs := s.lvs[l := d])
+            case D(data) => data == d && s' == s 
+            case GV(g) => s' == s.(gvs := s.gvs[g := d]) 
+            case LV(l) => s' == s.(lvs := s.lvs[l := d])
     }
 
-    predicate evalRet(s:state, o:operand, data:Data, r:state)
+    predicate evalRet(s:state, o:operand, data:Data, s':state)
         requires ValidState(s)
         requires ValidRegOperand(s,o)
-        requires ValidData(r,data)
+        requires ValidData(s',data)
     {
         
         if data.Void? then 
-            && s == r 
+            && s == s' 
             // && OperandContents(s, o) == OperandContents(r, o)
-        else evalUpdate(s,o,data,r)
+        else evalUpdate(s,o,data,s')
     }
 
-    predicate evalIns(ins:ins, s:state, r:state)
+    predicate evalIns(ins:ins, s:state, s':state)
     {   
-        if !s.ok || !ValidInstruction(s, ins) then !r.ok
+        if !s.ok || !ValidInstruction(s, ins) then !s'.ok
         else match ins
-            case ADD(dst,t,src1,src2) => ValidState(r) //o == dst 
-                                && ValidData(r,evalADD(t,OperandContents(s,src1),OperandContents(s,src2))) 
-                                && evalUpdate(s, dst, evalADD(t,OperandContents(s,src1),OperandContents(s,src2)),r)
-            case SUB(dst,t,src1,src2) => ValidState(r) //o == dst 
-                                && ValidData(r,evalSUB(t,OperandContents(s,src1),OperandContents(s,src2))) 
-                                && evalUpdate(s, dst, evalSUB(t,OperandContents(s,src1),OperandContents(s,src2)),r)
-            case CALL(dst,fnc) => ValidState(r) //o == dst 
-                                && evalBlock(fnc,s,r) 
-                                && ValidData(r,OperandContents(s,dst))
-                                && evalUpdate(s,dst,OperandContents(s,dst),r)
-            case GETELEMENTPTR(dst,t,op1,op2) => ValidState(r) //o == dst 
-                                && ValidData(r,evalGETELEMENTPTR(s.m,t,OperandContents(s,op1),OperandContents(s,op2)))
-                                && evalUpdate(s, dst, evalGETELEMENTPTR(s.m,t,OperandContents(s,op1),OperandContents(s,op2)),r)
-            case ICMP(dst,cond,t,src1,src2) => ValidState(r) //o == dst 
-                                && ValidData(r,evalICMP(cond,t,OperandContents(s,src1),OperandContents(s,src2)))
-                                && evalUpdate(s, dst, evalICMP(cond,t,OperandContents(s,src1),OperandContents(s,src2)),r)
-                                && OperandContents(s,src1).itype == OperandContents(r,src1).itype
-            case RET(val) => ValidState(r) && r.m == s.m && (if OperandContents(s,val).Void? then assert ValidState(r); &&  r == s
+            case ADD(dst,t,src1,src2) => ValidState(s') //o == dst 
+                                && ValidData(s',evalADD(t,OperandContents(s,src1),OperandContents(s,src2))) 
+                                && evalUpdate(s, dst, evalADD(t,OperandContents(s,src1),OperandContents(s,src2)),s')
+            case SUB(dst,t,src1,src2) => ValidState(s') //o == dst 
+                                && ValidData(s',evalSUB(t,OperandContents(s,src1),OperandContents(s,src2))) 
+                                && evalUpdate(s, dst, evalSUB(t,OperandContents(s,src1),OperandContents(s,src2)),s')
+            case CALL(dst,fnc) => ValidState(s') //o == dst 
+                                && evalBlock(fnc,s,s') 
+                                && ValidData(s',OperandContents(s,dst))
+                                && evalUpdate(s,dst,OperandContents(s,dst),s')
+            case GETELEMENTPTR(dst,t,op1,op2) => ValidState(s') //o == dst 
+                                && ValidData(s',evalGETELEMENTPTR(s.m,t,OperandContents(s,op1),OperandContents(s,op2)))
+                                && evalUpdate(s, dst, evalGETELEMENTPTR(s.m,t,OperandContents(s,op1),OperandContents(s,op2)),s')
+            case ICMP(dst,cond,t,src1,src2) => ValidState(s') //o == dst 
+                                && ValidData(s',evalICMP(cond,t,OperandContents(s,src1),OperandContents(s,src2)))
+                                && evalUpdate(s, dst, evalICMP(cond,t,OperandContents(s,src1),OperandContents(s,src2)),s')
+                                && OperandContents(s,src1).itype == OperandContents(s',src1).itype
+            case RET(val) => ValidState(s') && s'.m == s.m && (if OperandContents(s,val).Void? then assert ValidState(s'); &&  s' == s
                                             else 
-                                             && evalUpdate(s, val, OperandContents(s,val),r))// && r == s
-            case BR(if_cond, labelTrue,labelFalse) => ValidState(r) && evalIfElse(dataToBool(OperandContents(s,if_cond)),labelTrue,labelFalse,s,r)&& ValidState(r)
-            case SHL(dst,src,shiftAmt) => ValidState(r) //o == dst
-                                && ValidData(r,evalSHL(OperandContents(s,src),OperandContents(s,shiftAmt)))
-                                && evalUpdate(s, dst, evalSHL(OperandContents(s,src),OperandContents(s,shiftAmt)),r)
-            case LSHR(dst,src,shiftAmt) => ValidState(r) // o == dst 
-                                && ValidData(r,evalLSHR(OperandContents(s,src),OperandContents(s,shiftAmt)))
-                                && evalUpdate(s, dst, evalLSHR(OperandContents(s,src),OperandContents(s,shiftAmt)),r)
-            case AND(dst,src1,src2) => ValidState(r)  //o == dst 
-                                && ValidData(r,evalAND(OperandContents(s,dst).itype.size,OperandContents(s,src1),OperandContents(s,src2)))   
-                                && evalUpdate(s, dst, evalAND(OperandContents(s,dst).itype.size,OperandContents(s,src1),OperandContents(s,src2)),r)
-            case OR(dst,src1,src2) =>  ValidState(r) //o == dst 
-                                && ValidData(r,evalOR(OperandContents(s,dst).itype.size,OperandContents(s,src1),OperandContents(s,src2)))   
-                                && evalUpdate(s, dst, evalOR(OperandContents(s,dst).itype.size,OperandContents(s,src1),OperandContents(s,src2)),r)
-            case TRUN(dst,t,src,dstSize) => ValidState(r) //o == dst
-                                && ValidData(r,evalTRUNC(OperandContents(s,src),dstSize))    
-                                && evalUpdate(s, dst, evalTRUNC(OperandContents(s,src),dstSize),r)
-            case SEXT(dst,t,src,dstSize) => ValidState(r) //o == dst
-                                && ValidData(r,evalSEXT(OperandContents(s,src),dstSize))    
-                                && evalUpdate(s, dst, evalSEXT(OperandContents(s,src),dstSize),r)
-            case ZEXT(dst,t,src,dstSize) => ValidState(r) // o == dst 
-                                && ValidData(r,evalZEXT(OperandContents(s,src),dstSize))
-                                && evalUpdate(s, dst, evalZEXT(OperandContents(s,src),dstSize),r)
-            case LOAD(dst,mems,size,src) => ValidState(r) && s.m == r.m 
-                                && if evalLOAD(s.m,r.m,size,OperandContents(s,src)).Void? then !r.ok else// o == dst 
-                                 evalUpdate(s, dst, evalLOAD(s.m,r.m,size,OperandContents(s,src)),r) && evalLOAD(s.m,r.m,size,OperandContents(s,src)).Int?
+                                             && evalUpdate(s, val, OperandContents(s,val),s'))// && r == s
+            case BR(if_cond, labelTrue,labelFalse) => ValidState(s') && evalIfElse(dataToBool(OperandContents(s,if_cond)),labelTrue,labelFalse,s,s')&& ValidState(s')
+            case SHL(dst,src,shiftAmt) => ValidState(s') //o == dst
+                                && ValidData(s',evalSHL(OperandContents(s,src),OperandContents(s,shiftAmt)))
+                                && evalUpdate(s, dst, evalSHL(OperandContents(s,src),OperandContents(s,shiftAmt)),s')
+            case LSHR(dst,src,shiftAmt) => ValidState(s') // o == dst 
+                                && ValidData(s',evalLSHR(OperandContents(s,src),OperandContents(s,shiftAmt)))
+                                && evalUpdate(s, dst, evalLSHR(OperandContents(s,src),OperandContents(s,shiftAmt)),s')
+            case AND(dst,src1,src2) => ValidState(s')  //o == dst 
+                                && ValidData(s',evalAND(OperandContents(s,dst).itype.size,OperandContents(s,src1),OperandContents(s,src2)))   
+                                && evalUpdate(s, dst, evalAND(OperandContents(s,dst).itype.size,OperandContents(s,src1),OperandContents(s,src2)),s')
+            case OR(dst,src1,src2) =>  ValidState(s') //o == dst 
+                                && ValidData(s',evalOR(OperandContents(s,dst).itype.size,OperandContents(s,src1),OperandContents(s,src2)))   
+                                && evalUpdate(s, dst, evalOR(OperandContents(s,dst).itype.size,OperandContents(s,src1),OperandContents(s,src2)),s')
+            case TRUN(dst,t,src,dstSize) => ValidState(s') //o == dst
+                                && ValidData(s',evalTRUNC(OperandContents(s,src),dstSize))    
+                                && evalUpdate(s, dst, evalTRUNC(OperandContents(s,src),dstSize),s')
+            case SEXT(dst,t,src,dstSize) => ValidState(s') //o == dst
+                                && ValidData(s',evalSEXT(OperandContents(s,src),dstSize))    
+                                && evalUpdate(s, dst, evalSEXT(OperandContents(s,src),dstSize),s')
+            case ZEXT(dst,t,src,dstSize) => ValidState(s') // o == dst 
+                                && ValidData(s',evalZEXT(OperandContents(s,src),dstSize))
+                                && evalUpdate(s, dst, evalZEXT(OperandContents(s,src),dstSize),s')
+            case LOAD(dst,mems,size,src) => ValidState(s') && s.m == s'.m 
+                                && if evalLOAD(s.m,s'.m,size,OperandContents(s,src)).Void? then !s'.ok else// o == dst 
+                                 evalUpdate(s, dst, evalLOAD(s.m,s'.m,size,OperandContents(s,src)),s') && evalLOAD(s.m,s'.m,size,OperandContents(s,src)).Int?
                                 // && evalLoad(s,o,OperandContents(s,src).bid,OperandContents(s,src).offset,r) //bid:nat, ofs:nat
-            case STORE(valueToStore,ptr,mems) => ValidState(r) && mems == s.m && Store(s.m,r.m,OperandContents(s,ptr).bid,OperandContents(s,ptr).offset,OperandContents(s,valueToStore))
-                                                 && (MemValid(r.m))
-            case ALLOCA(dst,mems,t) =>  ValidState(r) && mems == s.m && exists b,n :: Alloc(s.m,r.m,b,n)
-            case INTTOPTR(dst,intSrc,ptrType) => ValidState(r)
-            case PTRTOINT(dst,ptrSrc,intType) => ValidState(r)
-            case BITCAST(dst,src,castType) => ValidState(r)
-                                            && ValidData(r,evalBITCAST(OperandContents(s,src),OperandContents(s,castType)))    
-                                            && evalUpdate(s, dst, evalBITCAST(OperandContents(s,src),OperandContents(s,castType)),r)
-            case EXTRACTVALUE() => ValidState(r)
-            case PHI() => ValidState(r)
-            case UNCONDBR(goToLabel) => evalBlock(goToLabel,s,r) && ValidState(r)
+            case STORE(valueToStore,ptr,mems) => ValidState(s') && mems == s.m && Store(s.m,s'.m,OperandContents(s,ptr).bid,OperandContents(s,ptr).offset,OperandContents(s,valueToStore))
+                                                 && (MemValid(s'.m))
+            case ALLOCA(dst,t) =>  ValidState(s') && exists b :: (Alloc(s.m,s'.m,b,t)
+                                        && evalUpdate(s, dst, Ptr(b, b, 0, t),s'))
+            case INTTOPTR(dst,intSrc,ptrType) => ValidState(s')
+            case PTRTOINT(dst,ptrSrc,intType) => ValidState(s')
+            case BITCAST(dst,src,castType) => ValidState(s')
+                                            && ValidData(s',evalBITCAST(OperandContents(s,src),OperandContents(s,castType)))    
+                                            && evalUpdate(s, dst, evalBITCAST(OperandContents(s,src),OperandContents(s,castType)),s')
+            case EXTRACTVALUE() => ValidState(s')
+            case PHI() => ValidState(s')
+            case UNCONDBR(goToLabel) => evalBlock(goToLabel,s,s') && ValidState(s')
+            case LLVM_MEMCPY(dst,src,len,volatile) => ValidState(s')
     }
 
-    predicate evalBlock(block:codes, s:state, r:state)
+    predicate evalBlock(block:codes, s:state, s':state)
     {
         if block.CNil? || block.ForeignFunction? then
-            r == s
+            s' == s
         else
-            exists r' :: (evalCode(block.hd, s, r') && evalBlock(block.tl, r', r))
+            exists r :: (evalCode(block.hd, s, r) && evalBlock(block.tl, r, s'))
     }
 
     predicate branchRelation(s:state, s':state, cond:bool)
@@ -394,23 +425,23 @@ module LLVM_def {
         dataToBool(evalICMP(o.cmp, OperandContents(s, o.o1).itype.size, OperandContents(s, o.o1), OperandContents(s, o.o2)))
     }
 
-    predicate evalIfElse(cond:bool, ifT:codes, ifF:codes, s:state, r:state)
+    predicate evalIfElse(cond:bool, ifT:codes, ifF:codes, s:state, s':state)
         decreases if ValidState(s) && cond then ifT else ifF
     {
         if ValidState(s) && s.ok then
-            exists s' :: branchRelation(s, s', cond) && (if cond then evalBlock(ifT, s', r) else evalBlock(ifF, s', r))
+            exists r :: branchRelation(s, r, cond) && (if cond then evalBlock(ifT, r, s') else evalBlock(ifF, r, s'))
         else
-            !r.ok
+            !s'.ok
     }
 
 
-    predicate evalCode(c:code, s:state, r:state)
+    predicate evalCode(c:code, s:state, s':state)
         decreases c, 0
     {
         match c
-            case Ins(ins) => evalIns(ins, s, r)
-            case Block(block) => evalBlock(block, s, r)
-            case IfElse(ifCond, ifT, ifF) => evalIfElse(ifCond, ifT, ifF, s, r)
+            case Ins(ins) => evalIns(ins, s, s')
+            case Block(block) => evalBlock(block, s, s')
+            case IfElse(ifCond, ifT, ifF) => evalIfElse(ifCond, ifT, ifF, s, s')
     }
 
 //// utility functions and helper lemmas 
@@ -447,6 +478,7 @@ module LLVM_def {
         SeqIsUnique(ops) && SeqIsUniqueAtomic(ops)
     }
 
+
 // ---LLVM INTRINSICs ----
     predicate llvm_lifetime_end(s:state,s':state,size:bitWidth,ptr:Data)
         requires ptr.Ptr?
@@ -454,6 +486,33 @@ module LLVM_def {
         Free(s.m,s'.m,ptr.bid)
     }
 
+    //   method evalLLVM_MEMCPY(s:state,s':state,dst:operand,src:operand,len:bitWidth,volatile:bool) returns (out:Data)
+    //     requires ValidOperand(s,dst)
+    //     requires ValidOperand(s,src)
+    //     requires ValidState(s)
+    //     requires OperandContents(s,dst).Ptr?;
+    //     requires OperandContents(s,src).Ptr?;
+    //     requires OperandContents(s,dst).size >= OperandContents(s,src).size
+    //     requires OperandContents(s,src).block in s.m.mem;
+    //     requires OperandContents(s,dst).block in s.m.mem;
+    //     // ensures OperandContents(s,dst) == out
 
+    // {   
+        
+    //     assert OperandContents(s,src).block in s.m.mem;
+    //     var bSrc:Block := s.m.mem[OperandContents(s,src).block];
+    //     var bDst:Block := s.m.mem[OperandContents(s,dst).block];
+    //     assert BlockValid(bSrc);
+    //     assert |bSrc| > 0;
+    //     var i := 0;
+    //     var index := 0;
+    //     while i < len 
+    //     {
+    //         var mc:MemCell := bSrc[index];
+    //         i := i + 1;
+    //     }
+
+    //     out := Ptr(0,0,0,1);
+    // }
 
 }
