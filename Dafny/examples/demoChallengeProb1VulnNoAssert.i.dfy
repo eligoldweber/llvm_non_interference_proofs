@@ -83,7 +83,7 @@ define void @rx_message_routine(i8* nocapture readonly %0) local_unnamed_addr #0
 }
 */
 
-function {:opaque} demo_challenge_prob_1_code(speed_value:lvm_operand_opr,s:MemState,var_0:lvm_operand_opr,
+function {:opaque} demo_challenge_prob_1_code(speed_value:lvm_operand_opr,var_0:lvm_operand_opr,
                                               var_5:lvm_operand_opr,var_10:lvm_operand_opr,var_17:lvm_operand_opr,
                                               var_6:lvm_operand_opr,var_7:lvm_operand_opr,var_8:lvm_operand_opr,
                                               var_11:lvm_operand_opr,var_12:lvm_operand_opr):lvm_code
@@ -95,11 +95,11 @@ function {:opaque} demo_challenge_prob_1_code(speed_value:lvm_operand_opr,s:MemS
 
 
     lvm_Block(lvm_Codes(Ins(GETELEMENTPTR(var_5,1,var_0,index3)),                         // %5 = getelementptr inbounds i8, i8* %0, i64 3
-              lvm_Codes(Ins(LOAD(var_6,s,1,var_5)),                                       // %6 = load i8, i8* %2, align 1, !tbaa !4
+              lvm_Codes(Ins(LOAD(var_6,1,var_5)),                                       // %6 = load i8, i8* %2, align 1, !tbaa !4
               lvm_Codes(Ins(ZEXT(var_7,1,var_6,2)),                                       // %7 = zext i8 %3 to i16
               lvm_Codes(Ins(SHL(var_8,var_7,shl_amount)),                                 // %8 = shl i32 %7, 8
               lvm_Codes(Ins(GETELEMENTPTR(var_10,1,var_0,index2)),                        // %10 = getelementptr inbounds i8, i8* %0, i64 2
-              lvm_Codes(Ins(LOAD(var_11,s,1,var_10)),                                     // %11 = load i8, i8* %10, align 1
+              lvm_Codes(Ins(LOAD(var_11,1,var_10)),                                     // %11 = load i8, i8* %10, align 1
               lvm_Codes(Ins(ZEXT(var_12,1,var_11,2)),                                     // %12 = zext i8 %11 to i16
               lvm_Codes(Ins(ADD(speed_value,2,var_8,var_12)),                             // %13 = add nsw i16 %8, %12
               lvm_Codes(Ins(ICMP(var_17,sgt,2,speed_value,D(Int(0,IntType(2,false))))),   // %17 = icmp sgt i16 %13, 0  <--------
@@ -116,7 +116,7 @@ lemma lvm_demo_simple_challenge_prob_1_vuln(lvm_b0:lvm_codes, lvm_s0:lvm_state,v
 
 
 
-  requires exists sN :: lvm_require(lvm_b0, demo_challenge_prob_1_code(speed_value,lvm_s0.m,var_0,var_5,var_10,var_17,var_6,var_7,var_8,var_11,var_12), lvm_s0, sN)
+  requires exists sN :: lvm_require(lvm_b0, demo_challenge_prob_1_code(speed_value,var_0,var_5,var_10,var_17,var_6,var_7,var_8,var_11,var_12), lvm_s0, sN)
   requires lvm_b0.tl.CNil?
 
   requires ValidState(lvm_s0)
@@ -163,7 +163,7 @@ lemma lvm_demo_simple_challenge_prob_1_vuln(lvm_b0:lvm_codes, lvm_s0:lvm_state,v
   ensures lvm_sM.ok ==> (forall s:state :: s.ok && ValidState(s) && ValidOperand(s,speed_value) && OperandContents(s,speed_value).Int? 
                         && OperandContents(s,speed_value).val > 0 && typesMatch(OperandContents(s,speed_value),Int(0,IntType(2,false)))
                           ==> (evalICMP(ugt,2,OperandContents(s,speed_value),Int(0,IntType(2,false))).val == 1)); 
-  ensures lvm_sM.ok ==> ValidStateSeq(lvm_sMs); // [S0 -> S1 -> ..... -> SN]
+  ensures lvm_sM.ok ==> ValidBehavior(lvm_sMs); // [S0 -> S1 -> ..... -> SN]
   {
     reveal_demo_challenge_prob_1_code();
     
@@ -171,12 +171,10 @@ lemma lvm_demo_simple_challenge_prob_1_vuln(lvm_b0:lvm_codes, lvm_s0:lvm_state,v
     
     
     
-    
-
-    lvm_sMs := [lvm_s0];
+      lvm_sMs := [lvm_s0];
     var operands :=[speed_value,var_10,var_5,var_6,var_7,var_8,var_11,var_12,var_17];
 
-    var codeBlock := demo_challenge_prob_1_code(speed_value,lvm_s0.m,var_0,var_5,var_10,var_17,var_6,var_7,var_8,var_11,var_12);
+    var codeBlock := demo_challenge_prob_1_code(speed_value,var_0,var_5,var_10,var_17,var_6,var_7,var_8,var_11,var_12);
     var sN :|  lvm_require(lvm_b0, codeBlock, lvm_s0, sN);
 
     ghost var lvm_ltmp1, lvm_cM:lvm_code, lvm_ltmp2 := lvm_lemma_block(lvm_b0, lvm_s0, sN);
@@ -185,9 +183,9 @@ lemma lvm_demo_simple_challenge_prob_1_vuln(lvm_b0:lvm_codes, lvm_s0:lvm_state,v
     assert lvm_bM == lvm_b0.tl;
     assert lvm_bM.CNil?;
     var lvm_b1:lvm_codes := lvm_get_block(lvm_cM);
-
+    assert false;
     assert lvm_b1.hd == Ins(GETELEMENTPTR(var_5,1,var_0,D(Int(3,IntType(8,false)))));
-   
+
 
     ghost var lvm_b2, lvm_s2 := lvm_lemma_GetElementPtr(lvm_b1, lvm_s0, lvm_sM, var_5, lvm_s0.m,1,var_0,D(Int(3,IntType(8,false))));
     assert lvm_s0.m == lvm_s2.m;

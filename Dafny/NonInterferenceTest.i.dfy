@@ -66,9 +66,9 @@ module challenge5 refines AbstractNonInterferenceProof {
         requires evalCode(code', r, r')
         ensures forall stateSeqS:seq<state>, stateSeqR:seq<state> 
                 ::  (&& startAndEndState(s,s',stateSeqS) 
-                    && ValidStateSeq(stateSeqS) 
+                    && ValidBehavior(stateSeqS) 
                     && startAndEndState(r,r',stateSeqR) 
-                    && ValidStateSeq(stateSeqR)
+                    && ValidBehavior(stateSeqR)
                     && ModuloMiniCH_P1Double(code,stateSeqS)) ==> lvm_state_eq(s',r') //might need to compare full seq?   
                     // {
 

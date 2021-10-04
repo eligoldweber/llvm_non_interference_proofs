@@ -155,6 +155,75 @@ lemma block_state_validity(block:codes, s:state, r:state)
 }
 
 
+    function evalBlockBehavior(block:codes, s:state, s':state,b:behavior): (out:behavior)
+        requires evalBlock(block,s,s');
+        requires ValidState(s);
+        requires |b| > 0 ==> bls(b) == s;
+        requires s.ok ==> ValidBehavior(b);
+        // ensures s.ok ==> ValidBehavior(out);
+    {
+        // assert evalBlock(block,s,s');
+        if block.CNil? || block.ForeignFunction? then
+           assert s' == s;
+           b
+        else
+            assert evalBlock(block,s,s');
+            assert exists r :: (evalCode(block.hd, s, r) && evalBlock(block.tl, r, s'));
+            var r :| (evalCode(block.hd, s, r) && evalBlock(block.tl, r, s'));
+            code_state_validity(block.hd,s,r);
+            assert r.ok ==> ValidState(r);
+            if ValidState(r) then
+                var b' := (evalCodeBehavior(block.hd, s, r, b) + evalBlockBehavior(block.tl,r,s',[r]));
+                // assert ValidBehavior(evalCodeBehavior(block.hd, s, r, b));
+                // assert bls((evalCodeBehavior(block.hd, s, r, b))) == r;
+                // assert ValidBehavior(evalBlockBehavior(block.tl,r,s',[r]));
+                // assert ValidBehavior(b');
+                b'
+            else 
+                b
+            // assert StateNext(s,r);
+            // var b' := b + [r];
+            // assert ValidState(r) ==> ValidBehavior(b');
+            
+            
+    }
+
+                            //  assert (s.ok  && ValidInstruction(s,ins)) ==> evalIns(ins, s, s');
+                            //  assert (s.ok  && ValidInstruction(s,ins)) ==> NextStep(s,s',evalInsStep(ins));
+                            //     //  assert (s.ok  && ValidInstruction(s,ins)) ==> MemStateNext(s.m,s'.m,MemStep.stutterStep());
+                            //  assert (s.ok  && ValidInstruction(s,ins)) ==>  StateNext(s,s');
+    function evalCodeBehavior(c:code,s:state, s':state, b:behavior): (out:behavior)
+         requires evalCode(c,s,s')
+         requires ValidBehavior(b)
+         requires |b| > 0 ==> bls(b) == s;
+         ensures s.ok ==> ValidBehavior(out);
+         ensures (c.Ins? &&  s.ok  && ValidInstruction(s,c.ins)) ==> |out| > 0 && bls(out) == s';
+         decreases c, 0
+    {
+        match c
+            case Ins(ins) => 
+            // assert (s.ok  && ValidInstruction(s,ins)) ==> NextStep(s,s',evalInsStep(ins));
+            // assert (s.ok  && ValidInstruction(s,ins)) ==> evalIns(ins, s, s');
+            // assert (s.ok  && ValidInstruction(s,ins)) ==>  StateNext(s,s');
+                             if (s.ok  && ValidInstruction(s,ins)) then
+                                assert NextStep(s,s',evalInsStep(ins));
+                                assert StateNext(s,s');
+                                assert ValidState(s');
+                                var b' := b + [s'];
+                                assert ValidBehavior(b');
+                                assert |b'| > 0;
+                                b'
+                            else
+                                b
+            case Block(block) => b //  evalCodeBlockImpliesEvalBlock(c, s, s');
+                                //   assert evalBlock(block,s,s');
+                                //   evalBlockBehavior(block,s,s',b)//evalBlockBehavior(block, s, s')
+            case IfElse(ifCond, ifT, ifF) => b//evalIfElse(ifCond, ifT, ifF, s, s')
+    }
+
+
+
+
 lemma lvm_lemma_block_lax(b0:lvm_codes, s0:state, sN:state) 
                 returns(s1:state, c1:lvm_code, b1:lvm_codes)
     requires b0.lvm_Codes?
