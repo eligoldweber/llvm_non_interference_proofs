@@ -139,7 +139,8 @@ module LLVM_def {
     {
         && exists step :: NextStep(s,s',step)
         && ValidState(s)
-        && MemStateNext(s.m,s'.m)
+        // && MemStateNext(s.m,s'.m)
+        && exists memStep :: MemStateNext(s.m,s'.m,memStep)
         
     }
 

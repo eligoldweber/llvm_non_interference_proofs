@@ -81,17 +81,29 @@ predicate MemValid(s:MemState) {
     && (forall bid | bid in s.mem :: BlockValid(s.mem[bid]))
 }
 
+datatype MemStep = 
+    | allocStep(bid:nat, size:nat)
+    | freeStep(bid:nat)
+    | storeStep(bid:nat, offset:nat, data:Data, n:bitWidth)
+    | stutterStep()
+
+predicate NextMemStep(s:MemState, s':MemState, step:MemStep)
+{
+    match step  
+        case allocStep(bid,size) => Alloc(s,s',bid,size)
+        case freeStep(bid) => Free(s,s',bid)
+        case storeStep(bid,offset,data,n) => (&& IsValidPtr(s, bid, offset,n)
+                                            && data.Int? && IntType(1, false) == data.itype
+                                            && (|s.mem[bid]| == 1 && Store(s,s',bid,offset,data)))
+        case stutterStep() => s == s'
+}
+
 // Describes valid Mem state transition 
-predicate MemStateNext(s:MemState,s':MemState)
+predicate MemStateNext(s:MemState,s':MemState,step:MemStep)
 {
     MemValid(s)
     && MemValid(s')
-    && ( || s == s'
-         || exists b,n :: Alloc(s,s',b,n)
-         || exists b :: Free(s,s',b)
-         || exists b:nat,o:nat,d:Data,n:bitWidth :: && IsValidPtr(s, b, o,n)
-                                                    && d.Int? && IntType(1, false) == d.itype
-                                                    && Store(s,s',b,o,d))
+    && NextMemStep(s,s',step)
 }
 // When a new block is allocated, all the previous blocks should remain the same,
 // and an unininitialized block of the appropriate size should be added with block

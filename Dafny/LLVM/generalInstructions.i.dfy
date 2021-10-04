@@ -89,6 +89,8 @@ lemma lvm_lemma_Add(lvm_b0:lvm_codes, lvm_s0:lvm_state, lvm_sN:lvm_state,
     assert ValidOperand(lvm_sM,dst);
     assert evalIns(lvm_code_Add(dst, size,src1,src2).ins,lvm_s0,lvm_sM);
     assert NextStep(lvm_s0,lvm_sM,evalInsStep(lvm_code_Add(dst, size,src1,src2).ins));
+        assert MemStateNext(lvm_s0.m,lvm_sM.m,MemStep.stutterStep());
+
     // var evalA := evalADD(OperandContents(lvm_s0,dst).itype.size,OperandContents(lvm_s0,src1),OperandContents(lvm_s0,src2));
     // assert evalUpdate(lvm_s0, dst, evalA,lvm_sM);
     assert (forall d :: ValidOperand(lvm_s0,d) && d != dst ==> ValidOperand(lvm_sM,d) && OperandContents(lvm_s0,d) == OperandContents(lvm_sM,d));
@@ -147,6 +149,7 @@ ensures lvm_s0.m == lvm_sM.m;
   assert ValidState(lvm_sM);
   assert evalCode_lax(lvm_cM, lvm_s0, lvm_sM);
   assert NextStep(lvm_s0,lvm_sM,evalInsStep(lvm_code_GetElementPtr(dst,t,op1,op2).ins));
+    assert MemStateNext(lvm_s0.m,lvm_sM.m,MemStep.stutterStep());
 
 }
 
@@ -193,6 +196,7 @@ lemma lvm_lemma_Ret(lvm_b0:lvm_codes, lvm_s0:lvm_state, lvm_sN:lvm_state,dst:lvm
   assert ValidState(lvm_sM);
   assert evalCode(lvm_cM, lvm_s0, lvm_sM);
   assert NextStep(lvm_s0,lvm_sM,evalInsStep(lvm_code_Ret(op1).ins));
+    assert MemStateNext(lvm_s0.m,lvm_sM.m,MemStep.stutterStep());
 
 }
 
@@ -271,6 +275,7 @@ lemma lvm_lemma_Load(lvm_b0:lvm_codes, lvm_s0:lvm_state, lvm_sN:lvm_state,dst:lv
   assert lvm_sM.ok ==> ValidState(lvm_sM);
   assert lvm_sM.ok ==> evalCode_lax(lvm_cM, lvm_s0, lvm_sM);
   assert NextStep(lvm_s0,lvm_sM,evalInsStep(lvm_LOAD(dst,lvm_s0.m,t,op1).ins));
+    assert MemStateNext(lvm_s0.m,lvm_sM.m,MemStep.stutterStep());
 
 }
 
@@ -331,6 +336,8 @@ lemma lvm_lemma_Zext(lvm_b0:lvm_codes, lvm_s0:lvm_state, lvm_sN:lvm_state,
   assert ValidState(lvm_sM);
   assert evalCode_lax(lvm_cM, lvm_s0, lvm_sM);
   assert NextStep(lvm_s0,lvm_sM,evalInsStep(lvm_code_ZEXT(dst,t,op1,dstSize).ins));
+      assert MemStateNext(lvm_s0.m,lvm_sM.m,MemStep.stutterStep());
+
 }
 
 
@@ -390,6 +397,7 @@ lemma lvm_lemma_Sext(lvm_b0:lvm_codes, lvm_s0:lvm_state, lvm_sN:lvm_state,
     assert ValidState(lvm_sM);
     assert evalCode_lax(lvm_cM, lvm_s0, lvm_sM);
     assert NextStep(lvm_s0,lvm_sM,evalInsStep(lvm_code_SEXT(dst,t,op1,dstSize).ins));
+    assert MemStateNext(lvm_s0.m,lvm_sM.m,MemStep.stutterStep());
 
 }
 
@@ -454,6 +462,7 @@ lemma lvm_lemma_Shl(lvm_b0:lvm_codes, lvm_s0:lvm_state, lvm_sN:lvm_state,
     assert ValidState(lvm_sM);
     assert evalCode_lax(lvm_cM, lvm_s0, lvm_sM);
     assert NextStep(lvm_s0,lvm_sM,evalInsStep(lvm_code_SHL(dst,src,shiftAmt).ins));
+    assert MemStateNext(lvm_s0.m,lvm_sM.m,MemStep.stutterStep());
 
 }
 
@@ -512,6 +521,7 @@ lemma lvm_lemma_Icmp(lvm_b0:lvm_codes, lvm_s0:lvm_state, lvm_sN:lvm_state,
     assert ValidState(lvm_sM);
     assert evalCode_lax(lvm_cM, lvm_s0, lvm_sM);
     assert NextStep(lvm_s0,lvm_sM,evalInsStep(lvm_code_ICMP(dst,cond,size,op1,op2).ins));
+    assert MemStateNext(lvm_s0.m,lvm_sM.m,MemStep.stutterStep());
 
 
 }
@@ -557,7 +567,8 @@ lemma lvm_lemma_Empty(lvm_b0:lvm_codes, lvm_s0:lvm_state, lvm_sN:lvm_state)
     lvm_sM := lvm_lemma_empty(lvm_s0, lvm_sM);
     assert ValidState(lvm_sM);
     assert lvm_s0 == lvm_sM;
-    assert NextStep(lvm_s0,lvm_sM,stutterStep());
+    assert NextStep(lvm_s0,lvm_sM,Step.stutterStep());
+    assert MemStateNext(lvm_s0.m,lvm_sM.m,MemStep.stutterStep());
 
 }
 
