@@ -120,7 +120,7 @@ lemma lvm_lemma_GetElementPtr(lvm_b0:lvm_codes, lvm_s0:lvm_state, lvm_sN:lvm_sta
   requires OperandContents(lvm_s0,op1).Ptr?;
   requires OperandContents(lvm_s0,op2).Int?;
   requires !OperandContents(lvm_s0,op2).itype.signed;
-  requires |lvm_s0.m.mem[OperandContents(lvm_s0,op1).bid]| == t
+  // requires |lvm_s0.m.mem[OperandContents(lvm_s0,op1).bid]| == t
 
   requires OperandContents(lvm_s0,op1).bid in lvm_s0.m.mem; //needed for IsValidBid for valid input
   requires ValidOperand(lvm_s0,dst)
@@ -253,6 +253,7 @@ function method lvm_LOAD(dst:lvm_operand_opr,t:bitWidth,op1:lvm_operand_opr):lvm
 }
 
 
+
 lemma lvm_lemma_Load(lvm_b0:lvm_codes, lvm_s0:lvm_state, lvm_sN:lvm_state,dst:lvm_operand_opr,t:bitWidth,op1:lvm_operand_opr)
   returns (lvm_bM:lvm_codes, lvm_sM:lvm_state)
   requires lvm_require(lvm_b0, lvm_LOAD(dst,t,op1), lvm_s0, lvm_sN)
@@ -320,7 +321,7 @@ lemma lvm_lemma_Load(lvm_b0:lvm_codes, lvm_s0:lvm_state, lvm_sN:lvm_state,dst:lv
   assert lvm_sM.ok ==> ValidState(lvm_sM);
   assert lvm_sM.ok ==> evalCode_lax(lvm_cM, lvm_s0, lvm_sM);
   assert NextStep(lvm_s0,lvm_sM,evalInsStep(lvm_LOAD(dst,t,op1).ins));
-  assert MemStateNext(lvm_s0.m,lvm_sM.m,MemStep.stutterStep());
+    assert MemStateNext(lvm_s0.m,lvm_sM.m,MemStep.stutterStep());
 
 }
 

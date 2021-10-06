@@ -21,21 +21,16 @@ module demo_challenge_prob_1 {
 //####################################################################
 
 /*
-
 int main(int argc, const char *argv[]) {
   // default input
   unsigned char buf[8] = { 0, 1, 2, 3, 4, 5, 6, 7};
-
   // optional input
   for(int i = 1; i < argc && i < sizeof(buf)/sizeof(buf[0]); i++) {
     buf[i] = (unsigned char)atoi(argv[i]);
   }
-
   rx_message_routine(buf);
   return 0;
 }
-
-
 void rx_message_routine(unsigned char buf[]){
   // buf[3] is the integer value, 0-255km, buff[2] is the decimal
   uint16_t speed_value = (buf[3] << 8) + buf[2];  // <-------- Vulnerability here
@@ -70,7 +65,6 @@ void rx_message_routine(unsigned char buf[]){
 /*
 ; Function Attrs: nofree nounwind ssp uwtable
 define void @rx_message_routine(i8* nocapture readonly %0) local_unnamed_addr #0 {
-
   %5 = getelementptr inbounds i8, i8* %0, i64 3
   %6 = load i8, i8* %5, align 1, !tbaa !4
   %7 = zext i8 %6 to i32
@@ -84,7 +78,7 @@ define void @rx_message_routine(i8* nocapture readonly %0) local_unnamed_addr #0
 }
 */
 
-function {:opaque} demo_challenge_prob_1_code(speed_value:lvm_operand_opr,var_0:lvm_operand_opr,
+function {:opaque} demo_challenge_prob_1_code(speed_value:lvm_operand_opr,s:MemState,var_0:lvm_operand_opr,
                                               var_5:lvm_operand_opr,var_10:lvm_operand_opr,var_17:lvm_operand_opr,
                                               var_6:lvm_operand_opr,var_7:lvm_operand_opr,var_8:lvm_operand_opr,
                                               var_11:lvm_operand_opr,var_12:lvm_operand_opr):lvm_code
@@ -113,7 +107,7 @@ function {:opaque} demo_challenge_prob_1_code(speed_value:lvm_operand_opr,var_0:
 lemma lvm_demo_simple_challenge_prob_1(lvm_b0:lvm_codes, lvm_s0:lvm_state,var_0:lvm_operand_opr,var_5:lvm_operand_opr,var_6:lvm_operand_opr,var_7:lvm_operand_opr,var_8:lvm_operand_opr,var_10:lvm_operand_opr,var_11:lvm_operand_opr,var_12:lvm_operand_opr,speed_value:lvm_operand_opr, var_17:lvm_operand_opr)
       returns (lvm_bM:lvm_codes, lvm_sM:lvm_state,lvm_sMs:seq<lvm_state>)
 // PRE Conditions 
-  requires exists sN :: lvm_require(lvm_b0, demo_challenge_prob_1_code(speed_value,var_0,var_5,var_10,var_17,var_6,var_7,var_8,var_11,var_12), lvm_s0, sN)
+  requires exists sN :: lvm_require(lvm_b0, demo_challenge_prob_1_code(speed_value,lvm_s0.m,var_0,var_5,var_10,var_17,var_6,var_7,var_8,var_11,var_12), lvm_s0, sN)
   requires lvm_b0.tl.CNil?
 
   requires ValidState(lvm_s0)
@@ -161,16 +155,17 @@ lemma lvm_demo_simple_challenge_prob_1(lvm_b0:lvm_codes, lvm_s0:lvm_state,var_0:
                         && OperandContents(s,speed_value).val > 0 && typesMatch(OperandContents(s,speed_value),Int(0,IntType(2,false)))
                           ==> (evalICMP(ugt,2,OperandContents(s,speed_value),Int(0,IntType(2,false))).val == 1)); 
   ensures lvm_sM.ok ==> ValidBehavior(lvm_sMs); // [S0 -> S1 -> ..... -> SN]
-  ensures lvm_sM.ok  ==> BehaviorEvalsCode(demo_challenge_prob_1_code(speed_value,var_0,var_5,var_10,var_17,var_6,var_7,var_8,var_11,var_12),lvm_sMs)
+  ensures lvm_sM.ok  ==> BehaviorEvalsCode(demo_challenge_prob_1_code(speed_value,lvm_s0.m,var_0,var_5,var_10,var_17,var_6,var_7,var_8,var_11,var_12),lvm_sMs)
   {
     reveal_demo_challenge_prob_1_code();
 
     lvm_sMs := [lvm_s0];
     var operands :=[speed_value,var_10,var_5,var_6,var_7,var_8,var_11,var_12,var_17];
 
-    var codeBlock := demo_challenge_prob_1_code(speed_value,var_0,var_5,var_10,var_17,var_6,var_7,var_8,var_11,var_12);
+    var codeBlock := demo_challenge_prob_1_code(speed_value,lvm_s0.m,var_0,var_5,var_10,var_17,var_6,var_7,var_8,var_11,var_12);
     var sN :|  lvm_require(lvm_b0, codeBlock, lvm_s0, sN);
-          assert lvm_b0.hd.Block?;
+
+        assert lvm_b0.hd.Block?;
 
     ghost var lvm_ltmp1, lvm_cM:lvm_code, lvm_ltmp2 := lvm_lemma_block(lvm_b0, lvm_s0, sN);
     lvm_sM := lvm_ltmp1;

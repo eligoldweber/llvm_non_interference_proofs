@@ -584,6 +584,9 @@ lemma lvm_lemma_Icmp(b:behavior,lvm_b0:lvm_codes, lvm_sN:lvm_state,
   ensures forall d :: ValidOperand(bls(b),d) && d != dst ==> ValidOperand(lvm_sM,d) && OperandContents(bls(b),d) == OperandContents(lvm_sM,d)
   ensures StateNext(bls(b),lvm_sM)
   ensures ValidBehavior(b');
+  ensures |b'| == |b| + 1;
+  ensures bls(b') == lvm_sM;
+  ensures forall i :: i >=0 && i < |b| ==> b[i] == b'[i];
 
 {
     
@@ -680,6 +683,10 @@ lemma lvm_lemma_Alloca(b:behavior,lvm_b0:lvm_codes, lvm_sN:lvm_state,dst:lvm_ope
   requires MemValid(bls(b).m)
   requires OperandContents(bls(b),dst).Ptr?
   requires validBitWidth(t)
+  requires dst.D?;
+  requires exists s' :: (s' == State(bls(b).lvs,bls(b).gvs,AllocaStep(bls(b).m,t),bls(b).ok) 
+                        && evalAlloca(bls(b),dst,evalALLOCA(bls(b).m,t),t,s')
+                        && evalCode(lvm_b0.hd, bls(b), s') && evalBlock(lvm_b0.tl, s', lvm_sN));
   ensures  lvm_ensure(lvm_b0, lvm_bM, bls(b), lvm_sM, lvm_sN)
   ensures  lvm_get_ok(lvm_sM) // ValidState(sM)
   ensures  lvm_state_eq(lvm_sM, lvm_update_mem( lvm_sM, lvm_update_ok(lvm_sM, lvm_sM)))
@@ -697,53 +704,50 @@ lemma lvm_lemma_Alloca(b:behavior,lvm_b0:lvm_codes, lvm_sN:lvm_state,dst:lvm_ope
 
     assert ValidInstruction(lvm_s0, lvm_code_ALLOCA(dst,t).ins);
     assert evalBlock(lvm_b0, lvm_s0, lvm_sN);
-
+// assert false;
     // assert exists s',b :: (Alloc(lvm_s0.m,s'.m,b,t));
     assert ValidState(lvm_s0) && lvm_s0.ok;
     assert lvm_b0.hd.ins == lvm_code_ALLOCA(dst,t).ins;
     assert lvm_b0.hd.Ins?;
-    // var s':MemState := AllocaStep(lvm_s0.m,t);
-    // var z:state := State(lvm_s0.lvs,lvm_s0.gvs,s',lvm_s0.ok);
 
-    // // && s'.mem == s.mem[s.nextBlock := UninitBlock(size)]
-    // assert ValidState(z); //&& Alloc(lvm_s0.m,s'.m,lvm_s0.m.nextBlock,t);
-    // assert Alloc(lvm_s0.m,z.m,lvm_s0.m.nextBlock,t);
-    // assert ValidData(z,evalALLOCA(lvm_s0.m,t));
-    // assert z == lvm_s0.(m := s'); 
-    // assert evalAlloca(lvm_s0, dst, t,z);
-    // // assert exists r':state :: evalIns(lvm_b0.hd.ins, lvm_s0, r') <==> evalCode(lvm_b0.hd, lvm_s0, r');
-    // assert evalIns(lvm_b0.hd.ins, lvm_s0, z);
-
-    // assert exists r':state :: evalCode(lvm_b0.hd, lvm_s0, r') && evalBlock(lvm_b0.tl, r', lvm_sN);
-    //              assert false;
-
-    // var r':state :| evalCode(lvm_b0.hd, lvm_s0, r') && evalBlock(lvm_b0.tl, r', lvm_sN);
-    //              assert false;
-
-    // assert lvm_b0.hd == lvm_code_ALLOCA(dst,t);
-    // assert evalIns(lvm_b0.hd.ins,lvm_s0,r');
-    
-    // assert r'.ok;
-    //      assert false;
+    assert evalBlock(lvm_b0, lvm_s0, lvm_sN);
+    var r:state :| evalCode(lvm_b0.hd, lvm_s0, r) && evalBlock(lvm_b0.tl, r, lvm_sN) ;
+    lvm_sM := r;
+    lvm_bM := lvm_b0.tl;
+    assert ValidState(lvm_s0);
+      assert lvm_b0.hd.Ins?;
+      // assert evalCode(lvm_b0.hd, lvm_s0, r);
+        
+        
+    assert ValidInstruction(lvm_s0,lvm_b0.hd.ins);
+    var nextS := State(lvm_s0.lvs,lvm_s0.gvs,AllocaStep(lvm_s0.m,t),lvm_s0.ok);
+    assert nextS == r;
+    assert Alloc(lvm_s0.m,nextS.m,lvm_s0.m.nextBlock,t);
+    assert ValidData(nextS,evalALLOCA(lvm_s0.m,t));
+    // assert evalAlloca(lvm_s0, dst, evalALLOCA(lvm_s0.m,t),t,nextS);    
+    // assert evalIns(lvm_b0.hd.ins,lvm_s0,r);
+  // assert false;
+  //   code_state_validity(lvm_b0.hd, lvm_s0, lvm_sM);
+  //   assert ValidState(lvm_s0) && lvm_sM.ok ==> ValidState(lvm_sM);
+     assert false;
 
     ghost var lvm_ltmp1, lvm_cM:lvm_code, lvm_ltmp2 := lvm_lemma_block(lvm_b0, lvm_s0, lvm_sN);
-    lvm_sM := lvm_ltmp1;
-    lvm_bM := lvm_ltmp2;
+    // lvm_sM := lvm_ltmp1;
+    // lvm_bM := lvm_ltmp2;
     assert ValidState(lvm_s0);
     assert ValidState(lvm_sM);
-    //  assert false;
+     assert false;
 
     assert lvm_sM.ok;
     assert lvm_b0.tl == lvm_bM;
 
     assert ValidState(lvm_sM);
-    assert evalCode_lax(lvm_cM, lvm_s0, lvm_sM);
+    assert evalCode_lax(lvm_b0.hd, lvm_s0, lvm_sM);
     assert NextStep(lvm_s0,lvm_sM,evalInsStep(lvm_code_ALLOCA(dst,t).ins));
     assert MemStateNext(lvm_s0.m,lvm_sM.m,MemStep.allocStep(lvm_s0.m.nextBlock,t));
     b' := b + [lvm_sM];
     assert ValidBehavior(b');
     assert BehaviorEvalsCode(lvm_code_ALLOCA(dst,t),[lvm_s0,lvm_sM]);
-
 }
 
 function method lvm_code_CALL(dst:lvm_operand_opr,fnc:lvm_codes):(out:lvm_code)
@@ -835,8 +839,9 @@ lemma lvm_lemma_MemCpy(b:behavior,lvm_b0:lvm_codes, lvm_sN:lvm_state,dst:lvm_ope
   ensures StateNext(bls(b),lvm_sM)
   ensures ValidBehaviorNonTrivial(b');
   ensures  lvm_state_eq(lvm_sM, bls(b'))
+  ensures |b'| == |b| + 1;
 
-
+        ensures forall i :: i >=0 && i < |b| ==> b[i] == b'[i];
 
 {
     
@@ -864,12 +869,123 @@ lemma lvm_lemma_MemCpy(b:behavior,lvm_b0:lvm_codes, lvm_sN:lvm_state,dst:lvm_ope
 
     assert ValidState(lvm_sM);
     assert evalCode_lax(lvm_cM, lvm_s0, lvm_sM);
-    assert NextStep(lvm_s0,lvm_sM,evalInsStep(lvm_code_MEMCPY(dst,src,len).ins));
+    
+    assert NextStep(lvm_s0,lvm_sM,Step.evalInsStep(lvm_code_MEMCPY(dst,src,len).ins));
+    assert NextMemStep(lvm_s0.m,lvm_sM.m,MemStep.memCpyStep(OperandContents(lvm_s0,src).bid,OperandContents(lvm_s0,dst).bid));
     // assert MemStateNext(lvm_s0.m,lvm_sM.m,MemStep.allocStep(lvm_s0.m.nextBlock,t));
+    var memS :| memS == MemStep.memCpyStep(OperandContents(lvm_s0,src).bid,OperandContents(lvm_s0,dst).bid);
+    assert  MemStateNext(lvm_s0.m,lvm_sM.m,memS);
+    assert StateNext(lvm_s0,lvm_sM);
+
     b' := b + [lvm_sM];
     assert ValidBehavior(b');
     assert BehaviorEvalsCode(lvm_code_MEMCPY(dst,src,len),[lvm_s0,lvm_sM]);
 
 }
+
+function method lvm_code_STORE(val:lvm_operand_opr,ptr:lvm_operand_opr):(out:lvm_code)
+{
+    
+    Ins(STORE(val,ptr))
+}
+
+lemma lvm_lemma_Store(b:behavior,lvm_b0:lvm_codes, lvm_sN:lvm_state,val:lvm_operand_opr,ptr:lvm_operand_opr)
+  returns (b':behavior,lvm_bM:lvm_codes, lvm_sM:lvm_state)
+  
+  requires ValidBehaviorNonTrivial(b);
+  requires lvm_require(lvm_b0, lvm_code_STORE(val,ptr), bls(b), lvm_sN)
+  requires lvm_get_ok(bls(b))
+  requires ValidOperand(bls(b),val)
+  requires ValidOperand(bls(b),ptr)
+  requires MemValid(bls(b).m)
+  requires OperandContents(bls(b),val).Int?
+  requires OperandContents(bls(b),ptr).Ptr?
+  requires IntType(1, false) == OperandContents(bls(b),val).itype
+  requires IsValidPtr(bls(b).m,OperandContents(bls(b),ptr).bid,OperandContents(bls(b),ptr).offset,1)
+  ensures  lvm_ensure(lvm_b0, lvm_bM, bls(b), lvm_sM, lvm_sN)
+  ensures  lvm_get_ok(lvm_sM) // ValidState(sM)
+  ensures  lvm_state_eq(lvm_sM, lvm_update_mem( lvm_sM, lvm_update_ok(lvm_sM, lvm_sM)))
+  ensures  forall s2 :: evalCode(lvm_b0.hd, bls(b), s2) ==> s2.ok 
+  ensures StateNext(bls(b),lvm_sM)
+  ensures ValidBehaviorNonTrivial(b');
+  ensures  lvm_state_eq(lvm_sM, bls(b'))
+  ensures |b'| == |b| + 1;
+        ensures forall i :: i >=0 && i < |b| ==> b[i] == b'[i];
+
+
+{
+    
+    var lvm_s0 := bls(b);
+    assert lvm_code_STORE(val,ptr).Ins?;
+
+    assert ValidInstruction(lvm_s0, lvm_code_STORE(val,ptr).ins);
+    assert evalBlock(lvm_b0, lvm_s0, lvm_sN);
+
+    // assert exists s',b :: (Alloc(lvm_s0.m,s'.m,b,t));
+    assert ValidState(lvm_s0) && lvm_s0.ok;
+    assert lvm_b0.hd.ins == lvm_code_STORE(val,ptr).ins;
+    assert lvm_b0.hd.Ins?;
+   
+
+    ghost var lvm_ltmp1, lvm_cM:lvm_code, lvm_ltmp2 := lvm_lemma_block(lvm_b0, lvm_s0, lvm_sN);
+    lvm_sM := lvm_ltmp1;
+    lvm_bM := lvm_ltmp2;
+    assert ValidState(lvm_s0);
+    assert ValidState(lvm_sM);
+    //  assert false;
+
+    assert lvm_sM.ok;
+    assert lvm_b0.tl == lvm_bM;
+
+    assert ValidState(lvm_sM);
+    assert evalCode_lax(lvm_cM, lvm_s0, lvm_sM);
+    
+    assert NextStep(lvm_s0,lvm_sM,Step.evalInsStep(lvm_code_STORE(val,ptr).ins));
+    assert Store(lvm_s0.m,lvm_sM.m,OperandContents(lvm_s0,ptr).bid,OperandContents(lvm_s0,ptr).offset,OperandContents(lvm_s0,val));
+    // assert NextMemStep(lvm_s0.m,lvm_sM.m,MemStep.storeStep(OperandContents(lvm_s0,ptr).bid,OperandContents(lvm_s0,ptr).offset,OperandContents(lvm_s0,val),1));
+    // // assert MemStateNext(lvm_s0.m,lvm_sM.m,MemStep.allocStep(lvm_s0.m.nextBlock,t));
+    var memS :| memS == MemStep.storeStep(OperandContents(lvm_s0,ptr).bid,OperandContents(lvm_s0,ptr).offset,OperandContents(lvm_s0,val),1);
+    assert  MemStateNext(lvm_s0.m,lvm_sM.m,memS);
+    assert StateNext(lvm_s0,lvm_sM);
+
+    b' := b + [lvm_sM];
+    assert ValidBehavior(b');
+    assert BehaviorEvalsCode(lvm_code_STORE(val,ptr),[lvm_s0,lvm_sM]);
+
+}
+
+function method lvm_code_BR(if_cond:operand, labelTrue:codes,labelFalse:codes):(out:lvm_code)
+{
+    
+    Ins(BR(if_cond,labelTrue,labelFalse))
+}
+
+
+lemma lvm_lemma_BR(b:behavior,lvm_b0:lvm_codes, lvm_sN:lvm_state,if_cond:lvm_operand_opr,labelTrue:lvm_codes, labelFalse:lvm_codes)
+  returns (b':behavior,lvm_bM:lvm_codes, lvm_sM:lvm_state)
+  
+  requires ValidBehaviorNonTrivial(b);
+  requires lvm_require(lvm_b0, Ins(BR(if_cond,labelTrue,labelFalse)), bls(b), lvm_sN)
+  requires lvm_get_ok(bls(b))
+  requires ValidOperand(bls(b),if_cond)
+  requires OperandContents(bls(b),if_cond).Int? 
+  requires !OperandContents(bls(b),if_cond).itype.signed
+  requires OperandContents(bls(b),if_cond).itype.size == 1 
+
+  // ensures  lvm_ensure(lvm_b0, lvm_bM, bls(b), lvm_sM, lvm_sN)
+  // ensures  lvm_get_ok(lvm_sM)
+  // ensures  forall s2 :: evalCode(lvm_b0.hd, bls(b), s2) ==> s2.ok 
+  // // ensures StateNext(bls(b),lvm_sM)
+  // ensures ValidBehaviorNonTrivial(b');
+  // ensures  lvm_state_eq(lvm_sM, bls(b'))
+  // ensures |b'| == |b| + 1;
+
+  {
+    b' := b;
+    lvm_bM := lvm_b0;
+    lvm_sM := bls(b);
+  }
+
+
 
 }

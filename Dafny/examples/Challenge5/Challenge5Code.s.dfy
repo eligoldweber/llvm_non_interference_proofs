@@ -1,18 +1,240 @@
-include "../LLVM/llvm.i.dfy"
-include "../LLVM/control_flow.i.dfy"
-include "../LLVM/generalInstructionsBehavior.i.dfy"
-include "../LLVM/types.dfy"
-include "../LLVM/memory.i.dfy"
-include "../LLVM/Operations/otherOperations.i.dfy"
-include "../AbstractNonInterferenceProof.s.dfy"
+include "../../LLVM/llvm.i.dfy"
+include "../../LLVM/types.dfy"
+include "../../LLVM/control_flow.i.dfy"
 
-module challenge5 refines UpdatedAbstractNonInterferenceProof{ 
-    // import opened LLVM_def
-    // import opened control_flow
-    import opened general_instructions_behaviors
+
+module challenge5Code{
+    import opened control_flow
+    import opened LLVM_def
     import opened types
-    import opened memory
-    import opened other_operations_i
+
+    function challenge_prob_5_code_write_encrypted():lvm_code
+    {
+
+       // [temp] dummy ptrs
+        var call := D(Ptr(0,0,0,1));
+        var mblock := D(Ptr(0,0,0,1));
+        var call1 := D(Ptr(0,0,0,1));
+        // var call2 := D(Ptr(0,0,0,1));
+        var call2 := D(Int(0,IntType(1,false)));
+        var call3 := D(Int(1,IntType(4,false)));
+
+        // var call3 := D(Ptr(0,0,0,1));
+        var call4 := D(Ptr(0,0,0,1));
+        var IV_SIZE := Int(16,IntType(4,false));
+        var bytes_written := D(Ptr(0,0,0,1));
+
+        var cmp := D(Int(0,IntType(1,false)));
+        var cmp5 := D(Int(0,IntType(1,false)));
+ 
+        var var_1 := D(Ptr(0,0,0,1));
+        var var_2 := D(Int(0,IntType(4,false)));
+        var var_3 := D(Ptr(0,0,0,1));
+    
+        var conv := D(Int(0,IntType(8,false)));
+
+        // if.end8:                                          ; preds = %if.then7, %if.end
+        //   tail call void @free(i8* nonnull %call) #24
+        //   tail call void @free(i8* %call1) #24
+        //   tail call void @initialize_write(i8* getelementptr inbounds ([16 x i8], [16 x i8]* @IV, i64 0, i64 0), i32 16)
+        //   call void @llvm.lifetime.end.p0i8(i64 4, i8* nonnull %0) #24
+        //   ret void
+        var if_end8:code := lvm_Block(lvm_Codes(Ins(CALL(D(Void),free(call.d))),
+                                      lvm_Codes(Ins(CALL(D(Void),free(call1.d))),  
+                                      lvm_Codes(Ins(CALL(D(Void),initialize_write(call1.d,IV_SIZE))),  
+                                      lvm_Codes(Ins(RET(D(Void))),lvm_CNil()))))); 
+
+        // if.then7:                                         ; preds = %if.end
+        //   tail call void @perror(i8* getelementptr inbounds ([37 x i8], [37 x i8]* @.str.5, i64 0, i64 0)) #23
+        //   br label %if.end8
+        var if_then7:code := lvm_Block(lvm_Codes(Ins(CALL(D(Void),perror())),
+                                      lvm_Codes(Ins(UNCONDBR(lvm_Codes(if_end8,lvm_CNil()))), lvm_CNil())));
+        
+        // if.end:                                           ; preds = %if.then, %entry
+        //   %2 = load i32, i32* %bytes_written, align 4, !tbaa !3
+        //   %conv = sext i32 %2 to i64
+        //   %3 = load %struct._IO_FILE*, %struct._IO_FILE** @wfd, align 8, !tbaa !14
+        //   %call4 = tail call i64 @fwrite(i8* %call1, i64 1, i64 %conv, %struct._IO_FILE* %3)
+        //   %cmp5 = icmp eq i64 %call4, 0
+        //   br i1 %cmp5, label %if.then7, label %if.end8
+        var if_end:code := lvm_Block(lvm_Codes(Ins(LOAD(var_2,4,bytes_written)),
+                                     lvm_Codes(Ins(SEXT(conv,8,var_2,8)),
+                                     lvm_Codes(Ins(LOAD(var_3,4,D(Ptr(0,0,0,1)))),
+                                     lvm_Codes(Ins(CALL(call4,fwrite(call1,1,conv.d.val,D(Ptr(0,0,0,1))))),
+                                     lvm_Codes(Ins(ICMP(cmp5,eq,8,call4,D(Int(0,IntType(8,false))))),
+                                     lvm_Codes(Ins(BR(cmp,                                          
+                                        lvm_Codes(if_then7,lvm_CNil()),
+                                        lvm_Codes(if_end8,lvm_CNil()))),lvm_CNil())))))));
+
+
+        // if.then:                                          ; preds = %entry
+        //   tail call void @perror(i8* getelementptr inbounds ([27 x i8], [27 x i8]* @.str.4, i64 0, i64 0)) #23
+        //   br label %if.end
+        var if_then:code := lvm_Block(lvm_Codes(Ins(CALL(D(Void),perror())),
+                                      lvm_Codes(Ins(UNCONDBR(lvm_Codes(if_end,lvm_CNil()))), lvm_CNil())));
+
+    //   %bytes_written = alloca i32, align 4
+    //   call void @llvm.lifetime.start.p0i8(i64 4, i8* nonnull %0) #24
+    //   %call = tail call noalias align 16 dereferenceable_or_null(112) i8* @malloc(i64 112) #24
+    //   tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* noundef nonnull align 16 dereferenceable(112) %call, i8* noundef nonnull align 8 dereferenceable(112) getelementptr inbounds (%struct.MBlock, %struct.MBlock* @mblock, i64 0, i32 0, i64 0), i64 112, i1 false)
+    //   %call1 = tail call noalias align 16 dereferenceable_or_null(120) i8* @malloc(i64 120) #24
+    //   %call2 = tail call i32 @encrypt(i8* %call, i32 112, i8* getelementptr inbounds ([32 x i8], [32 x i8]* @KEY, i64 0, i64 0), i8* getelementptr inbounds ([16 x i8], [16 x i8]* @IV, i64 0, i64 0), i8* %call1) #24
+    //   store i32 %call2, i32* %bytes_written, align 4, !tbaa !3
+    //   %1 = load %struct._IO_FILE*, %struct._IO_FILE** @wfd, align 8, !tbaa !14
+    //   %call3 = call i64 @fwrite(i8* nonnull %0, i64 4, i64 1, %struct._IO_FILE* %1)
+    //   %cmp = icmp eq i64 %call3, 0
+    //   br i1 %cmp, label %if.then, label %if.end
+    
+    //main function block
+        lvm_Block(lvm_Codes(Ins(CALL(call,malloc(Int(0,IntType(8,false))))),
+                  lvm_Codes(Ins(LLVM_MEMCPY(call,mblock,1,false)),
+                  lvm_Codes(Ins(CALL(call1,malloc(call1.d))),
+                  lvm_Codes(Ins(CALL(call2,encryptEmpty())),
+                  lvm_Codes(Ins(STORE(call2,bytes_written)),
+                  lvm_Codes(Ins(CALL(call3,fwrite(bytes_written,4,1,D(Ptr(0,0,0,1))))),
+                  lvm_Codes(Ins(ICMP(cmp,eq,4,call3,D(Int(0,IntType(4,false))))),
+                  lvm_Codes(Ins(BR(cmp,                                          
+                    lvm_Codes(if_then,lvm_CNil()),
+                    lvm_Codes(if_end,lvm_CNil()))),lvm_CNil())))))))))                           
+
+    }
+
+    function challenge_prob_5_code_write_encrypted_simple():lvm_code
+    {
+
+       // [temp] dummy ptrs
+        var call := D(Ptr(0,0,0,1));
+        var mblock := D(Ptr(0,0,0,1));
+        var call1 := D(Ptr(0,0,0,1));
+        // var call2 := D(Ptr(0,0,0,1));
+        var call2 := D(Int(0,IntType(1,false)));
+        var call3 := D(Int(1,IntType(4,false)));
+
+        // var call3 := D(Ptr(0,0,0,1));
+        var call4 := D(Ptr(0,0,0,1));
+        var IV_SIZE := D(Int(16,IntType(4,false)));
+        var KEY := D(Int(16,IntType(4,false)));
+        var cipherText := D(Ptr(0,0,0,1));
+        var bytes_written := D(Ptr(0,0,0,1));
+
+        var cmp := D(Int(0,IntType(1,false)));
+        var cmp5 := D(Int(0,IntType(1,false)));
+ 
+        var var_1 := D(Ptr(0,0,0,1));
+        var var_2 := D(Int(0,IntType(4,false)));
+        var var_3 := D(Ptr(0,0,0,1));
+    
+        var conv := D(Int(0,IntType(8,false)));
+
+        // if.end8:                                          ; preds = %if.then7, %if.end
+        //   tail call void @free(i8* nonnull %call) #24
+        //   tail call void @free(i8* %call1) #24
+        //   tail call void @initialize_write(i8* getelementptr inbounds ([16 x i8], [16 x i8]* @IV, i64 0, i64 0), i32 16)
+        //   call void @llvm.lifetime.end.p0i8(i64 4, i8* nonnull %0) #24
+        //   ret void
+        var if_end8:code := lvm_Block(lvm_Codes(Ins(CALL(D(Void),free(call.d))),
+                                      lvm_Codes(Ins(CALL(D(Void),free(call1.d))),  
+                                      lvm_Codes(Ins(CALL(D(Void),initialize_write(call1.d,IV_SIZE.d))),  
+                                      lvm_Codes(Ins(RET(D(Void))),lvm_CNil()))))); 
+
+        // if.then7:                                         ; preds = %if.end
+        //   tail call void @perror(i8* getelementptr inbounds ([37 x i8], [37 x i8]* @.str.5, i64 0, i64 0)) #23
+        //   br label %if.end8
+        var if_then7:code := lvm_Block(lvm_Codes(Ins(CALL(D(Void),perror())),
+                                      lvm_Codes(Ins(UNCONDBR(lvm_Codes(if_end8,lvm_CNil()))), lvm_CNil())));
+        
+        // if.end:                                           ; preds = %if.then, %entry
+        //   %2 = load i32, i32* %bytes_written, align 4, !tbaa !3
+        //   %conv = sext i32 %2 to i64
+        //   %3 = load %struct._IO_FILE*, %struct._IO_FILE** @wfd, align 8, !tbaa !14
+        //   %call4 = tail call i64 @fwrite(i8* %call1, i64 1, i64 %conv, %struct._IO_FILE* %3)
+        //   %cmp5 = icmp eq i64 %call4, 0
+        //   br i1 %cmp5, label %if.then7, label %if.end8
+        var if_end:code := lvm_Block(lvm_Codes(Ins(LOAD(var_2,4,bytes_written)),
+                                     lvm_Codes(Ins(SEXT(conv,8,var_2,8)),
+                                     lvm_Codes(Ins(LOAD(var_3,4,D(Ptr(0,0,0,1)))),
+                                     lvm_Codes(Ins(CALL(call4,fwrite(call1,1,conv.d.val,D(Ptr(0,0,0,1))))),
+                                     lvm_Codes(Ins(ICMP(cmp5,eq,8,call4,D(Int(0,IntType(8,false))))),
+                                     lvm_Codes(Ins(BR(cmp,                                          
+                                        lvm_Codes(if_then7,lvm_CNil()),
+                                        lvm_Codes(if_end8,lvm_CNil()))),lvm_CNil())))))));
+
+
+        // if.then:                                          ; preds = %entry
+        //   tail call void @perror(i8* getelementptr inbounds ([27 x i8], [27 x i8]* @.str.4, i64 0, i64 0)) #23
+        //   br label %if.end
+        var if_then:code := lvm_Block(lvm_Codes(Ins(CALL(D(Void),perror())),
+                                      lvm_Codes(Ins(UNCONDBR(lvm_Codes(if_end,lvm_CNil()))), lvm_CNil())));
+
+    //   %bytes_written = alloca i32, align 4
+    //   call void @llvm.lifetime.start.p0i8(i64 4, i8* nonnull %0) #24
+    //   %call = tail call noalias align 16 dereferenceable_or_null(112) i8* @malloc(i64 112) #24
+    //   tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* noundef nonnull align 16 dereferenceable(112) %call, i8* noundef nonnull align 8 dereferenceable(112) getelementptr inbounds (%struct.MBlock, %struct.MBlock* @mblock, i64 0, i32 0, i64 0), i64 112, i1 false)
+    //   %call1 = tail call noalias align 16 dereferenceable_or_null(120) i8* @malloc(i64 120) #24
+    //   %call2 = tail call i32 @encrypt(i8* %call, i32 112, i8* getelementptr inbounds ([32 x i8], [32 x i8]* @KEY, i64 0, i64 0), i8* getelementptr inbounds ([16 x i8], [16 x i8]* @IV, i64 0, i64 0), i8* %call1) #24
+    //   store i32 %call2, i32* %bytes_written, align 4, !tbaa !3
+    //   %1 = load %struct._IO_FILE*, %struct._IO_FILE** @wfd, align 8, !tbaa !14
+    //   %call3 = call i64 @fwrite(i8* nonnull %0, i64 4, i64 1, %struct._IO_FILE* %1)
+    //   %cmp = icmp eq i64 %call3, 0
+    //   br i1 %cmp, label %if.then, label %if.end
+    
+    //main function block
+        lvm_Block(lvm_Codes(Ins(CALL(call,malloc(Int(0,IntType(8,false))))),
+                  lvm_Codes(Ins(LLVM_MEMCPY(call,mblock,1,false)),
+                  lvm_Codes(Ins(CALL(call1,malloc(call1.d))),
+                  lvm_Codes(Ins(CALL(call2,encrypt1(call,4,KEY,IV_SIZE,cipherText))),
+                  lvm_Codes(Ins(STORE(call2,bytes_written)),
+                  lvm_Codes(Ins(CALL(call3,fwrite(bytes_written,4,1,D(Ptr(0,0,0,1))))),
+                  lvm_Codes(Ins(ICMP(cmp,eq,4,call3,D(Int(0,IntType(4,false))))),lvm_CNil()))))))))                         
+
+    }
+
+
+    function encryptEmpty():codes
+    {
+        ForeignFunction
+    }
+
+    function encrypt1(plainText:operand,size:nat,KEY:operand,IV:operand,cipherText:operand):codes
+    {
+        ForeignFunction
+    }
+
+    function encrypt_side_effects(plainText:operand,size:nat,KEY:operand,IV:operand,cipherText:operand):codes
+    {
+        lvm_Codes(Ins(RET(D(Void))),lvm_CNil())    
+    }
+
+
+    function initialize_write(char_ptr:Data, size:Data):codes
+    {
+        ForeignFunction
+    }
+
+    function perror():codes
+    {
+        ForeignFunction
+    }
+
+    function free(ptr:Data):codes
+    {
+        ForeignFunction
+    }
+
+    function malloc(ptr:Data):codes
+    {
+        ForeignFunction
+    }
+
+    function fwrite(ptr:operand, size:nat, cnt:nat, file:operand):codes
+    {
+        ForeignFunction
+    }
+
+
+
+
+}
 // **** MAIN.C MAIN WHILE LOOP ****
 
 // do.body:                                          ; preds = %schedule_timer.exit, %cleanup
@@ -250,294 +472,5 @@ module challenge5 refines UpdatedAbstractNonInterferenceProof{
 //   call void @llvm.lifetime.end.p0i8(i64 4, i8* nonnull %0) #24
 //   ret void
 // }
-lemma {:axiom} challengeStateAssumptions(s:state)
-    ensures exists cipherText:operand :: ValidOperand(s,cipherText) && ValidState(s)
-    ensures exists bytes_written:operand :: ValidOperand(s,bytes_written) && ValidState(s) && bytes_written.D? && D(Ptr(0,0,0,1)) == bytes_written
 
 
-predicate challengeStateAssumptionsPred(s:state)
-    {
-        challengeStateAssumptions(s);
-        && (exists cipherText:operand :: ValidOperand(s,cipherText) && ValidState(s))
-        && (exists bytes_written:operand :: ValidOperand(s,bytes_written) && ValidState(s)&& bytes_written.D?&& D(Ptr(0,0,0,1)) == bytes_written)
-    }
-
-   predicate stateFramingMultiValue(s:state,s':state)
-    {
-
-        challengeStateAssumptions(s);
-        var cipherText :| ValidOperand(s,cipherText);
-        var bytes_written :| ValidOperand(s,bytes_written);
-        var ops := {OperandContents(s,cipherText),OperandContents(s,bytes_written)};
-
-
-        ValidState(s)
-        && ValidState(s')
-        && forall op :: op in ops ==> 
-            (&& ValidData(s,op)
-            && ValidData(s',op)
-            && s.ok == s'.ok
-            && (forall lv :: (lv in s.lvs && !(s.lvs[lv] in ops)) ==> (lv in s'.lvs && s.lvs[lv] == s'.lvs[lv]))//(lv in s'.lv && s.lv[op] == s'.lv[op])
-            && (forall gv :: (gv in s.gvs && !(s.gvs[gv] in ops)) ==> (gv in s'.gvs && s.gvs[gv] == s'.gvs[gv]))
-            && s.m == s'.m)
-    }
-
-    predicate stateFraming(s:state,s':state,op:operand)
-    {
-        ValidState(s)
-        && ValidState(s')
-        && ValidOperand(s,op)
-        && ValidOperand(s',op)
-        && s.ok == s'.ok
-        && op.LV? ==> (forall lv :: (lv in s.lvs && lv != op.l) ==> (lv in s'.lvs && s.lvs[lv] == s'.lvs[lv]))//(lv in s'.lv && s.lv[op] == s'.lv[op])
-        && op.GV? ==> (forall gv :: (gv in s.gvs && gv != op.g) ==> (gv in s'.gvs && s.gvs[gv] == s'.gvs[gv]))//(lv in s'.lv && s.lv[op] == s'.lv[op])
-        && s.m == s'.m
-    }
-
-    // predicate MiniSpec(s:LLVM_def.state,cipherText:Data, bytes_written:Data)
-    // {
-    //     && ValidState(s)
-    //     && forall r:LLVM_def.state :: (evalBlock(encrypt(),s,r) ==> stateFramingMultiValue(s,r,{cipherText,bytes_written})) 
-
-    // }
-    predicate RemovedBehaviors(b:behavior)
-    {
-        forall i,j :: 
-            (&& i >= 0 
-             && i <= |b|-2 
-             && j > i
-             && j < |b|
-             && evalBlock(encrypt(),b[i],b[j])) 
-             ==> stateFramingMultiValue(b[i],b[j])
-    }
-
-     function encrypt():codes
-        // reads s.m.mem; plainText:Data, s:state
-    {
-        lvm_Codes(Ins(RET(D(Void))),lvm_CNil())    
-    }
-
-    function initialize_write(char_ptr:Data, size:Data):codes
-    {
-        ForeignFunction
-    }
-
-    function perror():codes
-    {
-        ForeignFunction
-    }
-
-    function free(ptr:Data):codes
-    {
-        ForeignFunction
-    }
-
-    function malloc(ptr:Data):codes
-    {
-        ForeignFunction
-    }
-
-    function fwrite(ptr:operand, size:nat, cnt:nat, file:operand):codes
-    {
-        ForeignFunction
-    }
-
-
-
-    function challenge_prob_5_code_write_encrypted():lvm_code
-    {
-
-       // [temp] dummy ptrs
-        var call := D(Ptr(0,0,0,1));
-        var mblock := D(Ptr(0,0,0,1));
-        var call1 := D(Ptr(0,0,0,1));
-        var call2 := D(Ptr(0,0,0,1));
-        var call3 := D(Ptr(0,0,0,1));
-        var call4 := D(Ptr(0,0,0,1));
-        var IV_SIZE := Int(16,IntType(4,false));
-        var bytes_written := D(Ptr(0,0,0,1));
-
-        var cmp := D(Int(0,IntType(1,false)));
-        var cmp5 := D(Int(0,IntType(1,false)));
- 
-        var var_1 := D(Ptr(0,0,0,1));
-        var var_2 := D(Int(0,IntType(4,false)));
-        var var_3 := D(Ptr(0,0,0,1));
-    
-        var conv := D(Int(0,IntType(8,false)));
-
-        // if.end8:                                          ; preds = %if.then7, %if.end
-        //   tail call void @free(i8* nonnull %call) #24
-        //   tail call void @free(i8* %call1) #24
-        //   tail call void @initialize_write(i8* getelementptr inbounds ([16 x i8], [16 x i8]* @IV, i64 0, i64 0), i32 16)
-        //   call void @llvm.lifetime.end.p0i8(i64 4, i8* nonnull %0) #24
-        //   ret void
-        var if_end8:code := lvm_Block(lvm_Codes(Ins(CALL(D(Void),free(call.d))),
-                                      lvm_Codes(Ins(CALL(D(Void),free(call1.d))),  
-                                      lvm_Codes(Ins(CALL(D(Void),initialize_write(call1.d,IV_SIZE))),  
-                                      lvm_Codes(Ins(RET(D(Void))),lvm_CNil()))))); 
-
-        // if.then7:                                         ; preds = %if.end
-        //   tail call void @perror(i8* getelementptr inbounds ([37 x i8], [37 x i8]* @.str.5, i64 0, i64 0)) #23
-        //   br label %if.end8
-        var if_then7:code := lvm_Block(lvm_Codes(Ins(CALL(D(Void),perror())),
-                                      lvm_Codes(Ins(UNCONDBR(lvm_Codes(if_end8,lvm_CNil()))), lvm_CNil())));
-        
-        // if.end:                                           ; preds = %if.then, %entry
-        //   %2 = load i32, i32* %bytes_written, align 4, !tbaa !3
-        //   %conv = sext i32 %2 to i64
-        //   %3 = load %struct._IO_FILE*, %struct._IO_FILE** @wfd, align 8, !tbaa !14
-        //   %call4 = tail call i64 @fwrite(i8* %call1, i64 1, i64 %conv, %struct._IO_FILE* %3)
-        //   %cmp5 = icmp eq i64 %call4, 0
-        //   br i1 %cmp5, label %if.then7, label %if.end8
-        var if_end:code := lvm_Block(lvm_Codes(Ins(LOAD(var_2,4,bytes_written)),
-                                     lvm_Codes(Ins(SEXT(conv,8,var_2,8)),
-                                     lvm_Codes(Ins(LOAD(var_3,4,D(Ptr(0,0,0,1)))),
-                                     lvm_Codes(Ins(CALL(call4,fwrite(call1,1,conv.d.val,D(Ptr(0,0,0,1))))),
-                                     lvm_Codes(Ins(ICMP(cmp5,eq,8,call4,D(Int(0,IntType(8,false))))),
-                                     lvm_Codes(Ins(BR(cmp,                                          
-                                        lvm_Codes(if_then7,lvm_CNil()),
-                                        lvm_Codes(if_end8,lvm_CNil()))),lvm_CNil())))))));
-
-
-        // if.then:                                          ; preds = %entry
-        //   tail call void @perror(i8* getelementptr inbounds ([27 x i8], [27 x i8]* @.str.4, i64 0, i64 0)) #23
-        //   br label %if.end
-        var if_then:code := lvm_Block(lvm_Codes(Ins(CALL(D(Void),perror())),
-                                      lvm_Codes(Ins(UNCONDBR(lvm_Codes(if_end,lvm_CNil()))), lvm_CNil())));
-
-    //   %bytes_written = alloca i32, align 4
-    //   call void @llvm.lifetime.start.p0i8(i64 4, i8* nonnull %0) #24
-    //   %call = tail call noalias align 16 dereferenceable_or_null(112) i8* @malloc(i64 112) #24
-    //   tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* noundef nonnull align 16 dereferenceable(112) %call, i8* noundef nonnull align 8 dereferenceable(112) getelementptr inbounds (%struct.MBlock, %struct.MBlock* @mblock, i64 0, i32 0, i64 0), i64 112, i1 false)
-    //   %call1 = tail call noalias align 16 dereferenceable_or_null(120) i8* @malloc(i64 120) #24
-    //   %call2 = tail call i32 @encrypt(i8* %call, i32 112, i8* getelementptr inbounds ([32 x i8], [32 x i8]* @KEY, i64 0, i64 0), i8* getelementptr inbounds ([16 x i8], [16 x i8]* @IV, i64 0, i64 0), i8* %call1) #24
-    //   store i32 %call2, i32* %bytes_written, align 4, !tbaa !3
-    //   %1 = load %struct._IO_FILE*, %struct._IO_FILE** @wfd, align 8, !tbaa !14
-    //   %call3 = call i64 @fwrite(i8* nonnull %0, i64 4, i64 1, %struct._IO_FILE* %1)
-    //   %cmp = icmp eq i64 %call3, 0
-    //   br i1 %cmp, label %if.then, label %if.end
-    
-    //main function block
-        lvm_Block(lvm_Codes(Ins(ALLOCA(bytes_written,4)),
-                  lvm_Codes(Ins(CALL(call,malloc(Int(0,IntType(8,false))))),
-                  lvm_Codes(Ins(LLVM_MEMCPY(call,mblock,1,false)),
-                  lvm_Codes(Ins(CALL(call1,malloc(call1.d))),
-                  lvm_Codes(Ins(CALL(call2,encrypt())),
-                  lvm_Codes(Ins(STORE(call2,bytes_written)),
-                  lvm_Codes(Ins(LOAD(var_1,4,D(Ptr(0,0,0,1)))),
-                  lvm_Codes(Ins(CALL(call3,fwrite(bytes_written,4,1,D(Ptr(0,0,0,1))))),
-                  lvm_Codes(Ins(ICMP(cmp,eq,4,call3,D(Int(0,IntType(4,false))))),
-                  lvm_Codes(Ins(BR(cmp,                                          
-                    lvm_Codes(if_then,lvm_CNil()),
-                    lvm_Codes(if_end,lvm_CNil()))),lvm_CNil())))))))))))                           
-
-    }
-
-    lemma malloc_(b:behavior,codes:lvm_codes, ptr:operand,size:Data ,sN:lvm_state) 
-        returns (b':behavior,lvm_bM:lvm_codes, s':lvm_state)
-        
-        requires ValidBehaviorNonTrivial(b);
-        requires lvm_require(codes, Ins(CALL(ptr,malloc(size))), bls(b), sN)
-        requires ValidState(bls(b));
-        requires ValidOperand(bls(b),ptr);
-        requires challengeStateAssumptionsPred(bls(b));
-
-        // requires codes == malloc(ptr);
-        ensures ValidBehaviorNonTrivial(b');
-        ensures StateNext(bls(b),s')
-
-        // requires exists s' :: lvm_require(codes,malloc(ptr),s,s');
-    {
-        var s := bls(b);
-        assert malloc(size) == ForeignFunction;
-        assert codes.hd == Ins(CALL(ptr,malloc(size)));
-        assert ValidOperand(s,ptr);
-        assert !codes.hd.ins.fnc.CNil?;
-        assert ValidInstruction(s, codes.hd.ins);
-
-        
-
-    
-    assert forall s' :: evalIns(codes.hd.ins,bls(b),s') ==> bls(b) == s';
-        s' := s;
-        lvm_bM := codes.tl;
-
-        ghost var lvm_ltmp1, lvm_cM:lvm_code, lvm_ltmp2 := lvm_lemma_block(codes, s, sN);
-        var lvm_sM := lvm_ltmp1;
-        var lvm_bMs := lvm_ltmp2;
-        assert ValidState(s);
-        assert ValidState(lvm_sM);
-        assert lvm_sM == s;
-        assert codes.tl == lvm_bMs;
-
-
-        assert evalIns(codes.hd.ins,bls(b),s');
-
-        assert NextStep(s,s',Step.stutterStep());
-        assert StateNext(s,s');
-        b' := b + [s'];
-        assert ValidBehaviorNonTrivial(b');
-    }
-
-    lemma challengeProb5PatchBehavior(codes:lvm_codes, s:lvm_state) 
-        returns (postBehavior:behavior)
-
-        requires codes.lvm_Codes?;
-        requires codes.tl.CNil?
-        requires ValidState(s);
-        requires challengeStateAssumptionsPred(s);
-
-        // requires codes == challenge_prob_5_code_write_encrypted();
-        requires exists s' :: lvm_require(codes,challenge_prob_5_code_write_encrypted(),s,s');
-
-    {
-        assert false;
-        postBehavior := [s];
-        // assert codes.hd == challenge_prob_5_code_write_encrypted();
-        
-        var codeBlockaa := challenge_prob_5_code_write_encrypted();
-        var s' :|  lvm_require(codes, codeBlockaa, s, s');
-        
-        assert s.ok;
-        // assert !codes.hd.Block?;
-        ghost var lvm_ltmp1, lvm_cM:lvm_code, lvm_ltmp2 := lvm_lemma_block(codes, s, s');
-        assert false;
-
-        var r := lvm_ltmp1;
-        var tail := lvm_ltmp2;
-        assert tail == codes.tl;
-        assert tail.CNil?;
-        var codeBlock:lvm_codes := lvm_get_block(lvm_cM);
-        
-        var bytes_written :| ValidOperand(s,bytes_written) && ValidState(s) && bytes_written.D? && D(Ptr(0,0,0,1)) == bytes_written;
-        assert codeBlock.hd == Ins(ALLOCA(bytes_written,4));
-
-                
-
-        ghost var updatedB, unwrapedCode, nextState := lvm_lemma_Alloca(postBehavior, codeBlock, r, bytes_written, 4);
-        assert AllocaStep(s.m,4) == nextState.m;
-        assert StateNext(s,nextState);
-        postBehavior := updatedB;
-        assert ValidBehavior(postBehavior) && |updatedB| == 2;
-
-        var call := D(Ptr(0,0,0,1));
-        assert unwrapedCode.hd == Ins(CALL(call,malloc(Int(0,IntType(8,false)))));
-
-        updatedB, unwrapedCode, nextState := malloc_(postBehavior, unwrapedCode, call, Int(0,IntType(8,false)), s');
-        
-        var mblock := D(Ptr(0,0,0,1));
-        assert unwrapedCode.hd == Ins(LLVM_MEMCPY(call,mblock,1,false));
-        assert ValidBehavior(postBehavior) && |updatedB| == 3;
-
-        updatedB, unwrapedCode, nextState := lvm_lemma_MemCpy(postBehavior, unwrapedCode, r, call, mblock,1);
-
-        // assert lvm_s0.m == lvm_s2.m;
-        // assert StateNext(lvm_s0,lvm_s2);
-
-
-
-        // assert forall b :: BehaviorEvalsCode(Ins(RET(D(Void))), b) ==> ValidBehavior(b);    
-    }
-
-}
