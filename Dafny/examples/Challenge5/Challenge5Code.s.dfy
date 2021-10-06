@@ -182,10 +182,12 @@ module challenge5Code{
         lvm_Block(lvm_Codes(Ins(CALL(call,malloc(Int(0,IntType(8,false))))),
                   lvm_Codes(Ins(LLVM_MEMCPY(call,mblock,1,false)),
                   lvm_Codes(Ins(CALL(call1,malloc(call1.d))),
-                  lvm_Codes(Ins(CALL(call2,encrypt1(call,4,KEY,IV_SIZE,cipherText))),
+                  lvm_Codes(Ins(CALL(call2,encrypt(call,4,KEY,IV_SIZE,cipherText))),
                   lvm_Codes(Ins(STORE(call2,bytes_written)),
                   lvm_Codes(Ins(CALL(call3,fwrite(bytes_written,4,1,D(Ptr(0,0,0,1))))),
                   lvm_Codes(Ins(ICMP(cmp,eq,4,call3,D(Int(0,IntType(4,false))))),lvm_CNil()))))))))                         
+
+
 
     }
 
@@ -195,7 +197,7 @@ module challenge5Code{
         ForeignFunction
     }
 
-    function encrypt1(plainText:operand,size:nat,KEY:operand,IV:operand,cipherText:operand):codes
+    function encrypt(plainText:operand,size:nat,KEY:operand,IV:operand,cipherText:operand):codes
     {
         ForeignFunction
     }
@@ -203,6 +205,7 @@ module challenge5Code{
     function encrypt_side_effects(plainText:operand,size:nat,KEY:operand,IV:operand,cipherText:operand):codes
     {
         lvm_Codes(Ins(RET(D(Void))),lvm_CNil())    
+        // lvm_Codes(Ins(AND(plainText,plainText,KEY)),lvm_CNil())    
     }
 
 
@@ -233,6 +236,16 @@ module challenge5Code{
 
 
 
+        // lvm_Block(lvm_Codes(Ins(CALL(call,malloc(Int(0,IntType(8,false))))),
+        //           lvm_Codes(Ins(LLVM_MEMCPY(call,mblock,1,false)),
+        //           lvm_Codes(Ins(CALL(call1,malloc(call1.d))),
+        //           lvm_Codes(Ins(CALL(call2,encryptEmpty())),
+        //           lvm_Codes(Ins(STORE(call2,bytes_written)),
+        //           lvm_Codes(Ins(CALL(call3,fwrite(bytes_written,4,1,D(Ptr(0,0,0,1))))),
+        //           lvm_Codes(Ins(ICMP(cmp,eq,4,call3,D(Int(0,IntType(4,false))))),
+        //           lvm_Codes(Ins(BR(cmp,                                          
+        //             lvm_Codes(if_then,lvm_CNil()),
+        //             lvm_Codes(if_end,lvm_CNil()))),lvm_CNil())))))))))    
 
 }
 // **** MAIN.C MAIN WHILE LOOP ****

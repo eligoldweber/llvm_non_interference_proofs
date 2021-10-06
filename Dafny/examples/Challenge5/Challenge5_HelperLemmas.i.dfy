@@ -86,7 +86,7 @@ lemma malloc_(b:behavior,codes:lvm_codes, ptr:operand,size:Data ,sN:lvm_state)
     }
 
 
-    lemma encrypt_(b:behavior,codes:lvm_codes, ptr:operand ,sN:lvm_state) 
+    lemma encryptEmpty_(b:behavior,codes:lvm_codes, ptr:operand ,sN:lvm_state) 
         returns (b':behavior,lvm_bM:lvm_codes, s':lvm_state)
         
         requires ValidBehaviorNonTrivial(b);
@@ -181,11 +181,11 @@ lemma malloc_(b:behavior,codes:lvm_codes, ptr:operand,size:Data ,sN:lvm_state)
     }
 
 
-lemma encrypt1_(b:behavior,codes:lvm_codes, ptr:operand ,plainText:operand,size:nat,KEY:operand,IV:operand,cipherText:operand,sN:lvm_state) 
+lemma encrypt_(b:behavior,codes:lvm_codes, ptr:operand ,plainText:operand,size:nat,KEY:operand,IV:operand,cipherText:operand,sN:lvm_state) 
         returns (b':behavior,lvm_bM:lvm_codes, s':lvm_state)
         
         requires ValidBehaviorNonTrivial(b);
-        requires lvm_require(codes, Ins(CALL(ptr,encrypt1(plainText,size,KEY,IV,cipherText))), bls(b), sN)
+        requires lvm_require(codes, Ins(CALL(ptr,encrypt(plainText,size,KEY,IV,cipherText))), bls(b), sN)
         requires ValidState(bls(b));
         requires ValidOperand(bls(b),ptr);
         requires challengeStateAssumptionsPred(bls(b));
@@ -201,8 +201,8 @@ lemma encrypt1_(b:behavior,codes:lvm_codes, ptr:operand ,plainText:operand,size:
         // requires exists s' :: lvm_require(codes,malloc(ptr),s,s');
     {
         var s := bls(b);
-        assert encrypt1(plainText,size,KEY,IV,cipherText) == ForeignFunction;
-        assert codes.hd == Ins(CALL(ptr,encrypt1(plainText,size,KEY,IV,cipherText)));
+        assert encrypt(plainText,size,KEY,IV,cipherText) == ForeignFunction;
+        assert codes.hd == Ins(CALL(ptr,encrypt(plainText,size,KEY,IV,cipherText)));
         assert ValidOperand(s,ptr);
         assert !codes.hd.ins.fnc.CNil?;
         assert ValidInstruction(s, codes.hd.ins);
@@ -227,5 +227,55 @@ lemma encrypt1_(b:behavior,codes:lvm_codes, ptr:operand ,plainText:operand,size:
         b' := b + [s'];
         assert ValidBehaviorNonTrivial(b');
     }
+
+
+    // lemma encrypt_side_effects_(b:behavior,codes:lvm_codes, ptr:operand ,plainText:operand,size:nat,KEY:operand,IV:operand,cipherText:operand,sN:lvm_state) 
+    //     returns (b':behavior,lvm_bM:lvm_codes, s':lvm_state)
+        
+    //     requires ValidBehaviorNonTrivial(b);
+    //     requires lvm_require(codes, Ins(CALL(ptr,encrypt_side_effects(plainText,size,KEY,IV,cipherText))), bls(b), sN)
+    //     requires ValidState(bls(b));
+    //     requires ValidOperand(bls(b),ptr);
+    //     requires challengeStateAssumptionsPred(bls(b));
+
+    //     // requires codes == malloc(ptr);
+    //     ensures ValidBehaviorNonTrivial(b');
+    //     ensures StateNext(bls(b),s')
+    //     ensures  lvm_ensure(codes, lvm_bM, bls(b), s', sN);
+    //     ensures |b'| == |b| + 1;
+    //     ensures bls(b') == s';
+    //     ensures forall i :: i >=0 && i < |b| ==> b[i] == b'[i];
+
+    //     // requires exists s' :: lvm_require(codes,malloc(ptr),s,s');
+    // {
+    //     var s := bls(b);
+    //     assert encrypt_side_effects(plainText,size,KEY,IV,cipherText) == lvm_Codes(Ins(RET(D(Void))),lvm_CNil())  ;
+    //     assert codes.hd == Ins(CALL(ptr,encrypt_side_effects(plainText,size,KEY,IV,cipherText)));
+    //     assert ValidOperand(s,ptr);
+    //     assert !codes.hd.ins.fnc.CNil?;
+    //     assert ValidInstruction(s, codes.hd.ins);
+
+    //     // assert forall s' :: evalIns(codes.hd.ins,bls(b),s') ==> bls(b) == s';
+    //     s' :| evalIns(codes.hd.ins,bls(b),s');
+    //     lvm_bM := codes.tl;
+
+    //     ghost var lvm_ltmp1, lvm_cM:lvm_code, lvm_ltmp2 := lvm_lemma_block(codes, s, sN);
+    //     var lvm_sM := lvm_ltmp1;
+    //     var lvm_bMs := lvm_ltmp2;
+    //     assert ValidState(s);
+    //     assert ValidState(lvm_sM);
+    //     assert lvm_sM == s;
+    //     assert codes.tl == lvm_bMs;
+    //     // lvm_bM := codes.tl;
+    //     assert evalIns(codes.hd.ins,bls(b),s');
+
+    //     assert NextStep(s,s',Step.stutterStep());
+    //     assert MemStateNext(s.m,s'.m,MemStep.stutterStep());
+    //     assert StateNext(s,s');
+    //     b' := b + [s'];
+    //     assert ValidBehaviorNonTrivial(b');
+    // }
+
+
 
 }

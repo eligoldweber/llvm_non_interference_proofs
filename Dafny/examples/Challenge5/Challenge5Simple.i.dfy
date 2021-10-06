@@ -21,8 +21,8 @@ module challenge5 refines UpdatedAbstractNonInterferenceProof{
     {
 
         challengeStateAssumptions(s);
-        var cipherText :| ValidOperand(s,cipherText);
-        var bytes_written :| ValidOperand(s,bytes_written);
+        var cipherText :| ValidOperand(s,cipherText) && ValidState(s);
+        var bytes_written :| ValidOperand(s,bytes_written) && ValidState(s);
         var ops := {OperandContents(s,cipherText),OperandContents(s,bytes_written)};
 
 
@@ -60,17 +60,17 @@ module challenge5 refines UpdatedAbstractNonInterferenceProof{
         && challengeStateAssumptionsPred(s)
     }
 
-    lemma challengeProb5PatchBehavior(codes:lvm_codes, s:lvm_state,s':lvm_state) 
+    lemma challengeProb5PatchBehavior(codes:lvm_codes, s:lvm_state) 
         returns (postB:behavior)
+        requires exists s' :: preConds(codes,s,s');
+        // requires preConds(codes,s,s');
 
-        requires preConds(codes,s,s');
-
-        ensures ValidBehavior(postB);
+        ensures ValidBehaviorNonTrivial(postB);
+        
         ensures !MiniSpec(postBehavior(postB));
         ensures !MiniSpec(preBehavior(postB));
 
     {
-
         postB := [s];
         
         var fullCode := challenge_prob_5_code_write_encrypted_simple();
@@ -119,13 +119,13 @@ module challenge5 refines UpdatedAbstractNonInterferenceProof{
         var cipherText := D(Ptr(0,0,0,1));
         var call2 := D(Int(0,IntType(1,false)));
 
-       assert unwrapedCode.hd == Ins(CALL(call2,encrypt1(call,4,KEY,IV_SIZE,cipherText)));
+       assert unwrapedCode.hd == Ins(CALL(call2,encrypt(call,4,KEY,IV_SIZE,cipherText)));
 
         currState := nextState;
         assert ValidBehavior(updatedB); 
         assert |updatedB| == 4;
 
-        updatedB, unwrapedCode, nextState := encrypt1_(updatedB, unwrapedCode, call2,call,4,KEY,IV_SIZE,cipherText, s');
+        updatedB, unwrapedCode, nextState := encrypt_(updatedB, unwrapedCode, call2,call,4,KEY,IV_SIZE,cipherText, s');
 
         assert unwrapedCode.hd == Ins(STORE(call2,bytes_written));
         assert ValidBehavior(updatedB); 
@@ -158,15 +158,4 @@ module challenge5 refines UpdatedAbstractNonInterferenceProof{
         postB := updatedB;
     }
 
-
-    // predicate TestRemovedBehaviors(b:behavior)
-    // {
-    //     forall i,j :: 
-    //         (&& i >= 0 
-    //          && i <= |b|-2 
-    //          && j > i
-    //          && j < |b|
-    //          && evalBlock(encryptEmpty(),b[i],b[j])) 
-    //          ==> stateFramingMultiValue(b[i],b[j])
-    // }
 }
