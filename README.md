@@ -51,14 +51,23 @@ Running the automation tool `dotnet Binaries/net5.0/NIPLLVM.dll`
 
 # Running With Docker
 
-Use the included Dockerfile to create an image with the appropriate dependencies and run in interactive mode to execute proofs:
+Pull created image or use the included Dockerfile to create an image with the appropriate dependencies and run in interactive mode to execute proofs:
 
+### Build Image Locally
 1. `docker build -t dafny_iron_patch .`
 2. `docker run -it --rm -v [FULL/PATH/TO/CLONED/REPO]:/src dafny_iron_patch`
-3. `cd src`
-4. Run like Normal -- ie (`scons --dafny-path=/path/to/directory/with/dafny/`)
 
- > **Note:** Dafny is installed in `/opt/dafny` so to run the above command: `scons --dafny-path=/opt/dafny`
+
+### Pull Image
+1. `docker pull eligoldweber/llvm_non_interference:dafny_iron_patch_challenge5`
+2. `docker run -it --rm -v [FULL/PATH/TO/CLONED/REPO]:/src eligoldweber/llvm_non_interference:dafny_iron_patch_challenge5`
+
+***
+
+3. `cd src`
+4. Run like Normal: `scons --dafny-path=/opt/dafny` -- ie (`scons --dafny-path=/path/to/directory/with/dafny/`)
+
+ > **Note:** Dafny is installed in `/opt/dafny` in the Docker image
 
  It is recomended to use the --time-limit flag when using docker set to at least 100 seconds. This is due to memory restrictions in the docker image. 
 
@@ -67,7 +76,6 @@ Use the included Dockerfile to create an image with the appropriate dependencies
 
 If the following error occurs `ValueError : unsupported pickle protocol: 4` try deleting the `.sconsign.dblite` file and run the command again. 
 
-`Dafny/examples/demoChallengeProblem1.i.dfy` is a good example to look at
 
 ## Questions and Issues
 

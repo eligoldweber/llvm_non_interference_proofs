@@ -163,7 +163,7 @@ lemma lvm_demo_simple_challenge_prob_1_vuln(lvm_b0:lvm_codes, lvm_s0:lvm_state,v
   ensures lvm_sM.ok ==> (forall s:state :: s.ok && ValidState(s) && ValidOperand(s,speed_value) && OperandContents(s,speed_value).Int? 
                         && OperandContents(s,speed_value).val > 0 && typesMatch(OperandContents(s,speed_value),Int(0,IntType(2,false)))
                           ==> (evalICMP(ugt,2,OperandContents(s,speed_value),Int(0,IntType(2,false))).val == 1)); 
-  ensures lvm_sM.ok ==> ValidStateSeq(lvm_sMs); // [S0 -> S1 -> ..... -> SN]
+  ensures lvm_sM.ok ==> ValidBehavior(lvm_sMs); // [S0 -> S1 -> ..... -> SN]
   {
     reveal_demo_challenge_prob_1_code();
     

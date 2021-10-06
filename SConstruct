@@ -29,7 +29,7 @@ AddOption('--no-verify',
 AddOption('--time-limit',
   dest='time_limit',
   type='int',
-  default=90,
+  default=120,
   action='store',
   help='Specify the time limit to use for each verification')
 
@@ -327,7 +327,9 @@ if verify_root is None:
   run_directory('Dafny/examples',["simple",
                                   "demoChallengeProb1",
                                   "demoChallengeProb1VulnNoAssert",
-                                  "Challenge4"])
+                                  "Challenge4",
+                                  "/Challenge5/Challenge5Simple"])
+                                  
 else:
   verify_dafny_file(str(GetOption('verify_root')))
 

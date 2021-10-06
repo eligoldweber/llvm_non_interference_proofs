@@ -60,7 +60,7 @@ lemma lvm_lemma_Add_single(lvm_b0:lvm_codes, lvm_s0:lvm_state, lvm_sN:lvm_state,
   evalADD(OperandContents(lvm_s0,src1).itype.size,OperandContents(lvm_s0,src1),D(Int(4,IntType(1,false))).d).val;
   // ensures  OperandContents(lvm_sM, dst).val == OperandContents(lvm_s0, src1).val + 4
   ensures  lvm_state_eq(lvm_sM, lvm_update_ok(lvm_sM, lvm_update_all( lvm_sM, lvm_s0)))
-    ensures lvm_sM.ok ==> ValidStateSeq(lvm_sMs);
+    ensures lvm_sM.ok ==> ValidBehavior(lvm_sMs);
 
 {
     reveal_lvm_code_Add_single();
@@ -91,7 +91,8 @@ lemma lvm_lemma_Add_single(lvm_b0:lvm_codes, lvm_s0:lvm_state, lvm_sN:lvm_state,
     assert eval_code(lvm_Block(lvm_b2), lvm_s2, lvm_sM);
     lvm_sM := lvm_lemma_empty(lvm_s2,lvm_sM);
     assert ValidState(lvm_sM);
-    assert NextStep(lvm_s2,lvm_sM,stutterStep());
+    assert NextStep(lvm_s2,lvm_sM,Step.stutterStep());
+    assert MemStateNext(lvm_s2.m,lvm_sM.m,MemStep.stutterStep());
     assert StateNext(lvm_s2,lvm_sM);
     lvm_sMs := lvm_sMs + [lvm_sM];
 
@@ -158,7 +159,7 @@ lemma lvm_lemma_Add_Multiple(lvm_b0:lvm_codes, lvm_s0:lvm_state, lvm_sN:lvm_stat
   // ensures ToTwosComp(OperandContents(lvm_sM, dst)).val == 
           // (OperandContents(lvm_s0, src1).val + D(Int(5,src1.d.itype)).d.val + D(Int(4,src1.d.itype)).d.val ) % Pow256(OperandContents(lvm_s0, src1).itype.size)
   ensures  lvm_state_eq(lvm_sM, lvm_update_ok(lvm_sM, lvm_update_all( lvm_sM, lvm_s0)))
-  ensures lvm_sM.ok ==> ValidStateSeq(lvm_sMs);
+  ensures lvm_sM.ok ==> ValidBehavior(lvm_sMs);
 
 {
     reveal_lvm_code_Add_Multiple();

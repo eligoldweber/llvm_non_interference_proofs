@@ -82,7 +82,7 @@ function {:opaque} demo_challenge_prob_4_code(s:MemState,current_index:lvm_opera
     var returnLabel:code := lvm_Block(lvm_Codes(Ins(RET(D(Void))),lvm_CNil()));         // return: 
                                                                                         //   ret void
     
-    var ifThenLabel:code := lvm_Block(lvm_Codes(Ins(STORE(D(Int(2,IntType(1,false))),current_sa,s)),  //   store i8 -2, i8* getelementptr inbounds (%struct.conf_t, %struct.conf_t* @conf, i64 0, i32 3), align 8, !tbaa !20
+    var ifThenLabel:code := lvm_Block(lvm_Codes(Ins(STORE(D(Int(2,IntType(1,false))),current_sa)),  //   store i8 -2, i8* getelementptr inbounds (%struct.conf_t, %struct.conf_t* @conf, i64 0, i32 3), align 8, !tbaa !20
                                        lvm_Codes(Ins(UNCONDBR(returnLabel.block)),lvm_CNil())));      //   br label %return
                                                                                                              
       
