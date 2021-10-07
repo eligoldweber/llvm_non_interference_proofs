@@ -1,12 +1,13 @@
 # README - Verifying Non-Interference Properties For Software Patches
 
-##UofM -Task III AMP Challenge Problem 5
+## UofM -Task III AMP Challenge Problem 5
 
 
 This README will help guide you through running this tool and additonally provides an explanation about using this tool for Challenge Problem 5
 
 See [Challenge Problem 5](#Challenge-Problem-5) for specifc details and a video walkthrough
-#Overview
+
+# Overview
 This repo contains the ongoing work to produce non-interference proofs for software patches.
 
 The repo contains operational semantics for LLVM defined in [Dafny](https://github.com/dafny-lang/dafny). Additionally, there is defined instruction level state transitions for a subset of LLVM instructions. Lastly there is a collection of examples of how to represent an LLVM program in terms of the operational semantics in a state machine format, and proofs of safety for these programs.
@@ -78,7 +79,7 @@ This applies to verifying files locally or using docker.
 
 To verify files without the help of the scons tool, you can use the following command: `dotnet /path/to/directory/with/dafny/ [dafny parameters] ie. /compile:0 /timeLimit:60 /trace /arith:5 noCheating:1] /path/to/dafnyFile`
 
-## Understanding the output
+## Understanding The Output
 If the proof goes through (which is the expectation, unless otherwise explicitly stated)
 
 * The result of individual files should resemble something like: `Dafny program verifier finished with 8 verified, 0 errors`
