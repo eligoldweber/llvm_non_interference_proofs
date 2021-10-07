@@ -6,7 +6,6 @@ include "./Operations/bitwiseBinaryOperations.i.dfy"
 include "./Operations/binaryOperations.i.dfy"
 include "./Operations/otherOperations.i.dfy"
 include "../Libraries/SeqIsUniqueDef.i.dfy"
-include "./llvmIntrinsic.i.dfy"
 
 module LLVM_def {
 
