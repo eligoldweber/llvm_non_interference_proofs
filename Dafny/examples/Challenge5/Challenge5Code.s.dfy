@@ -191,6 +191,97 @@ module challenge5Code{
 
     }
 
+function challenge_prob_5_code_write_encrypted_simple_side_effect():lvm_code
+    {
+
+       // [temp] dummy ptrs
+        var call := D(Ptr(0,0,0,1));
+        var mblock := D(Ptr(0,0,0,1));
+        var call1 := D(Ptr(0,0,0,1));
+        // var call2 := D(Ptr(0,0,0,1));
+        var call2 := D(Int(0,IntType(1,false)));
+        var call3 := D(Int(1,IntType(4,false)));
+
+        // var call3 := D(Ptr(0,0,0,1));
+        var call4 := D(Ptr(0,0,0,1));
+        var IV_SIZE := D(Int(16,IntType(4,false)));
+        var KEY := D(Int(16,IntType(4,false)));
+        var cipherText := D(Ptr(0,0,0,1));
+        var bytes_written := D(Ptr(0,0,0,1));
+
+        var cmp := D(Int(0,IntType(1,false)));
+        var cmp5 := D(Int(0,IntType(1,false)));
+ 
+        var var_1 := D(Ptr(0,0,0,1));
+        var var_2 := D(Int(0,IntType(4,false)));
+        var var_3 := D(Ptr(0,0,0,1));
+    
+        var conv := D(Int(0,IntType(8,false)));
+
+        // if.end8:                                          ; preds = %if.then7, %if.end
+        //   tail call void @free(i8* nonnull %call) #24
+        //   tail call void @free(i8* %call1) #24
+        //   tail call void @initialize_write(i8* getelementptr inbounds ([16 x i8], [16 x i8]* @IV, i64 0, i64 0), i32 16)
+        //   call void @llvm.lifetime.end.p0i8(i64 4, i8* nonnull %0) #24
+        //   ret void
+        var if_end8:code := lvm_Block(lvm_Codes(Ins(CALL(D(Void),free(call.d))),
+                                      lvm_Codes(Ins(CALL(D(Void),free(call1.d))),  
+                                      lvm_Codes(Ins(CALL(D(Void),initialize_write(call1.d,IV_SIZE.d))),  
+                                      lvm_Codes(Ins(RET(D(Void))),lvm_CNil()))))); 
+
+        // if.then7:                                         ; preds = %if.end
+        //   tail call void @perror(i8* getelementptr inbounds ([37 x i8], [37 x i8]* @.str.5, i64 0, i64 0)) #23
+        //   br label %if.end8
+        var if_then7:code := lvm_Block(lvm_Codes(Ins(CALL(D(Void),perror())),
+                                      lvm_Codes(Ins(UNCONDBR(lvm_Codes(if_end8,lvm_CNil()))), lvm_CNil())));
+        
+        // if.end:                                           ; preds = %if.then, %entry
+        //   %2 = load i32, i32* %bytes_written, align 4, !tbaa !3
+        //   %conv = sext i32 %2 to i64
+        //   %3 = load %struct._IO_FILE*, %struct._IO_FILE** @wfd, align 8, !tbaa !14
+        //   %call4 = tail call i64 @fwrite(i8* %call1, i64 1, i64 %conv, %struct._IO_FILE* %3)
+        //   %cmp5 = icmp eq i64 %call4, 0
+        //   br i1 %cmp5, label %if.then7, label %if.end8
+        var if_end:code := lvm_Block(lvm_Codes(Ins(LOAD(var_2,4,bytes_written)),
+                                     lvm_Codes(Ins(SEXT(conv,8,var_2,8)),
+                                     lvm_Codes(Ins(LOAD(var_3,4,D(Ptr(0,0,0,1)))),
+                                     lvm_Codes(Ins(CALL(call4,fwrite(call1,1,conv.d.val,D(Ptr(0,0,0,1))))),
+                                     lvm_Codes(Ins(ICMP(cmp5,eq,8,call4,D(Int(0,IntType(8,false))))),
+                                     lvm_Codes(Ins(BR(cmp,                                          
+                                        lvm_Codes(if_then7,lvm_CNil()),
+                                        lvm_Codes(if_end8,lvm_CNil()))),lvm_CNil())))))));
+
+
+        // if.then:                                          ; preds = %entry
+        //   tail call void @perror(i8* getelementptr inbounds ([27 x i8], [27 x i8]* @.str.4, i64 0, i64 0)) #23
+        //   br label %if.end
+        var if_then:code := lvm_Block(lvm_Codes(Ins(CALL(D(Void),perror())),
+                                      lvm_Codes(Ins(UNCONDBR(lvm_Codes(if_end,lvm_CNil()))), lvm_CNil())));
+
+    //   %bytes_written = alloca i32, align 4
+    //   call void @llvm.lifetime.start.p0i8(i64 4, i8* nonnull %0) #24
+    //   %call = tail call noalias align 16 dereferenceable_or_null(112) i8* @malloc(i64 112) #24
+    //   tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* noundef nonnull align 16 dereferenceable(112) %call, i8* noundef nonnull align 8 dereferenceable(112) getelementptr inbounds (%struct.MBlock, %struct.MBlock* @mblock, i64 0, i32 0, i64 0), i64 112, i1 false)
+    //   %call1 = tail call noalias align 16 dereferenceable_or_null(120) i8* @malloc(i64 120) #24
+    //   %call2 = tail call i32 @encrypt(i8* %call, i32 112, i8* getelementptr inbounds ([32 x i8], [32 x i8]* @KEY, i64 0, i64 0), i8* getelementptr inbounds ([16 x i8], [16 x i8]* @IV, i64 0, i64 0), i8* %call1) #24
+    //   store i32 %call2, i32* %bytes_written, align 4, !tbaa !3
+    //   %1 = load %struct._IO_FILE*, %struct._IO_FILE** @wfd, align 8, !tbaa !14
+    //   %call3 = call i64 @fwrite(i8* nonnull %0, i64 4, i64 1, %struct._IO_FILE* %1)
+    //   %cmp = icmp eq i64 %call3, 0
+    //   br i1 %cmp, label %if.then, label %if.end
+    
+    //main function block
+        lvm_Block(lvm_Codes(Ins(CALL(call,malloc(Int(0,IntType(8,false))))),
+                  lvm_Codes(Ins(LLVM_MEMCPY(call,mblock,1,false)),
+                  lvm_Codes(Ins(CALL(call1,malloc(call1.d))),
+                  lvm_Codes(Ins(CALL(call2,encrypt_side_effects(call,4,KEY,IV_SIZE,cipherText))),
+                  lvm_Codes(Ins(STORE(call2,bytes_written)),
+                  lvm_Codes(Ins(CALL(call3,fwrite(bytes_written,4,1,D(Ptr(0,0,0,1))))),
+                  lvm_Codes(Ins(ICMP(cmp,eq,4,call3,D(Int(0,IntType(4,false))))),lvm_CNil()))))))))                         
+
+
+
+    }
 
     function encryptEmpty():codes
     {
@@ -204,8 +295,9 @@ module challenge5Code{
 
     function encrypt_side_effects(plainText:operand,size:nat,KEY:operand,IV:operand,cipherText:operand):codes
     {
-        lvm_Codes(Ins(RET(D(Void))),lvm_CNil())    
-        // lvm_Codes(Ins(AND(plainText,plainText,KEY)),lvm_CNil())    
+
+        lvm_Codes(Ins(LLVM_MEMCPY(plainText,cipherText,1,false)),
+                  encrypt(plainText,size,KEY,IV,cipherText))    
     }
 
 
@@ -233,19 +325,6 @@ module challenge5Code{
     {
         ForeignFunction
     }
-
-
-
-        // lvm_Block(lvm_Codes(Ins(CALL(call,malloc(Int(0,IntType(8,false))))),
-        //           lvm_Codes(Ins(LLVM_MEMCPY(call,mblock,1,false)),
-        //           lvm_Codes(Ins(CALL(call1,malloc(call1.d))),
-        //           lvm_Codes(Ins(CALL(call2,encryptEmpty())),
-        //           lvm_Codes(Ins(STORE(call2,bytes_written)),
-        //           lvm_Codes(Ins(CALL(call3,fwrite(bytes_written,4,1,D(Ptr(0,0,0,1))))),
-        //           lvm_Codes(Ins(ICMP(cmp,eq,4,call3,D(Int(0,IntType(4,false))))),
-        //           lvm_Codes(Ins(BR(cmp,                                          
-        //             lvm_Codes(if_then,lvm_CNil()),
-        //             lvm_Codes(if_end,lvm_CNil()))),lvm_CNil())))))))))    
 
 }
 // **** MAIN.C MAIN WHILE LOOP ****

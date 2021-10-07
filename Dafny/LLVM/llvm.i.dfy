@@ -178,14 +178,6 @@ module LLVM_def {
             // case evalBlockStep(block,metaT) => evalBlockTEST(block,s,s',metaT)
     }
 
-    // predicate StateNext(s:state,s':state)
-    // {
-    //     && ValidState(s)
-    //     // && ValidState(s')
-    //     && MemStateNext(s.m,s'.m)
-    //     &&  (|| (exists ins :: (evalIns(ins, s, s')))
-    //          || (s == s'))
-    // }
 
         predicate StateNext(s:state,s':state)
     {

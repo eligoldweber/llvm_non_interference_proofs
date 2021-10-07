@@ -3,33 +3,6 @@ include "LLVM/control_flow.i.dfy"
 include "LLVM/types.dfy"
 include "LLVM/Operations/otherOperations.i.dfy"
 
-abstract module AbstractNonInterferenceProof {
-    import opened LLVM_def
-    import opened control_flow
-
-
-    predicate MiniSpec(s:LLVM_def.state, s':LLVM_def.state)
-
-    predicate ModuloMiniSpec(code:lvm_code, s:LLVM_def.state, s':LLVM_def.state,stateSeqS:seq<state>){
-        && BehaviorDescribedByStates(s,s',stateSeqS) 
-        && ValidBehavior(stateSeqS) 
-        && BehaviorEvalsCode(code,stateSeqS)
-        && (forall i :: (i >=0 && i < |stateSeqS|-2) ==> !MiniSpec(stateSeqS[i],stateSeqS[i+1]))
-    }
-
-    lemma nonInterference(code:lvm_code, code':lvm_code,
-                          s:LLVM_def.state, s':LLVM_def.state, 
-                          r:LLVM_def.state, r':LLVM_def.state)
-        requires evalCode(code, s, s')
-        requires evalCode(code', r, r')
-        ensures forall stateSeqS:seq<state>, stateSeqR:seq<state> 
-                ::  (&& BehaviorDescribedByStates(s,s',stateSeqS) 
-                    && ValidBehavior(stateSeqS) 
-                    && BehaviorDescribedByStates(r,r',stateSeqR) 
-                    && ValidBehavior(stateSeqR)
-                    && ModuloMiniSpec(code,s,s',stateSeqS)) ==> lvm_state_eq(s',r')
-}
-
 abstract module UpdatedAbstractNonInterferenceProof {
     import opened LLVM_def
     import opened control_flow
@@ -77,35 +50,38 @@ abstract module UpdatedAbstractNonInterferenceProof {
 
 }
 
-
-/*
-
-
-    predicate ModuloMiniSpec(code:lvm_code,b:behaviors)
-    {
-        var behavior := getBehavior(b);
-        (ValidBehavior(behavior) && BehaviorEvalsCode(code,behavior)) ==> !MiniSpec(b)
-    }
+// abstract module AbstractNonInterferenceProof {
+//     import opened LLVM_def
+//     import opened control_flow
 
 
+//     predicate MiniSpec(s:LLVM_def.state, s':LLVM_def.state)
 
-/////
-    MiniSpec is a predicate over a behavior (finite seq of states [s to s']) that describes an incorrect action
+//     predicate ModuloMiniSpec(code:lvm_code, s:LLVM_def.state, s':LLVM_def.state,stateSeqS:seq<state>){
+//         && BehaviorDescribedByStates(s,s',stateSeqS) 
+//         && ValidBehavior(stateSeqS) 
+//         && BehaviorEvalsCode(code,stateSeqS)
+//         && (forall i :: (i >=0 && i < |stateSeqS|-2) ==> !MiniSpec(stateSeqS[i],stateSeqS[i+1]))
+//     }
 
-/////
-    MiniSpec is a two-state predicate (s,s') that describes both the incorrect behavior and that incorrect behavior 
-    > dictates the state transition from s to s'
-        
-        This only reasons about the exections where a state s enters a 'danger' state *and* makes the 
-        > corresponding transition 
+//     lemma nonInterference(code:lvm_code, code':lvm_code,
+//                           s:LLVM_def.state, s':LLVM_def.state, 
+//                           r:LLVM_def.state, r':LLVM_def.state)
+//         requires evalCode(code, s, s')
+//         requires evalCode(code', r, r')
+//         ensures forall stateSeqS:seq<state>, stateSeqR:seq<state> 
+//                 ::  (&& BehaviorDescribedByStates(s,s',stateSeqS) 
+//                     && ValidBehavior(stateSeqS) 
+//                     && BehaviorDescribedByStates(r,r',stateSeqR) 
+//                     && ValidBehavior(stateSeqR)
+//                     && ModuloMiniSpec(code,s,s',stateSeqS)) ==> lvm_state_eq(s',r')
+// }
 
-//////        
-    what is the MiniSpec?
-    MiniSpec is a single state predicate that describes incorrect behavior (that is supposedly fixed by the patch)
-
-        This would describe/preclude all exections where there is a state that enters a 'danger' or buggy state. but not 
-        > necessarily 'acts' on it
 
 
-*/
+
+
+
+
+
     
