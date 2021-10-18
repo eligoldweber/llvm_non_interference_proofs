@@ -48,6 +48,16 @@ abstract module UpdatedAbstractNonInterferenceProof {
                     ==> lvm_state_eq(pre[|pre|-1],post[|post|-1])
 
 
+    // lemma adjustedNonInterference(preCode:lvm_code, postCode:lvm_code)
+    //     ensures forall input,s,pre,post :: (&& ValidState(s)
+    //                                && validInput(s,input)
+    //                                && post == extractPatchBehavior(exampleCodePatch(input),s,input)
+    //                                && pre == extractVulnBehavior(exampleCodeVuln(input),s,input)//[s] + evalBlockRE(exampleCodeVuln(input).block,s)
+    //                                && !RemovedBehaviors(pre)
+    //                                && !AddedBehaviors(post))
+    //                             ==> last(post) == last(pre)
+
+
 }
 
 // abstract module AbstractNonInterferenceProof {
