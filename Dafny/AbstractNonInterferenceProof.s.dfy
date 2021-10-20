@@ -1,29 +1,38 @@
-include "LLVM/llvm.i.dfy" // needs to be re-factored
+// include "LLVM/llvm.i.dfy" // needs to be re-factored
+include "LLVM/llvmREFACTOR.i.dfy" // needs to be re-factored
+
 include "LLVM/control_flow.i.dfy"
 include "LLVM/types.dfy"
 include "LLVM/Operations/otherOperations.i.dfy"
+include "Libraries/Seqs.s.dfy"
 
 abstract module UpdatedAbstractNonInterferenceProof {
-    import opened LLVM_def
+    // import opened LLVM_def
     import opened control_flow
+    import opened LLVM_defRE
+    import opened Collections__Seqs_s
 
     // Describes/Excludes 'bad' behaviors in the Unpatched Code (ie preBehaviors)
-    predicate RemovedBehaviors(b:behavior)
+    // predicate RemovedBehaviors(b:behavior)
 
-    // Describes/Excludes 'good' added behavior in Patched Code (ie postBehaviors)
-    // [TODO] fix :: This is a placeholder for now -- ie this allows all executions of the patched code
-    predicate AddedBehaviors(b:behavior)
-    {
-        false
-    }
+    // // Describes/Excludes 'good' added behavior in Patched Code (ie postBehaviors)
+    // predicate AddedBehaviors(b:behavior)
+    // {
+    //     false
+    // }
 
     // The MiniSpec is a predicate over a behavior (finite seq of states [s to s']) 
-    predicate MiniSpec(b:behaviors)
-    {
-        match b
-            case preBehavior(preB) => RemovedBehaviors(preB)
-            case postBehavior(postB) => AddedBehaviors(postB)
-    }
+    // predicate MiniSpec(b:behaviors)
+    // {
+    //     match b
+    //         case preBehavior(preB) => !RemovedBehaviors(preB)
+    //         case postBehavior(postB) => !AddedBehaviors(postB)
+    // }
+
+    // predicate MiniSpec(pre:behavior, post:behavior)
+    // {
+    //    !RemovedBehaviors(pre) && !AddedBehaviors(post)
+    // }
 
     /*
         for all behaviors, pre(unpatched) and post(patched), such that the following is true:
@@ -36,26 +45,65 @@ abstract module UpdatedAbstractNonInterferenceProof {
         Implies that:
             the final states of both behaviors are the same
     */
-    lemma nonInterference(preCode:lvm_code, postCode:lvm_code)
-        ensures forall pre:behavior, post:behavior ::
-                   (&& ValidBehavior(pre) 
-                    && ValidBehavior(post)  
-                    && BehaviorEvalsCode(preCode,pre) 
-                    && BehaviorEvalsCode(postCode,post)
-                    && pre[0] == post[0] 
-                    && !MiniSpec(preBehavior(pre))
-                    && !MiniSpec(postBehavior(post)))
-                    ==> lvm_state_eq(pre[|pre|-1],post[|post|-1])
+    // lemma nonInterference(preCode:lvm_code, postCode:lvm_code)
+    //     ensures forall pre:behavior, post:behavior ::
+    //                (&& ValidBehavior(pre) 
+    //                 && ValidBehavior(post)  
+    //                 && BehaviorEvalsCode(preCode,pre) 
+    //                 && BehaviorEvalsCode(postCode,post)
+    //                 && pre[0] == post[0] 
+    //                 && !MiniSpec(preBehavior(pre))
+    //                 && !MiniSpec(postBehavior(post)))
+    //                 ==> lvm_state_eq(pre[|pre|-1],post[|post|-1])
 
 
-    // lemma adjustedNonInterference(preCode:lvm_code, postCode:lvm_code)
-    //     ensures forall input,s,pre,post :: (&& ValidState(s)
-    //                                && validInput(s,input)
-    //                                && post == extractPatchBehavior(exampleCodePatch(input),s,input)
-    //                                && pre == extractVulnBehavior(exampleCodeVuln(input),s,input)//[s] + evalBlockRE(exampleCodeVuln(input).block,s)
-    //                                && !RemovedBehaviors(pre)
-    //                                && !AddedBehaviors(post))
-    //                             ==> last(post) == last(pre)
+
+
+////
+
+    // Describes/Excludes 'bad' behaviors in the Unpatched Code (ie preBehaviors)
+    predicate RemovedBehaviors(b:behavior)
+
+    // Describes/Excludes 'good' added behavior in Patched Code (ie postBehaviors)
+    predicate AddedBehaviors(b:behavior)
+
+    predicate MiniSpec(pre:behavior, post:behavior)
+    {
+       !RemovedBehaviors(pre) && !AddedBehaviors(post)
+    }
+
+    function codePatch(input:operand):(out:codeRe)
+
+    function codeVuln(input:operand):(out:codeRe)
+
+    predicate validInput(s:state, input:operand)
+        requires ValidState(s)
+
+    function extractPatchBehavior(c:codeRe,s:state,input:operand) : (b:behavior)
+        requires ValidState(s);
+        requires c == codePatch(input);
+        requires validInput(s,input);
+        ensures ValidBehaviorNonTrivial(b);
+        ensures BehaviorEvalsCode(c,b);
+
+    
+    function extractVulnBehavior(c:codeRe,s:state,input:operand) : (b:behavior)
+        requires ValidState(s);
+        requires c == codeVuln(input);
+        requires validInput(s,input);
+        ensures ValidBehaviorNonTrivial(b);
+        ensures BehaviorEvalsCode(c,b);
+
+
+    lemma nonInterference(preCode:codeRe, postCode:codeRe)
+        ensures forall input,s,pre,post :: (&& ValidState(s)
+                                            && validInput(s,input)
+                                            && preCode == codeVuln(input)
+                                            && postCode == codePatch(input)
+                                            && post == extractPatchBehavior(postCode,s,input)
+                                            && pre == extractVulnBehavior(preCode,s,input)
+                                            && MiniSpec(pre,post))
+                                            ==> last(post) == last(pre)
 
 
 }

@@ -366,6 +366,7 @@ module LLVM_defRE {
             ensures |block| == 1 ==> |remainder| == 0;
             ensures (|block| > 0 && !first(block).CNil? && remainder == []) ==>  subBehavior == [last(step),last(step)];
             ensures (|block| > 0 && first(block).Ins?) ==> |step| == 1 
+            ensures (|block| > 0 && first(block).Ins?) ==> step[0] == evalInsRe(first(block).ins,s)
             // ensures 
             // requires |block| > 0;
             
