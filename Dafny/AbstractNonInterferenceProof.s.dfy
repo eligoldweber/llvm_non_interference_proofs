@@ -14,7 +14,6 @@ abstract module AbstractNonInterferenceProof {
     predicate RemovedBehaviors(b:behavior)
 
     // Describes/Excludes 'good' added behavior in Patched Code (ie postBehaviors)
-    // [TODO] fix :: This is a placeholder for now -- ie this allows all executions of the patched code
     predicate AddedBehaviors(b:behavior)
    
     // The MiniSpec is a predicate over a behavior (finite seq of states [s to s']) 
@@ -68,7 +67,7 @@ abstract module AbstractNonInterferenceProof {
                                              && post == extractPatchBehavior(postCode,s,input)
                                              && pre == extractVulnBehavior(preCode,s,input)
                                              && MiniSpec(pre,post))
-                                            ==> last(post) == last(pre)
+                                            ==> last(post) == last(pre) // behaviorOutput(post) == behaviorOutput(pre)
             
 
 }

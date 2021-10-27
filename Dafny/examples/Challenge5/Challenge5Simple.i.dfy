@@ -3,12 +3,15 @@ include "../../LLVM/control_flow.i.dfy"
 include "../../LLVM/generalInstructionsBehavior.i.dfy"
 include "../../LLVM/types.dfy"
 include "../../LLVM/memory.i.dfy"
+include "../../LLVM/control_flow.i.dfy"
 include "../../LLVM/Operations/otherOperations.i.dfy"
 include "../../AbstractNonInterferenceProof.s.dfy"
 include "./Challenge5Code.s.dfy"
 include "./Challenge5_HelperLemmas.i.dfy"
 
-module challenge5 refines UpdatedAbstractNonInterferenceProof{ 
+module challenge5{ 
+    import opened LLVM_def
+    import opened control_flow
     import opened challenge5Code
     import opened challenge5_helpful_lemmas
     import opened general_instructions_behaviors
