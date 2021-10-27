@@ -6,7 +6,7 @@ include "./Operations/binaryOperations.i.dfy"
 include "../Libraries/Seqs.s.dfy"
 
 
-module refactorExample refines AbstractNonInterferenceProof{ 
+module basicNonInterferenceExample refines AbstractNonInterferenceProof{ 
     import opened types
     import opened binary_operations_i
 
