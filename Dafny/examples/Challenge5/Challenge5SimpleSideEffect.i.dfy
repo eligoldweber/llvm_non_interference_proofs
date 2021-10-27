@@ -133,15 +133,12 @@ module challenge5SideEffects{
     }
 
     // Describes/Excludes 'bad' behaviors in the Unpatched Code (ie preBehaviors)
-    predicate RemovedBehaviors(b:behavior)
+        predicate RemovedBehaviors(b:behavior)
     {
-        exists i,j :: 
-            (&& i >= 0 
-             && i <= |b|-2 
-             && j > i
-             && j < |b|
-             && (forall plainText:operand,size:nat,KEY:operand,IV:operand,cipherText:operand :: evalBlock(encrypt_side_effects(plainText,size,KEY,IV,cipherText),b[i],b[j]))) 
-             && !stateFramingMultiValue(b[i],b[j])
+        exists i,j :: && i in b
+                      && j in b 
+                      && (forall plainText:operand,size:nat,KEY:operand,IV:operand,cipherText:operand :: evalBlock(encrypt_side_effects(plainText,size,KEY,IV,cipherText),i,j)) 
+                      && !stateFramingMultiValue(i,j)
     }
 
     

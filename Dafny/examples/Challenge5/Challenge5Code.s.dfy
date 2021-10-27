@@ -296,7 +296,7 @@ function challenge_prob_5_code_write_encrypted_simple_side_effect():lvm_code
     function encrypt_side_effects(plainText:operand,size:nat,KEY:operand,IV:operand,cipherText:operand):codes
     {
 
-        lvm_Codes(Ins(LLVM_MEMCPY(plainText,cipherText,1,false)),
+        lvm_Codes(Ins(LLVM_MEMCPY(KEY,cipherText,1,false)),
                   encrypt(plainText,size,KEY,IV,cipherText))    
     }
 
