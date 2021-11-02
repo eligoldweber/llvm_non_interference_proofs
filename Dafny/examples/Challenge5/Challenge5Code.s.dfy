@@ -283,11 +283,7 @@ function challenge_prob_5_code_write_encrypted_simple_side_effect():lvm_code
 
     }
 
-    function encryptEmpty():codes
-    {
-        ForeignFunction
-    }
-
+ 
     function encrypt(plainText:operand,size:nat,KEY:operand,IV:operand,cipherText:operand):codes
     {
         ForeignFunction
@@ -296,12 +292,17 @@ function challenge_prob_5_code_write_encrypted_simple_side_effect():lvm_code
     function encrypt_side_effects(plainText:operand,size:nat,KEY:operand,IV:operand,cipherText:operand):codes
     {
 
-        lvm_Codes(Ins(LLVM_MEMCPY(plainText,cipherText,1,false)),
+        lvm_Codes(Ins(LLVM_MEMCPY(KEY,D(Ptr(0,0,0,1)),1,false)),
                   encrypt(plainText,size,KEY,IV,cipherText))    
     }
 
 
     function initialize_write(char_ptr:Data, size:Data):codes
+    {
+        ForeignFunction
+    }
+
+       function encryptEmpty():codes
     {
         ForeignFunction
     }

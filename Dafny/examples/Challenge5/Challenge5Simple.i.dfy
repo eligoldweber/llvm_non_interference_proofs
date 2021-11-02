@@ -3,12 +3,15 @@ include "../../LLVM/control_flow.i.dfy"
 include "../../LLVM/generalInstructionsBehavior.i.dfy"
 include "../../LLVM/types.dfy"
 include "../../LLVM/memory.i.dfy"
+include "../../LLVM/control_flow.i.dfy"
 include "../../LLVM/Operations/otherOperations.i.dfy"
 include "../../AbstractNonInterferenceProof.s.dfy"
 include "./Challenge5Code.s.dfy"
 include "./Challenge5_HelperLemmas.i.dfy"
 
-module challenge5 refines UpdatedAbstractNonInterferenceProof{ 
+module challenge5{ 
+    import opened LLVM_def
+    import opened control_flow
     import opened challenge5Code
     import opened challenge5_helpful_lemmas
     import opened general_instructions_behaviors
@@ -125,13 +128,10 @@ module challenge5 refines UpdatedAbstractNonInterferenceProof{
     // Describes/Excludes 'bad' behaviors in the Unpatched Code (ie preBehaviors)
     predicate RemovedBehaviors(b:behavior)
     {
-        exists i,j :: 
-            (&& i >= 0 
-             && i <= |b|-2 
-             && j > i
-             && j < |b|
-             && (forall plainText:operand,size:nat,KEY:operand,IV:operand,cipherText:operand :: evalBlock(encrypt(plainText,size,KEY,IV,cipherText),b[i],b[j]))) 
-             && !stateFramingMultiValue(b[i],b[j])
+        exists i,j :: && i in b
+                      && j in b 
+                      && (forall plainText:operand,size:nat,KEY:operand,IV:operand,cipherText:operand :: evalBlock(encrypt(plainText,size,KEY,IV,cipherText),i,j)) 
+                      && !stateFramingMultiValue(i,j)
     }
 
 
@@ -149,7 +149,7 @@ module challenge5 refines UpdatedAbstractNonInterferenceProof{
             (&& ValidData(s,op)
             && ValidData(s',op)
             && s.ok == s'.ok
-            && (forall lv :: (lv in s.lvs && !(s.lvs[lv] in ops)) ==> (lv in s'.lvs && s.lvs[lv] == s'.lvs[lv]))//(lv in s'.lv && s.lv[op] == s'.lv[op])
+            && (forall lv :: (lv in s.lvs && !(s.lvs[lv] in ops)) ==> (lv in s'.lvs && s.lvs[lv] == s'.lvs[lv]))
             && (forall gv :: (gv in s.gvs && !(s.gvs[gv] in ops)) ==> (gv in s'.gvs && s.gvs[gv] == s'.gvs[gv]))
             && (forall o:operand :: (o.D? && ValidOperand(s,o) && ValidOperand(s',o) && !(OperandContents(s,o) in ops) ) ==> (OperandContents(s,o) == OperandContents(s',o)))
             && s.m == s'.m)

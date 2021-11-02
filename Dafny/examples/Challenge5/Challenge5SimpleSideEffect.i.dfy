@@ -7,8 +7,11 @@ include "../../LLVM/Operations/otherOperations.i.dfy"
 include "../../AbstractNonInterferenceProof.s.dfy"
 include "./Challenge5Code.s.dfy"
 include "./Challenge5_HelperLemmas.i.dfy"
+include "../../LLVM/control_flow.i.dfy"
 
-module challenge5SideEffects refines UpdatedAbstractNonInterferenceProof{ 
+module challenge5SideEffects{ 
+    import opened LLVM_def
+    import opened control_flow
     import opened challenge5Code
     import opened challenge5_helpful_lemmas
     import opened general_instructions_behaviors
@@ -130,15 +133,12 @@ module challenge5SideEffects refines UpdatedAbstractNonInterferenceProof{
     }
 
     // Describes/Excludes 'bad' behaviors in the Unpatched Code (ie preBehaviors)
-    predicate RemovedBehaviors(b:behavior)
+        predicate RemovedBehaviors(b:behavior)
     {
-        exists i,j :: 
-            (&& i >= 0 
-             && i <= |b|-2 
-             && j > i
-             && j < |b|
-             && (forall plainText:operand,size:nat,KEY:operand,IV:operand,cipherText:operand :: evalBlock(encrypt_side_effects(plainText,size,KEY,IV,cipherText),b[i],b[j]))) 
-             && !stateFramingMultiValue(b[i],b[j])
+        exists i,j :: && i in b
+                      && j in b 
+                      && (forall plainText:operand,size:nat,KEY:operand,IV:operand,cipherText:operand :: evalBlock(encrypt_side_effects(plainText,size,KEY,IV,cipherText),i,j)) 
+                      && !stateFramingMultiValue(i,j)
     }
 
     

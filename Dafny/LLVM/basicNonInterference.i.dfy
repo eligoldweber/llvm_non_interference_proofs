@@ -6,11 +6,9 @@ include "./Operations/binaryOperations.i.dfy"
 include "../Libraries/Seqs.s.dfy"
 
 
-module refactorExample{ 
-    import opened LLVM_defRE
+module basicNonInterferenceExample refines AbstractNonInterferenceProof{
     import opened types
     import opened binary_operations_i
-    import opened Collections__Seqs_s
 
 //Simpliefied Challenge Problem 1 code
 
@@ -26,7 +24,7 @@ module refactorExample{
 //               lvm_Codes(Ins(RET(D(Void))),lvm_CNil())))))))))))    
 
 // ---- Code representation ----
-    function exampleCodePatch(input:operand):(out:codeRe)
+    function codePatch(input:operand):(out:codeRe)
         ensures out.Block?;
         ensures forall c :: c in out.block ==> c.Ins?;
     {
@@ -40,9 +38,7 @@ module refactorExample{
         Block(cSeq)
     }
 
-    function exampleCodeVuln(input:operand):(out:codeRe)
-     ensures out.Block?;
-        ensures forall c :: c in out.block ==> c.Ins?;
+    function codeVuln(input:operand):codeRe
     {
         var speed_value := LV("speed_value");
         var result := LV("result");
@@ -57,7 +53,6 @@ module refactorExample{
 // ---- Extract behavior  ----
 
     predicate validInput(s:state, input:operand)
-        requires ValidState(s)
     {
         && ValidOperand(s,input)
         && isInt(OperandContents(s,input))
@@ -66,7 +61,7 @@ module refactorExample{
 
     lemma unwrapPatchBehaviorTest(c:codeRe,s:state, input:operand) returns (b:behavior)
         requires ValidState(s);
-        requires c == exampleCodePatch(input);
+        requires c == codePatch(input);
 
         // -- input is valid -- ie. valid 16 bit integer 
         requires validInput(s,input);
@@ -110,24 +105,12 @@ module refactorExample{
     
     
     
-    lemma extractPatchBehavior(c:codeRe,s:state, input:operand) returns (b:behavior)
-        requires ValidState(s);
-        requires c == exampleCodePatch(input);
 
-        // -- input is valid -- ie. valid 16 bit integer 
-        requires validInput(s,input);
+
+    function extractPatchBehavior(c:codeRe,s:state, input:operand) : (b:behavior)
 
         ensures ValidBehaviorNonTrivial(b);
         ensures BehaviorEvalsCode(c,b);
-        // ensures |b| == 4;
-        // ensures extractedBehaviorPostConditions(b);
-        ensures |b| == 4;
-        ensures b[0] == s;
-        ensures forall i :: i > 0 && i < |b|-1 ==> b[i] == evalInsRe(c.block[i-1].ins,b[i-1]);
-        ensures b[|b|-1] == b[|b|-2];
-        ensures b == [s] + evalCodeRE(c,s)
-
-        ensures exists speed_value :: ValidOperand(last(b),speed_value) && OperandContents(last(b),speed_value).Int? && (OperandContents(s,input).val > 0 ==> OperandContents(last(b),speed_value).val > 0);
 
 
     {
@@ -138,26 +121,19 @@ module refactorExample{
         assert c == Block([Ins(ADD(speed_value,2,op1,input)),
                      Ins(ICMP(result,ugt,2,speed_value,D(Int(0,IntType(2,false)))))]);
 
-        //  b := unwrapPatchBehaviorTest(c,s,input);
-         b := [s] + evalCodeRE(c,s);
-            
-        var step,remainder, subBehavior := unwrapBlock(b,c.block,s);
-        
-         step,remainder,subBehavior := unwrapBlock(subBehavior,remainder,last(step));
-
-        // assert c.Block?;
+        var b := [s] + evalCodeRE(c,s);
+        assert c.Block?;
        
-        // assert b == [s] + evalBlockRE(c.block,s);
-        // var metaBehavior := evalCodeRE(first(c.block),s);
-        // var theRest := evalBlockRE(all_but_first(c.block),last(metaBehavior));
-        // // assert b == [s] + metaBehavior + theRest;
-        // // assert |all_but_first(c.block)| == 1;
-        // // assert all_but_first(c.block)[0] == Ins(ICMP(result,ugt,2,speed_value,D(Int(0,IntType(2,false)))));
-        // var metaBehavior' := evalCodeRE(first(all_but_first(c.block)),last(metaBehavior));
-        // // assert all_but_first(all_but_first(c.block)) == [];
-        // assert [last(metaBehavior')] == evalBlockRE(all_but_first(all_but_first(c.block)),last(metaBehavior'));
-        // // assert theRest[0] == evalInsRe(ICMP(result,ugt,2,speed_value,D(Int(0,IntType(2,false)))),last(metaBehavior));
-        // // assert |b| == 4;
+        assert b == [s] + evalBlockRE(c.block,s);
+        var metaBehavior := evalCodeRE(first(c.block),s);
+        var theRest := evalBlockRE(all_but_first(c.block),last(metaBehavior));
+        // assert b == [s] + metaBehavior + theRest;
+        // assert |all_but_first(c.block)| == 1;
+        // assert all_but_first(c.block)[0] == Ins(ICMP(result,ugt,2,speed_value,D(Int(0,IntType(2,false)))));
+        var metaBehavior' := evalCodeRE(first(all_but_first(c.block)),last(metaBehavior));
+        // assert all_but_first(all_but_first(c.block)) == [];
+        assert [last(metaBehavior')] == evalBlockRE(all_but_first(all_but_first(c.block)),last(metaBehavior'));
+        // assert theRest[0] == evalInsRe(ICMP(result,ugt,2,speed_value,D(Int(0,IntType(2,false)))),last(metaBehavior));
 
         assert b[0] == s;
         assert b[1] == evalInsRe(ADD(speed_value,2,op1,input),s);
@@ -195,32 +171,16 @@ module refactorExample{
         assert ValidOperand(last(b),speed_value);
         assert OperandContents(s,input).val > 0 ==> OperandContents(last(b),speed_value).val > 0;
 
-        // b
+        b
 
     }        
 
 
 
-    lemma extractVulnBehavior(c:codeRe,s:state, input:operand) returns (b:behavior)
-        requires ValidState(s);
-        requires c == exampleCodeVuln(input);
-
-        // -- input is valid -- ie. valid 16 bit integer 
-        requires validInput(s,input);
-
-        requires validInput(s,input);
+    function extractVulnBehavior(c:codeRe,s:state, input:operand) : (b:behavior)
 
         ensures ValidBehaviorNonTrivial(b);
         ensures BehaviorEvalsCode(c,b);
-        // ensures |b| == 4;
-        // ensures extractedBehaviorPostConditions(b);
-        ensures |b| == 4;
-        ensures b[0] == s;
-        ensures forall i :: i > 0 && i < |b|-1 ==> b[i] == evalInsRe(c.block[i-1].ins,b[i-1]);
-        ensures b[|b|-1] == b[|b|-2];
-        ensures b == [s] + evalCodeRE(c,s)
-
-        ensures exists speed_value :: ValidOperand(last(b),speed_value) && OperandContents(last(b),speed_value).Int? && (OperandContents(s,input).val > 0 ==> OperandContents(last(b),speed_value).val > 0);
 
     {
         var speed_value := LV("speed_value");
@@ -230,27 +190,22 @@ module refactorExample{
         assert c == Block([Ins(ADD(speed_value,2,op1,input)),
                      Ins(ICMP(result,sgt,2,speed_value,D(Int(0,IntType(2,false)))))]);
 
-  b := [s] + evalCodeRE(c,s);
-            
-        var step,remainder, subBehavior := unwrapBlock(b,c.block,s);
-        
-         step,remainder,subBehavior := unwrapBlock(subBehavior,remainder,last(step));
-        // var b := [s] + evalCodeRE(c,s);
-        // assert c.Block?;
+        var b := [s] + evalCodeRE(c,s);
+        assert c.Block?;
        
-        // assert b == [s] + evalBlockRE(c.block,s);
-        // var metaBehavior := evalCodeRE(first(c.block),s);
-        // var theRest := evalBlockRE(all_but_first(c.block),last(metaBehavior));
-        // assert b == [s] + metaBehavior + theRest;
+        assert b == [s] + evalBlockRE(c.block,s);
+        var metaBehavior := evalCodeRE(first(c.block),s);
+        var theRest := evalBlockRE(all_but_first(c.block),last(metaBehavior));
+        assert b == [s] + metaBehavior + theRest;
         
 
-        // assert |all_but_first(c.block)| == 1;
-        // assert all_but_first(c.block)[0] == Ins(ICMP(result,sgt,2,speed_value,D(Int(0,IntType(2,false)))));
-        // var metaBehavior' := evalCodeRE(first(all_but_first(c.block)),last(metaBehavior));
-        // assert all_but_first(all_but_first(c.block)) == [];
-        // assert [last(metaBehavior')] == evalBlockRE(all_but_first(all_but_first(c.block)),last(metaBehavior'));
-        // assert theRest[0] == evalInsRe(ICMP(result,sgt,2,speed_value,D(Int(0,IntType(2,false)))),last(metaBehavior));
-        // assert |b| == 4;
+        assert |all_but_first(c.block)| == 1;
+        assert all_but_first(c.block)[0] == Ins(ICMP(result,sgt,2,speed_value,D(Int(0,IntType(2,false)))));
+        var metaBehavior' := evalCodeRE(first(all_but_first(c.block)),last(metaBehavior));
+        assert all_but_first(all_but_first(c.block)) == [];
+        assert [last(metaBehavior')] == evalBlockRE(all_but_first(all_but_first(c.block)),last(metaBehavior'));
+        assert theRest[0] == evalInsRe(ICMP(result,sgt,2,speed_value,D(Int(0,IntType(2,false)))),last(metaBehavior));
+        assert |b| == 4;
 
         assert b[0] == s;
         assert b[1] == evalInsRe(ADD(speed_value,2,op1,input),s);
@@ -280,15 +235,12 @@ module refactorExample{
         assert ValidState(b[3]);
         assert NextStep(b[2],b[3],Step.stutterStep());
         assert StateNext(b[2],b[3]);
-        assert ValidOperand(last(b),speed_value);
-                assert OperandContents(s,input).val > 0 ==> OperandContents(last(b),speed_value).val > 0;
-
+        
         // Properties
         assert ValidBehaviorNonTrivial(b);
         assert BehaviorEvalsCode(c,b);
         assert (OperandContents(b[1],speed_value).val > 0  && OperandContents(b[1],speed_value).val <= 0x80 )==> OperandContents(b[2],result).val == 1;
-        assert (OperandContents(s,input).val > 0 && OperandContents(s,input).val <= 0x80 ) ==> OperandContents(last(b),speed_value).val > 0;
-        // b
+        b
 
     }        
 
@@ -312,33 +264,23 @@ module refactorExample{
         false
     }
 
-lemma testNonInterference(vulnCode:codeRe,patchCode:codeRe)
+    lemma nonInterference(preCode:codeRe,postCode:codeRe)
     {
-         forall input,s | && ValidState(s)
+         forall input,s,pre,post | && ValidState(s)
                                    && validInput(s,input)
-                                //    && ValidBehavior(post)
-                                //    && BehaviorEvalsCode(exampleCodePatch(input),post) //post == extractPatchBehavior(exampleCodePatch(input),s,input)
-                                //    && ValidBehavior(pre)
-                                //    && BehaviorEvalsCode(exampleCodeVuln(input),pre)
-                                // //    && pre == extractVulnBehavior(exampleCodeVuln(input),s,input)//[s] + evalBlockRE(exampleCodeVuln(input).block,s)
-                                //    && !RemovedBehaviors(pre)
-                                //    && !AddedBehaviors(post)
-            ensures forall pre,post :: ( && ValidBehavior(post)
-                                   && BehaviorEvalsCode(exampleCodePatch(input),post) //post == extractPatchBehavior(exampleCodePatch(input),s,input)
-                                   && ValidBehavior(pre)
-                                   && BehaviorEvalsCode(exampleCodeVuln(input),pre)
-                                //    && pre == extractVulnBehavior(exampleCodeVuln(input),s,input)//[s] + evalBlockRE(exampleCodeVuln(input).block,s)
-                                   && !RemovedBehaviors(pre)
-                                   && !AddedBehaviors(post)) ==> true//last(post) == last(pre)
+                                   && preCode == codeVuln(input)
+                                   && postCode == codePatch(input)
+                                   && post == extractPatchBehavior(postCode,s,input)
+                                   && pre == extractVulnBehavior(preCode,s,input)
+                                   && MiniSpec(pre,post)
+            ensures last(post) == last(pre)
             {
                 var speed_value := LV("speed_value");
                 var result := LV("result");
                 var op1 := D(Int(0,IntType(2,false)));
 
-                var c := exampleCodeVuln(input);
-                var pre := extractVulnBehavior(c,s,input);
-                assert !RemovedBehaviors(pre);
-                assert pre == [s] + evalCodeRE(exampleCodeVuln(input),s);
+                var c := codeVuln(input);
+                assert pre == [s] + evalCodeRE(codeVuln(input),s);
                 assert pre == [s] + evalBlockRE(c.block,s);
                 var metaBehavior := evalCodeRE(first(c.block),s);
                 var theRest := evalBlockRE(all_but_first(c.block),last(metaBehavior));
@@ -348,15 +290,14 @@ lemma testNonInterference(vulnCode:codeRe,patchCode:codeRe)
                 assert ValidBehavior(pre);
                 //
 
-                var c' := exampleCodePatch(input);
-                var post := extractPatchBehavior(c',s,input);
-                assert post == [s] + evalCodeRE(exampleCodePatch(input),s);
+                var c' := codePatch(input);
+                assert post == [s] + evalCodeRE(codePatch(input),s);
                 assert post == [s] + evalBlockRE(c'.block,s);
                 var metaBehaviorPost := evalCodeRE(first(c'.block),s);
                 var theRestPost := evalBlockRE(all_but_first(c'.block),last(metaBehaviorPost));
                 assert post == [s] + metaBehaviorPost + theRestPost;
                 // assert |all_but_first(c'.block)| == 1;
-                // assert all_but_first(c'.block)[0] == Ins(ICMP(result,ugt,2,speed_value,D(Int(0,IntType(2,false)))));
+                assert all_but_first(c'.block)[0] == Ins(ICMP(result,ugt,2,speed_value,D(Int(0,IntType(2,false)))));
                 var metaBehaviorPost' := evalCodeRE(first(all_but_first(c'.block)),last(metaBehaviorPost));
 
                 assert last(post) == last(pre);
@@ -364,57 +305,4 @@ lemma testNonInterference(vulnCode:codeRe,patchCode:codeRe)
             }
     }
 
-    // lemma testNonInterference(vulnCode:codeRe,patchCode:codeRe)
-    // {
-    //      forall input,s,pre,post | && ValidState(s)
-    //                                && validInput(s,input)
-    //                                && post == extractPatchBehavior(exampleCodePatch(input),s,input)
-    //                                && pre == extractVulnBehavior(exampleCodeVuln(input),s,input)//[s] + evalBlockRE(exampleCodeVuln(input).block,s)
-    //                                && !RemovedBehaviors(pre)
-    //                                && !AddedBehaviors(post)
-    //         ensures last(post) == last(pre)
-    //         {
-    //             var speed_value := LV("speed_value");
-    //             var result := LV("result");
-    //             var op1 := D(Int(0,IntType(2,false)));
-
-    //             var c := exampleCodeVuln(input);
-    //             assert pre == [s] + evalCodeRE(exampleCodeVuln(input),s);
-    //             assert pre == [s] + evalBlockRE(c.block,s);
-    //             var metaBehavior := evalCodeRE(first(c.block),s);
-    //             var theRest := evalBlockRE(all_but_first(c.block),last(metaBehavior));
-
-    //             var metaBehavior' := evalCodeRE(first(all_but_first(c.block)),last(metaBehavior));
-
-    //             assert ValidBehavior(pre);
-    //             //
-
-    //             var c' := exampleCodePatch(input);
-    //             assert post == [s] + evalCodeRE(exampleCodePatch(input),s);
-    //             assert post == [s] + evalBlockRE(c'.block,s);
-    //             var metaBehaviorPost := evalCodeRE(first(c'.block),s);
-    //             var theRestPost := evalBlockRE(all_but_first(c'.block),last(metaBehaviorPost));
-    //             assert post == [s] + metaBehaviorPost + theRestPost;
-    //             // assert |all_but_first(c'.block)| == 1;
-    //             // assert all_but_first(c'.block)[0] == Ins(ICMP(result,ugt,2,speed_value,D(Int(0,IntType(2,false)))));
-    //             var metaBehaviorPost' := evalCodeRE(first(all_but_first(c'.block)),last(metaBehaviorPost));
-
-    //             assert last(post) == last(pre);
-
-    //         }
-    // }
-
 }
-
-
-
-    // predicate extractedBehaviorPostConditions(b:behavior)
-    // {
-    //      var speed_value := LV("speed_value");
-    //      var result := LV("result");
-    //     ValidBehaviorNonTrivial(b)
-    //     && ValidOperand(last(b),speed_value)
-    //     && OperandContents(last(b),speed_value).Int?
-    //     && ValidOperand(last(b),result)
-    //     && OperandContents(last(b),result).Int?
-    // }
