@@ -34,7 +34,8 @@ module basicNonInterferenceExample refines AbstractNonInterferenceProof{
         var op1 := D(Int(0,IntType(2,false)));
 
         var cSeq := [Ins(ADD(speed_value,2,op1,input)),
-                     Ins(ICMP(result,ugt,2,speed_value,D(Int(0,IntType(2,false)))))];
+                     Ins(ICMP(result,ugt,2,speed_value,D(Int(0,IntType(2,false))))),
+                     Ins(RET(result))];
         Block(cSeq)
     }
 
@@ -46,7 +47,8 @@ module basicNonInterferenceExample refines AbstractNonInterferenceProof{
         var op1 := D(Int(0,IntType(2,false)));
 
         var cSeq := [Ins(ADD(speed_value,2,op1,input)),
-                     Ins(ICMP(result,sgt,2,speed_value,D(Int(0,IntType(2,false)))))];
+                     Ins(ICMP(result,sgt,2,speed_value,D(Int(0,IntType(2,false))))),
+                     Ins(RET(result))];
         Block(cSeq)
     }
 
@@ -54,52 +56,53 @@ module basicNonInterferenceExample refines AbstractNonInterferenceProof{
 
     predicate validInput(s:state, input:operand)
     {
+        && s.output == []
         && ValidOperand(s,input)
         && isInt(OperandContents(s,input))
         && typesMatch(OperandContents(s,D(Int(0,IntType(2,false)))),OperandContents(s,input))
     }
 
-    lemma unwrapPatchBehaviorTest(c:codeRe,s:state, input:operand) returns (b:behavior)
-        requires ValidState(s);
-        requires c == codePatch(input);
+    // lemma unwrapPatchBehaviorTest(c:codeRe,s:state, input:operand) returns (b:behavior)
+    //     requires ValidState(s);
+    //     requires c == codePatch(input);
 
-        // -- input is valid -- ie. valid 16 bit integer 
-        requires validInput(s,input);
-        ensures |b| == 4;
-        ensures b[0] == s;
-        ensures forall i :: i > 0 && i < |b|-1 ==> b[i] == evalInsRe(c.block[i-1].ins,b[i-1]);
-        ensures b[|b|-1] == b[|b|-2];
-        ensures b == [s] + evalCodeRE(c,s)
-        // ensures ValidBehaviorNonTrivial(b);
-        // ensures BehaviorEvalsCode(c,b);
-        {
-            assert forall cs :: cs in c.block ==> !cs.CNil?;
-            assert |c.block| == 2;
-            b := [s] + evalCodeRE(c,s);
+    //     // -- input is valid -- ie. valid 16 bit integer 
+    //     requires validInput(s,input);
+    //     ensures |b| == 4;
+    //     ensures b[0] == s;
+    //     ensures forall i :: i > 0 && i < |b|-1 ==> b[i] == evalInsRe(c.block[i-1].ins,b[i-1]);
+    //     ensures b[|b|-1] == b[|b|-2];
+    //     ensures b == [s] + evalCodeRE(c,s)
+    //     // ensures ValidBehaviorNonTrivial(b);
+    //     // ensures BehaviorEvalsCode(c,b);
+    //     {
+    //         assert forall cs :: cs in c.block ==> !cs.CNil?;
+    //         assert |c.block| == 3;
+    //         b := [s] + evalCodeRE(c,s);
             
-            var step,remainder, subBehavior := unwrapBlock(b,c.block,s);
-            // assert |step| == 1;
-            // assert step[0] == evalInsRe(first(c.block).ins,s);
-            // assert b == [s] + step + evalCodeRE(Block(remainder),last(step));
-            // assert b[0] == s;
-            // assert b[1] ==  evalInsRe(first(c.block).ins,s);
-            // assert b == [s] + step + all_but_first(subBehavior);
-            // assert |remainder| == 1;
-            // assert remainder == all_but_first(c.block);
-            // assert !first(remainder).CNil?;
-            step,remainder,subBehavior := unwrapBlock(subBehavior,remainder,last(step));
-            // assert remainder == [];
-            // assert |b| > 0;
-            // assert ValidBehaviorNonTrivial(b);
-            // assert subBehavior == [];
+    //         var step,remainder, subBehavior := unwrapBlock(b,c.block,s);
+    //         // assert |step| == 1;
+    //         // assert step[0] == evalInsRe(first(c.block).ins,s);
+    //         // assert b == [s] + step + evalCodeRE(Block(remainder),last(step));
+    //         // assert b[0] == s;
+    //         // assert b[1] ==  evalInsRe(first(c.block).ins,s);
+    //         // assert b == [s] + step + all_but_first(subBehavior);
+    //         // assert |remainder| == 1;
+    //         // assert remainder == all_but_first(c.block);
+    //         // assert !first(remainder).CNil?;
+    //         step,remainder,subBehavior := unwrapBlock(subBehavior,remainder,last(step));
+    //         // assert remainder == [];
+    //         // assert |b| > 0;
+    //         // assert ValidBehaviorNonTrivial(b);
+    //         // assert subBehavior == [];
             
-            // step,remainder,subBehavior := unwrapBlock(subBehavior,remainder,last(step));
-            // assert subBehavior == [last(step)] + [last(step)];
-            // assert |b| == 4;
+    //         // step,remainder,subBehavior := unwrapBlock(subBehavior,remainder,last(step));
+    //         // assert subBehavior == [last(step)] + [last(step)];
+    //         // assert |b| == 4;
 
-            // assert remainder == [];
+    //         // assert remainder == [];
 
-        }
+    //     }
 
 
     
@@ -119,7 +122,8 @@ module basicNonInterferenceExample refines AbstractNonInterferenceProof{
         var op1 := D(Int(0,IntType(2,false)));
 
         assert c == Block([Ins(ADD(speed_value,2,op1,input)),
-                     Ins(ICMP(result,ugt,2,speed_value,D(Int(0,IntType(2,false)))))]);
+                     Ins(ICMP(result,ugt,2,speed_value,D(Int(0,IntType(2,false))))),
+                     Ins(RET(result))]);
 
         var b := [s] + evalCodeRE(c,s);
         assert c.Block?;
@@ -131,8 +135,13 @@ module basicNonInterferenceExample refines AbstractNonInterferenceProof{
         // assert |all_but_first(c.block)| == 1;
         // assert all_but_first(c.block)[0] == Ins(ICMP(result,ugt,2,speed_value,D(Int(0,IntType(2,false)))));
         var metaBehavior' := evalCodeRE(first(all_but_first(c.block)),last(metaBehavior));
-        // assert all_but_first(all_but_first(c.block)) == [];
-        assert [last(metaBehavior')] == evalBlockRE(all_but_first(all_but_first(c.block)),last(metaBehavior'));
+
+        var theRest' := evalBlockRE(all_but_first(all_but_first(c.block)),last(metaBehavior'));
+
+        var metaBehavior'' := evalCodeRE(first(all_but_first(all_but_first(c.block))),last(metaBehavior'));
+
+        assert all_but_first(all_but_first(all_but_first(c.block))) == [];
+        assert [last(metaBehavior'')] == evalBlockRE(all_but_first(all_but_first(all_but_first(c.block))),last(metaBehavior''));
         // assert theRest[0] == evalInsRe(ICMP(result,ugt,2,speed_value,D(Int(0,IntType(2,false)))),last(metaBehavior));
 
         assert b[0] == s;
@@ -158,11 +167,20 @@ module basicNonInterferenceExample refines AbstractNonInterferenceProof{
         assert StateNext(b[1],b[2]);
         assert ValidState(b[2]);
 
-        // LAST STEP
-        assert b[2] == b[3];
-        assert ValidState(b[3]);
-        assert NextStep(b[2],b[3],Step.stutterStep());
+
+
+//
+        assert ValidOperand(b[2],result);
+        assert ValidInstruction(b[2],RET(result));
+        assert NextStep(b[2],b[3],Step.evalInsStep(RET(result)));
         assert StateNext(b[2],b[3]);
+        assert ValidState(b[3]);
+
+        // LAST STEP
+        assert b[3] == b[4];
+        assert ValidState(b[4]);
+        assert NextStep(b[3],b[4],Step.stutterStep());
+        assert StateNext(b[3],b[4]);
         
         // Properties
         assert ValidBehaviorNonTrivial(b);
@@ -188,24 +206,28 @@ module basicNonInterferenceExample refines AbstractNonInterferenceProof{
         var op1 := D(Int(0,IntType(2,false)));
 
         assert c == Block([Ins(ADD(speed_value,2,op1,input)),
-                     Ins(ICMP(result,sgt,2,speed_value,D(Int(0,IntType(2,false)))))]);
+                     Ins(ICMP(result,sgt,2,speed_value,D(Int(0,IntType(2,false))))),
+                     Ins(RET(result))]);
 
-        var b := [s] + evalCodeRE(c,s);
+                var b := [s] + evalCodeRE(c,s);
         assert c.Block?;
        
         assert b == [s] + evalBlockRE(c.block,s);
         var metaBehavior := evalCodeRE(first(c.block),s);
         var theRest := evalBlockRE(all_but_first(c.block),last(metaBehavior));
-        assert b == [s] + metaBehavior + theRest;
-        
-
-        assert |all_but_first(c.block)| == 1;
-        assert all_but_first(c.block)[0] == Ins(ICMP(result,sgt,2,speed_value,D(Int(0,IntType(2,false)))));
+        // assert b == [s] + metaBehavior + theRest;
+        // assert |all_but_first(c.block)| == 1;
+        // assert all_but_first(c.block)[0] == Ins(ICMP(result,ugt,2,speed_value,D(Int(0,IntType(2,false)))));
         var metaBehavior' := evalCodeRE(first(all_but_first(c.block)),last(metaBehavior));
-        assert all_but_first(all_but_first(c.block)) == [];
-        assert [last(metaBehavior')] == evalBlockRE(all_but_first(all_but_first(c.block)),last(metaBehavior'));
-        assert theRest[0] == evalInsRe(ICMP(result,sgt,2,speed_value,D(Int(0,IntType(2,false)))),last(metaBehavior));
-        assert |b| == 4;
+
+        var theRest' := evalBlockRE(all_but_first(all_but_first(c.block)),last(metaBehavior'));
+
+        var metaBehavior'' := evalCodeRE(first(all_but_first(all_but_first(c.block))),last(metaBehavior'));
+
+        assert all_but_first(all_but_first(all_but_first(c.block))) == [];
+        assert [last(metaBehavior'')] == evalBlockRE(all_but_first(all_but_first(all_but_first(c.block))),last(metaBehavior''));
+        // assert theRest[0] == evalInsRe(ICMP(result,ugt,2,speed_value,D(Int(0,IntType(2,false)))),last(metaBehavior));
+
 
         assert b[0] == s;
         assert b[1] == evalInsRe(ADD(speed_value,2,op1,input),s);
@@ -230,16 +252,32 @@ module basicNonInterferenceExample refines AbstractNonInterferenceProof{
         assert StateNext(b[1],b[2]);
         assert ValidState(b[2]);
 
-        // LAST STEP
-        assert b[2] == b[3];
-        assert ValidState(b[3]);
-        assert NextStep(b[2],b[3],Step.stutterStep());
+        assert ValidOperand(b[2],result);
+        assert ValidInstruction(b[2],RET(result));
+        assert NextStep(b[2],b[3],Step.evalInsStep(RET(result)));
+        assert b[3].output == [OperandContents(b[2],result)];
         assert StateNext(b[2],b[3]);
+        assert ValidState(b[3]);
+
+        // LAST STEP
+        assert b[3] == b[4];
+        assert ValidState(b[4]);
+        assert NextStep(b[3],b[4],Step.stutterStep());
+        assert StateNext(b[3],b[4]);
         
         // Properties
         assert ValidBehaviorNonTrivial(b);
         assert BehaviorEvalsCode(c,b);
         assert (OperandContents(b[1],speed_value).val > 0  && OperandContents(b[1],speed_value).val <= 0x80 )==> OperandContents(b[2],result).val == 1;
+        assert b[0].output == [];
+        assert b[1].output == [];
+        assert b[2].output == [];
+        assert b[3].output == [OperandContents(b[2],result)];
+        assert b[4].output == [OperandContents(b[2],result)];
+        assert |b| == 5;
+        // bOut(b);
+        // assert ([] + [] + [] + [OperandContents(b[2],result)] + [OperandContents(b[2],result)]) == [OperandContents(b[2],result),OperandContents(b[2],result)];
+        // assert behaviorOutput(b) == [OperandContents(b[2],result),OperandContents(b[2],result)];
         b
 
     }        
@@ -274,6 +312,8 @@ module basicNonInterferenceExample refines AbstractNonInterferenceProof{
                                    && pre == extractVulnBehavior(preCode,s,input)
                                    && MiniSpec(pre,post)
             ensures last(post) == last(pre)
+                        // ensures behaviorOutput(post) == behaviorOutput(pre)
+
             {
                 var speed_value := LV("speed_value");
                 var result := LV("result");
@@ -301,6 +341,8 @@ module basicNonInterferenceExample refines AbstractNonInterferenceProof{
                 var metaBehaviorPost' := evalCodeRE(first(all_but_first(c'.block)),last(metaBehaviorPost));
 
                 assert last(post) == last(pre);
+                                // assert behaviorOutput(post) == behaviorOutput(pre);
+// 
 
             }
     }
