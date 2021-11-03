@@ -56,7 +56,7 @@ module basicNonInterferenceExample refines AbstractNonInterferenceProof{
 
     predicate validInput(s:state, input:operand)
     {
-        && s.output == []
+        && s.o.Nil?
         && ValidOperand(s,input)
         && isInt(OperandContents(s,input))
         && typesMatch(OperandContents(s,D(Int(0,IntType(2,false)))),OperandContents(s,input))
@@ -188,7 +188,9 @@ module basicNonInterferenceExample refines AbstractNonInterferenceProof{
         assert OperandContents(b[1],speed_value).val > 0 ==> OperandContents(b[2],result).val == 1;
         assert ValidOperand(last(b),speed_value);
         assert OperandContents(s,input).val > 0 ==> OperandContents(last(b),speed_value).val > 0;
-
+        assert |b| == 5;
+        assert Out(OperandContents(b[2],result)) in behaviorOutput(b);
+        assert behaviorOutput(b) == [Nil,Nil,Nil,Out(OperandContents(b[2],result)),Out(OperandContents(b[2],result))];
         b
 
     }        
@@ -255,7 +257,7 @@ module basicNonInterferenceExample refines AbstractNonInterferenceProof{
         assert ValidOperand(b[2],result);
         assert ValidInstruction(b[2],RET(result));
         assert NextStep(b[2],b[3],Step.evalInsStep(RET(result)));
-        assert b[3].output == [OperandContents(b[2],result)];
+        assert b[3].o == Out(OperandContents(b[2],result));
         assert StateNext(b[2],b[3]);
         assert ValidState(b[3]);
 
@@ -269,15 +271,17 @@ module basicNonInterferenceExample refines AbstractNonInterferenceProof{
         assert ValidBehaviorNonTrivial(b);
         assert BehaviorEvalsCode(c,b);
         assert (OperandContents(b[1],speed_value).val > 0  && OperandContents(b[1],speed_value).val <= 0x80 )==> OperandContents(b[2],result).val == 1;
-        assert b[0].output == [];
-        assert b[1].output == [];
-        assert b[2].output == [];
-        assert b[3].output == [OperandContents(b[2],result)];
-        assert b[4].output == [OperandContents(b[2],result)];
+        // assert b[0].o == Nil;
+        // assert b[1].o == Nil;
+        // assert b[2].o == Nil;
+        // assert b[3].o == o(OperandContents(b[2],result));
+        // assert b[4].o == o(OperandContents(b[2],result));
         assert |b| == 5;
         // bOut(b);
+        assert Out(OperandContents(b[2],result)) in behaviorOutput(b);
+        // assert |behaviorOutput(b)| == 2;
         // assert ([] + [] + [] + [OperandContents(b[2],result)] + [OperandContents(b[2],result)]) == [OperandContents(b[2],result),OperandContents(b[2],result)];
-        // assert behaviorOutput(b) == [OperandContents(b[2],result),OperandContents(b[2],result)];
+        assert behaviorOutput(b) == [Nil,Nil,Nil,Out(OperandContents(b[2],result)),Out(OperandContents(b[2],result))];
         b
 
     }        
@@ -311,8 +315,8 @@ module basicNonInterferenceExample refines AbstractNonInterferenceProof{
                                    && post == extractPatchBehavior(postCode,s,input)
                                    && pre == extractVulnBehavior(preCode,s,input)
                                    && MiniSpec(pre,post)
-            ensures last(post) == last(pre)
-                        // ensures behaviorOutput(post) == behaviorOutput(pre)
+            // ensures last(post) == last(pre)
+                        ensures behaviorOutput(post) == behaviorOutput(pre)
 
             {
                 var speed_value := LV("speed_value");
@@ -320,8 +324,8 @@ module basicNonInterferenceExample refines AbstractNonInterferenceProof{
                 var op1 := D(Int(0,IntType(2,false)));
 
                 var c := codeVuln(input);
-                assert pre == [s] + evalCodeRE(codeVuln(input),s);
-                assert pre == [s] + evalBlockRE(c.block,s);
+                // assert pre == [s] + evalCodeRE(codeVuln(input),s);
+                // assert pre == [s] + evalBlockRE(c.block,s);
                 var metaBehavior := evalCodeRE(first(c.block),s);
                 var theRest := evalBlockRE(all_but_first(c.block),last(metaBehavior));
 
@@ -331,17 +335,17 @@ module basicNonInterferenceExample refines AbstractNonInterferenceProof{
                 //
 
                 var c' := codePatch(input);
-                assert post == [s] + evalCodeRE(codePatch(input),s);
-                assert post == [s] + evalBlockRE(c'.block,s);
+                // assert post == [s] + evalCodeRE(codePatch(input),s);
+                // assert post == [s] + evalBlockRE(c'.block,s);
                 var metaBehaviorPost := evalCodeRE(first(c'.block),s);
                 var theRestPost := evalBlockRE(all_but_first(c'.block),last(metaBehaviorPost));
                 assert post == [s] + metaBehaviorPost + theRestPost;
                 // assert |all_but_first(c'.block)| == 1;
-                assert all_but_first(c'.block)[0] == Ins(ICMP(result,ugt,2,speed_value,D(Int(0,IntType(2,false)))));
-                var metaBehaviorPost' := evalCodeRE(first(all_but_first(c'.block)),last(metaBehaviorPost));
+                // assert all_but_first(c'.block)[0] == Ins(ICMP(result,ugt,2,speed_value,D(Int(0,IntType(2,false)))));
+                // var metaBehaviorPost' := evalCodeRE(first(all_but_first(c'.block)),last(metaBehaviorPost));
 
-                assert last(post) == last(pre);
-                                // assert behaviorOutput(post) == behaviorOutput(pre);
+                // assert last(post) == last(pre);
+                assert behaviorOutput(post) == behaviorOutput(pre);
 // 
 
             }

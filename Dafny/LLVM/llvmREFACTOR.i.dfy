@@ -35,11 +35,13 @@ module LLVM_defRE {
         lvs:map<LocalVar, Data>,
         gvs:map<GlobalVar, Data>,
         m:MemState,
-        output:seq<Data>,
+        o:output,
         ok:bool)
 
 
 ///
+
+    datatype output = Out(o:Data) | Nil
 
     type codeSeq = seq<codeRe>
 
@@ -70,31 +72,21 @@ module LLVM_defRE {
         |b| >= 2 && b == [b[0]] + evalCodeRE(c,b[0])
     }
 
-    function behaviorOutput(b:behavior) : (bOut:seq<Data>)
-        ensures forall bs :: (bs in b && bs.output != []) ==> bs.output[0] in bOut;
-        
+    function behaviorOutput(b:behavior) : (bOut:seq<output>)
+        ensures |bOut| == |b| 
+        ensures forall i :: (i >= 0 && i < |b|) ==> bOut[i] == b[i].o
         decreases |b|
     {
         if |b| == 0 then
             []
         else 
-            b[0].output + behaviorOutput(all_but_first(b))
+            [b[0].o] + behaviorOutput(all_but_first(b))
+            // if b[0].o.Nil? then
+            //     [] + behaviorOutput(all_but_first(b))
+            // else
+            //     [b[0].o.o] + behaviorOutput(all_but_first(b))
     }
 
-    // lemma bOut(b:behavior)// returns (bb:seq<Data>)
-    // {
-    //     var i := 0;
-    //     var bb := [];
-    //     while (i < |b|)
-    //     {
-    //         bb := bb + b[i].output;
-    //         i := i + 1;
-    //     }
-    //     assert behaviorOutput(b) == bb;
-    //     // bb := behaviorOutput(b);
-    //     // assert forall bs :: (bs in b && bs.output != []) ==> bs.output[0] in bb;
-    //     // return bb;
-    // }
 ///
 
     function evalCodeRE(c:codeRe, s:state) : (b:behavior)
@@ -169,15 +161,15 @@ module LLVM_defRE {
          {
              if dst.LV? then
                 if (dst.l in s.lvs) then
-                    var s' := s.(lvs := s.lvs[dst.l := d],output := []);
+                    var s' := s.(lvs := s.lvs[dst.l := d],o := Nil);
                     assert MemStateNext(s.m,s'.m,MemStep.stutterStep);
                     s'
                 else
-                    var s' := s.(lvs := s.lvs[dst.l := d],output := []);
+                    var s' := s.(lvs := s.lvs[dst.l := d],o := Nil);
                     assert MemStateNext(s.m,s'.m,MemStep.stutterStep);
                     s'
              else
-                var s' := s.(gvs := s.gvs[dst.g := d],output := []);
+                var s' := s.(gvs := s.gvs[dst.g := d],o := Nil);
                     assert MemStateNext(s.m,s'.m,MemStep.stutterStep);
                     s'
          }
@@ -224,7 +216,7 @@ module LLVM_defRE {
                     assert NextStep(s,notOk, Step.errorStateStep());
                     notOk
             case RET(val) => 
-                var s' := s.(output := [OperandContents(s,val)]);
+                var s' := s.(o := Out(OperandContents(s,val)));
                 assert ValidState(s');
                 assert MemStateNext(s.m,s'.m,MemStep.stutterStep);
                 assert validEvalIns(ins,s,s');
@@ -259,7 +251,7 @@ module LLVM_defRE {
         && |s.lvs| == 0
         && |s.gvs| == 0
         && MemInit(s.m) 
-        && |s.output| == 0   
+        && s.o.Nil?   
     }
 
     predicate ValidData(s:state, d:Data)
@@ -366,9 +358,9 @@ module LLVM_defRE {
         
         
         match o
-            case D(d) => data == d && s' == s.(output := []) 
-            case GV(g) => s' == s.(gvs := s.gvs[g := data],output := []) 
-            case LV(l) => s' == s.(lvs := s.lvs[l := data],output := []) 
+            case D(d) => data == d && s' == s.(o := Nil) 
+            case GV(g) => s' == s.(gvs := s.gvs[g := data],o := Nil) 
+            case LV(l) => s' == s.(lvs := s.lvs[l := data],o := Nil) 
             
     }
 
@@ -387,7 +379,7 @@ module LLVM_defRE {
             case ICMP(dst,cond,t,src1,src2) => ValidState(s') 
                                 && ValidData(s',evalICMP(cond,t,OperandContents(s,src1),OperandContents(s,src2)))
                                 && evalUpdate(s, dst, evalICMP(cond,t,OperandContents(s,src1),OperandContents(s,src2)),s')
-            case RET(val) => ValidState(s') && s'.m == s.m && s'.output == [OperandContents(s,val)]     
+            case RET(val) => ValidState(s') && s'.m == s.m && s'.o == Out(OperandContents(s,val))     
     
     }
 

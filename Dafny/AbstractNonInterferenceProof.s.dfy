@@ -68,7 +68,7 @@ abstract module AbstractNonInterferenceProof {
                                              && post == extractPatchBehavior(postCode,s,input)
                                              && pre == extractVulnBehavior(preCode,s,input)
                                              && MiniSpec(pre,post))
-                                            ==> last(post) == last(pre) // behaviorOutput(post) == behaviorOutput(pre)
+                                            ==>   behaviorOutput(post) == behaviorOutput(pre) // behaviorOutput(post) == behaviorOutput(pre)
 
 
 }
