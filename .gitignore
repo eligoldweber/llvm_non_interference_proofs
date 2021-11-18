@@ -6,3 +6,5 @@
 Binaries/* 
 Source/*/bin/
 Source/*/obj/
+.idea/*
+.sconsign.dblite
