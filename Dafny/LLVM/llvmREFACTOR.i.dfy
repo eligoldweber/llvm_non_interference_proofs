@@ -94,7 +94,6 @@ module LLVM_defRE {
         ensures (c.Ins?) ==> |b| == 1
         ensures c.Block? ==> |b| == |evalBlockRE(c.block, s)|
         ensures c.IfElse? ==> if c.ifCond then |b| == |evalBlockRE(c.ifTrue,s)| else |b| == |evalBlockRE(c.ifFalse,s)|
-        
         ensures (c.Ins? && validEvalIns(c.ins,s,b[0]) && b[0].ok) ==> ValidBehavior([s] + b)
         
         decreases c, 0
@@ -384,7 +383,7 @@ module LLVM_defRE {
     }
 
     // Control flow 
-        lemma unwrapBlock(b:behavior,block:codeSeq,s:state) 
+        lemma unwrapBlockWitness(b:behavior,block:codeSeq,s:state) 
             returns (step:behavior,remainder:codeSeq,subBehavior:behavior)
             requires b == [s] + evalBlockRE(block,s);
             // requires ValidState(s);
@@ -392,7 +391,7 @@ module LLVM_defRE {
             ensures (|block| > 0 && !first(block).CNil?) ==> (b == [s] + step + evalCodeRE(Block(remainder),last(step)));
             ensures (|block| > 0 && !first(block).CNil?) ==> subBehavior == [last(step)] + evalBlockRE(remainder,last(step));
             ensures (|block| > 0 && !first(block).CNil?) ==> |remainder| == |block|-1
-             ensures (|block| > 0 && !first(block).CNil?) ==> remainder == all_but_first(block);
+            ensures (|block| > 0 && !first(block).CNil?) ==> remainder == all_but_first(block);
             ensures |block| == 1 ==> |remainder| == 0;
             ensures (|block| > 0 && !first(block).CNil? && remainder == []) ==>  subBehavior == [last(step),last(step)];
             ensures (|block| > 0 && first(block).Ins?) ==> |step| == 1 

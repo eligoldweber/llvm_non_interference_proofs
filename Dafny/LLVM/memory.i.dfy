@@ -151,6 +151,7 @@ lemma StoreImpliesStoreStep(s:MemState, s':MemState, bid:nat, offset:nat, data:D
     requires IsValidPtr(s, bid, offset,1)
     requires data.Int? && IntType(1, false) == data.itype;
     requires Store(s,s',bid,offset,data);
+    ensures NextMemStep(s, s', MemStep.storeStep(bid,offset,data,1));
 {
     assert IsValidPtr(s, bid, offset,1);
     assert data.Int? && IntType(1, false) == data.itype;
