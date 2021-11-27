@@ -87,6 +87,98 @@ module LLVM_defRE {
             //     [b[0].o.o] + behaviorOutput(all_but_first(b))
     }
 
+
+    // function allBehaviors(a:set<behavior>) : (bOut:set<seq<output>>)
+    //     // ensures |bOut| == |a|
+    //     ensures forall aa :: aa in a ==> behaviorOutput(aa) in bOut;
+    //     ensures forall b :: b in bOut ==> exists aa :: aa in a && behaviorOutput(aa) == b
+    //     decreases |a|
+    // {
+    //     if |a| == 0 then
+    //         var empty := {};
+    //         assert |empty| == |a|; 
+    //         empty
+    //     else   
+    //         var x :| x in a;
+    //         var a' := a - {x};
+    //         var singleton := {behaviorOutput(x)};
+    //         var s := singleton + allBehaviors(a');
+            
+    //         s
+    //         //{behaviorOutput(x)} + allBehaviors(a')
+    // }
+
+    function allBehaviorOutput(a:seq<behavior>) : (bOut:seq<seq<output>>)
+        ensures |bOut| == |a|
+        ensures forall a' :: a' in a ==> behaviorOutput(a') in bOut;
+        ensures forall i :: (i >= 0 && i < |a|) ==> bOut[i] == behaviorOutput(a[i])
+        ensures |a| == 0 ==> |bOut| == 0;
+       
+        decreases |a|
+    {
+        if |a| == 0 then
+            var out := [];
+            assert forall a' :: behaviorOutput(a') in out ==> a' in a;
+            out
+        else   
+         
+            var out := [behaviorOutput(a[0])] + allBehaviorOutput(all_but_first(a));
+            
+            out
+            //{behaviorOutput(x)} + allBehaviors(a')
+    }
+
+    predicate equalOutput(a:seq<output>,b:seq<output>)
+        // ensures equalOutput(a,b) ==> a == b
+    {
+        && |a| == |b|
+        && forall i :: (i >=0 && i < |a|) ==> a[i] == b[i]
+    }
+
+
+    lemma equalOutputLemma(a:seq<output>,b:seq<output>)
+        requires equalOutput(a,b)
+        ensures a == b
+    {
+        assert a == b;
+    }
+
+    lemma outputIsEqual(a:seq<output>,b:seq<output>)
+        requires a == b
+        ensures equalOutput(a,b)
+    {
+        assert equalOutput(a,b);
+    }
+
+    lemma transitiveEquality(a:seq<output>,b:seq<output>,c:seq<output>)
+        requires equalOutput(a,c);
+        requires equalOutput(b,c);
+        ensures equalOutput(a,b);
+        ensures a == b
+    {
+        assert equalOutput(a,b);
+        equalOutputLemma(a,b);
+    }
+
+    lemma equalOutputIsTransitive(a:seq<output>,b:seq<output>,all:seq<seq<output>>)
+        requires a == b;
+        requires a in all;
+        ensures b in all;
+    {
+        assert b in all;
+    }
+
+
+
+    // lemma behaviorOutputAll(a:set<behavior>,bOut:seq<seq<output>>)
+    //     requires bOut == allBehaviorOutput(a)
+    //     // ensures forall b :: b in bOut ==> exists a' :: a' in a && behaviorOutput(a') == b
+    // {
+    //     assert |bOut| == |a|;
+    //     assert forall a' :: a' in a ==> behaviorOutput(a') in bOut;
+    //     assert forall b :: b in bOut ==> exists a' :: a' in a && behaviorOutput(a') == b;
+    // }
+
 ///
 
     function evalCodeRE(c:codeRe, s:state) : (b:behavior)
@@ -232,6 +324,7 @@ module LLVM_defRE {
     | ADD(dst:operand, size:nat, src1ADD:operand, src2ADD:operand)
     | SUB(dst:operand, size:nat, src1SUB:operand, src2SUB:operand)
     | ICMP(dst:operand,cond:condition,size:nat,src1:operand,src2:operand)
+    // | BR(if_cond:operand, labelTrue:codeRe,labelFalse:codeRe)
     | RET(val:operand)
 
 
@@ -328,6 +421,26 @@ module LLVM_defRE {
             case LV(l) => s.lvs[l]
             case GV(g) => s.gvs[g]
            
+    }
+
+    lemma uniqueOperandContent(s:state,o:operand)
+        requires ValidOperand(s,o)
+        requires ValidState(s)
+    {
+        assert forall x,y :: (OperandContents(s,o) == x && OperandContents(s,o) == y) ==> x == y;
+    }
+
+    lemma uniqueOperandInState(s:state,o:operand)
+        requires ValidOperand(s,o)
+        requires o.LV?
+        requires ValidState(s)
+    {
+        assert forall x:operand,y:operand :: (&& x.LV? 
+                                                && y.LV?  
+                                                && x.l in s.lvs 
+                                                && y.l in s.lvs 
+                                                && x == o
+                                                && y== o) ==> x == y;
     }
 
     predicate ValidInstruction(s:state, ins:ins)

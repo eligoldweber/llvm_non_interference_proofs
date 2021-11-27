@@ -1,10 +1,13 @@
 include "Types.s.dfy"
 include "Memory.s.dfy"
+include "../Libraries/Seqs.s.dfy"
 
  module System_s
 {
     import opened Types_s
     import opened Memory_s
+     import opened Collections__Seqs_s
+
 //////////////
 
     type addr = int
@@ -62,6 +65,54 @@ include "Memory.s.dfy"
     function behaviorOutput(b:behavior) : (bOut:seq<output>)
         ensures |bOut| == |b| 
         ensures forall i :: (i >= 0 && i < |b|) ==> bOut[i] == b[i].o
+
+
+    function allBehaviors(a:set<behavior>) : (bOut:set<seq<output>>)
+        // ensures |bOut| == |a|
+        decreases |a|
+    {
+        if |a| == 0 then
+            var empty := {};
+            assert |empty| == |a|; 
+            empty
+        else   
+            var x :| x in a;
+            var a' := a - {x};
+            var singleton := {behaviorOutput(x)};
+            var s := singleton + allBehaviors(a');
+            
+            s
+            //{behaviorOutput(x)} + allBehaviors(a')
+    }
+
+    function allBehaviorOutput(a:seq<behavior>) : (bOut:seq<seq<output>>)
+        ensures |bOut| == |a|
+        ensures forall a' :: a' in a ==> behaviorOutput(a') in bOut;
+        ensures forall i :: (i >= 0 && i < |a|) ==> bOut[i] == behaviorOutput(a[i])
+        // ensures forall b :: behaviorOutput(b) in bOut ==> b in a;
+        // ensures forall b :: b in bOut ==> exists a' :: a' in a && behaviorOutput(a') == b
+        // ensures forall a' :: behaviorOutput(a') in bOut ==> a' in a;
+        // ensures forall b :: b in bOut ==> exists aa :: aa in a && behaviorOutput(aa) == b
+        decreases |a|
+    {
+        if |a| == 0 then
+            var out := [];
+            assert forall a' :: behaviorOutput(a') in out ==> a' in a;
+            out
+        else   
+            // var x :| x in a;
+            // var a' := a - {x};
+            // assert x in a;
+            var out := [behaviorOutput(a[0])] + allBehaviorOutput(all_but_first(a));
+            // assert behaviorOutput(a[0]) in out && a[0] in;
+            // assert forall b :: behaviorOutput(b) in [behaviorOutput(x)] ==> behaviorOutput(b) == behaviorOutput(x);
+            // assert forall b :: behaviorOutput(b) in [behaviorOutput(x)] ==> 
+            out
+            //{behaviorOutput(x)} + allBehaviors(a')
+    }
+
+
+
 
     function evalCode(c:codeRe, s:state) : (b:behavior)
         ensures |b| > 0

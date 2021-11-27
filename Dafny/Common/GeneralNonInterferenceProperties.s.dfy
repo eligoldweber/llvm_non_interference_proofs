@@ -3,46 +3,57 @@ include "System.s.dfy"
 abstract module GeneralNonInterferenceProperties {
         import opened System_s
 
-    // datatype abstractState = abstractState(ok:bool)
-
-    // type abstractBehavior = seq<abstractState>
-
     // Describes 'bad' behavior that a safe patch should prune
-    predicate MiniSpec(b:behavior)
+    predicate MiniSpec(b:System_s.behavior)
     // {
     //     exists s :: s in b && !s.ok
     // }
 
 // -- 
     // benignPatch: "The patch does not add any NEW behaviors"
-    predicate benignPatch(a:set<behavior>,b:set<behavior>)
+    predicate benignPatch(a:seq<System_s.behavior>,b:seq<System_s.behavior>)
     {
-        forall p :: p in b ==> p in a
+        // forall p :: p in b ==> p in a
+       
+        var aOut := allBehaviorOutput(a);
+        var bOut := allBehaviorOutput(b);
+        forall p :: p in bOut ==> p in aOut
+
     }
 
     // successfulPatch: "The patch prunes the BAD (defined by MiniSpec) behaviors"
-    predicate successfulPatch(b:set<behavior>)
+    predicate successfulPatch(a:seq<System_s.behavior>,b:seq<System_s.behavior>)
     {
-        forall p :: MiniSpec(p) ==> !(p in b)
+        // forall p :: p in a && MiniSpec(p) ==> !(p in b)
+        var aOut := allBehaviorOutput(a);
+        var bOut := allBehaviorOutput(b);
+        forall p :: (behaviorOutput(p) in aOut && MiniSpec(p)) ==> !(behaviorOutput(p) in bOut)
+
     }
     
     // completePatch: "The patch preserves the GOOD behavior" // Name; complete -> preserving ? 
-    predicate completePatch(a:set<behavior>,b:set<behavior>)
+    predicate completePatch(a:seq<System_s.behavior>,b:seq<System_s.behavior>)
     {
-        forall p :: (p in a && !MiniSpec(p)) ==> p in b
+        // forall p :: (p in a && !MiniSpec(p)) ==> p in b
+
+        var aOut := allBehaviorOutput(a);
+        var bOut := allBehaviorOutput(b);
+        forall p :: (behaviorOutput(p) in aOut && !MiniSpec(p)) ==> behaviorOutput(p) in bOut
     }
 
     // The conjuntion of benign, successful and complete imply that; that after apply the patch, b retains all good behavior from a and 
     // is pruned of all bad behavior. 
-    predicate safePatch(a:set<behavior>,b:set<behavior>)
+    predicate safePatch(a:seq<System_s.behavior>,b:seq<System_s.behavior>)
     {
-        //assert benignPatch(a,b) && successfulPatch(b) && completePatch(a,b) ==> 
-        forall p :: (p in a && !MiniSpec(p)) <==> p in b
+        // forall p :: (p in a && !MiniSpec(p)) <==> p in b
+        var aOut := allBehaviorOutput(a);
+        var bOut := allBehaviorOutput(b);
+        forall p :: (behaviorOutput(p) in aOut && !MiniSpec(p)) <==> behaviorOutput(p) in bOut
     }
 
-    lemma fullPatch(a:set<behavior>,b:set<behavior>)
+    lemma fullPatch(a:seq<System_s.behavior>,b:seq<System_s.behavior>)
         requires benignPatch(a,b);
-        requires successfulPatch(b);
+        requires successfulPatch(a,b);
         requires completePatch(a,b);
         ensures safePatch(a,b);
         // {
@@ -50,16 +61,16 @@ abstract module GeneralNonInterferenceProperties {
         // }
 
 
-//// Helping General Functions
+//// Other General Functions
 
-    function codePatch(input:operand):(out:codeRe)
+    function codePatch(input:System_s.operand):(out:System_s.codeRe)
 
-    function codeVuln(input:operand):(out:codeRe)
+    function codeVuln(input:System_s.operand):(out:System_s.codeRe)
 
-    predicate validInput(s:state, input:operand)
+    predicate validInput(s:System_s.state, input:System_s.operand)
         requires ValidState(s)
 
-    function extractPatchBehavior(c:codeRe,s:state,input:operand) : (b:behavior)
+    function extractPatchBehavior(c:System_s.codeRe,s:System_s.state,input:System_s.operand) : (b:System_s.behavior)
         requires ValidState(s);
         requires c == codePatch(input);
         requires validInput(s,input);
@@ -67,7 +78,7 @@ abstract module GeneralNonInterferenceProperties {
         ensures BehaviorEvalsCode(c,b);
 
 
-    function extractVulnBehavior(c:codeRe,s:state,input:operand) : (b:behavior)
+    function extractVulnBehavior(c:System_s.codeRe,s:System_s.state,input:System_s.operand) : (b:System_s.behavior)
         requires ValidState(s);
         requires c == codeVuln(input);
         requires validInput(s,input);
