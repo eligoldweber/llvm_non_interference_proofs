@@ -3,7 +3,7 @@ include "mul_auto_proofs.i.dfy"
 module Math__mul_auto_i {
 import opened Math__mul_auto_proofs_i
 
-predicate MulAuto()
+predicate {:opaque} MulAuto()
 {
   && (forall x:int, y:int {:trigger x * y} :: x * y == y * x)
   && (forall x:int, y:int, z:int {:trigger (x + y) * z} :: (x + y) * z == x * z + y * z)
@@ -13,6 +13,7 @@ predicate MulAuto()
 lemma lemma_mul_auto()
   ensures  MulAuto()
 {
+  reveal_MulAuto();
   lemma_mul_auto_commutes();
   lemma_mul_auto_distributes();
 }
@@ -26,6 +27,7 @@ lemma lemma_mul_auto_induction(x:int, f:int->bool)
   ensures  MulAuto()
   ensures  f(x)
 {
+  reveal_MulAuto();
   lemma_mul_auto_commutes();
   lemma_mul_auto_distributes();
   assert forall i {:trigger f(i)} :: TMulAutoLe(0, i) && f(i) ==> f(i + 1);
@@ -41,6 +43,7 @@ lemma lemma_mul_auto_induction_forall(f:int->bool)
   ensures  MulAuto()
   ensures  forall i {:trigger f(i)} :: f(i)
 {
+  reveal_MulAuto();
   lemma_mul_auto_commutes();
   lemma_mul_auto_distributes();
   assert forall i {:trigger f(i)} :: TMulAutoLe(0, i) && f(i) ==> f(i + 1);

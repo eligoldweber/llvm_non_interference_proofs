@@ -52,7 +52,7 @@ module LLVM_defRE {
     | CNil
             
     type behavior = seq<state>
-    predicate ValidBehavior(states:behavior)
+    predicate {:opaque} ValidBehavior(states:behavior)
     {
         || |states| == 0
         || (|states| == 1 && ValidState(states[0])) 
@@ -67,12 +67,12 @@ module LLVM_defRE {
         
     }
 
-  predicate BehaviorEvalsCode(c:codeRe,b:behavior)
+  predicate {:opaque} BehaviorEvalsCode(c:codeRe,b:behavior)
     {
         |b| >= 2 && b == [b[0]] + evalCodeRE(c,b[0])
     }
 
-    function behaviorOutput(b:behavior) : (bOut:seq<output>)
+    function {:opaque} behaviorOutput(b:behavior) : (bOut:seq<output>)
         ensures |bOut| == |b| 
         ensures forall i :: (i >= 0 && i < |b|) ==> bOut[i] == b[i].o
         decreases |b|
@@ -190,6 +190,7 @@ module LLVM_defRE {
         
         decreases c, 0
     {
+        reveal_ValidBehavior();
         match c
             case Ins(ins) => [evalInsRe(ins,s)]
             case Block(block) => evalBlockRE(block, s) 
@@ -513,6 +514,7 @@ module LLVM_defRE {
             // requires |block| > 0;
             
         {
+            reveal_ValidBehavior();
             if (|block| == 0 || first(block).CNil?) {
                 assert b == [s,s];
                 step := [s];

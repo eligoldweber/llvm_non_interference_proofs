@@ -135,7 +135,7 @@ module simpleBugCode{
         requires validInput(s,input);
         ensures |b| == 5;
         ensures b[0] == s;
-        ensures forall i :: i > 0 && i < |b|-1 ==> b[i] == evalInsRe(codePatch(input).block[i-1].ins,b[i-1]);
+        // ensures forall i :: i > 0 && i < |b|-1 ==> b[i] == evalInsRe(codePatch(input).block[i-1].ins,b[i-1]);
         ensures b[|b|-1] == b[|b|-2];
         // ensures b == [s] + evalCodeRE(c,s)
 
@@ -146,7 +146,7 @@ module simpleBugCode{
 
         ensures ValidBehaviorNonTrivial(b);
         ensures BehaviorEvalsCode(codePatch(input),b);
-        ensures forall b' :: (BehaviorEvalsCode(codePatch(input),b')  && b'[0] == b[0]) ==> b' == b
+        // ensures forall b' :: (BehaviorEvalsCode(codePatch(input),b')  && b'[0] == b[0]) ==> b' == b
 
         ensures exists patch :: BehaviorEvalsCode(codePatch(input),patch) && b == patch;
         // ensures  exists result :: (
@@ -156,6 +156,7 @@ module simpleBugCode{
         ensures (behaviorOutput(b) == [Nil,Nil,Nil,Out((Int(1,IntType(1,false)))),Out((Int(1,IntType(1,false))))]);
 
         {
+            reveal_BehaviorEvalsCode();
             var c := codePatch(input);
             assert forall cs :: cs in c.block ==> !cs.CNil?;
             assert |c.block| == 3;
@@ -267,9 +268,9 @@ module simpleBugCode{
 
         ensures ValidBehaviorNonTrivial(b);
         ensures BehaviorEvalsCode(codeVuln(input),b);
-        ensures forall b' :: (BehaviorEvalsCode(codeVuln(input),b')  && b'[0] == b[0]) ==> b' == b
+        ensures forall b' :: (|b'| > 0 && BehaviorEvalsCode(codeVuln(input),b')  && b'[0] == b[0]) ==> b' == b
 
-        ensures exists input :: validInput(s,input) && BehaviorEvalsCode(codeVuln(input),b) && b[0] == s
+        ensures exists input :: |b| > 0 && validInput(s,input) && BehaviorEvalsCode(codeVuln(input),b) && b[0] == s
 
         ensures ValidBehaviorNonTrivial(b);
         ensures BehaviorEvalsCode(codeVuln(input),b);
@@ -285,6 +286,7 @@ module simpleBugCode{
                                                             && OperandContents(last(b),result).Int?
                                                             && OperandContents(last(b),result).val == 0));
         {
+            reveal_BehaviorEvalsCode();
             var c := codeVuln(input);
             assert forall cs :: cs in c.block ==> !cs.CNil?;
             assert |c.block| == 3;
@@ -372,25 +374,25 @@ module simpleBugCode{
 
     lemma validInputPatchImpliesBehavior(s:state)
         requires ValidState(s);
-        ensures forall input :: validInput(s,input) ==> (exists b :: BehaviorEvalsCode(codePatch(input),b) && b[0] == s)
+        ensures forall input :: validInput(s,input) ==> (exists b :: |b| > 0 && BehaviorEvalsCode(codePatch(input),b) && b[0] == s)
     {
         forall input | validInput(s,input)
-            ensures exists b :: BehaviorEvalsCode(codePatch(input),b) && b[0] == s
+            ensures exists b :: |b| > 0 && BehaviorEvalsCode(codePatch(input),b) && b[0] == s
         {
             var b := unwrapPatchBehaviors(s,input);
-            assert exists b' :: BehaviorEvalsCode(codePatch(input),b') && b'[0] == s;
+            assert exists b' :: |b'| > 0 && BehaviorEvalsCode(codePatch(input),b') && b'[0] == s;
         }
     }
 
     lemma validInputVulnImpliesBehavior(s:state)
         requires ValidState(s);
-        ensures forall input :: validInput(s,input) ==> (exists b :: BehaviorEvalsCode(codeVuln(input),b) && b[0] == s)
+        ensures forall input :: validInput(s,input) ==> (exists b :: |b| > 0 && BehaviorEvalsCode(codeVuln(input),b) && b[0] == s)
     {
         forall input | validInput(s,input)
-            ensures exists b :: BehaviorEvalsCode(codeVuln(input),b) && b[0] == s
+            ensures exists b :: |b| > 0 && BehaviorEvalsCode(codeVuln(input),b) && b[0] == s
         {
             var b := unwrapVulnBehaviors(s,input);
-            assert exists b' :: BehaviorEvalsCode(codeVuln(input),b') && b'[0] == s;
+            assert exists b' :: |b'| > 0 && BehaviorEvalsCode(codeVuln(input),b') && b'[0] == s;
         }
     }
 
@@ -406,13 +408,15 @@ module simpleBugCode{
     predicate nonTrivialBehaviorPreconditionsPatch(s:state,patchBehaviors:seq<behavior>)
         requires ValidState(s)
     {   
-        (forall b :: b in patchBehaviors <==> (exists input :: validInput(s,input) && BehaviorEvalsCode(codePatch(input),b) && b[0] == s))
+        // reveal_BehaviorEvalsCode();
+        (forall b :: b in patchBehaviors <==> (exists input :: validInput(s,input) &&  ValidBehaviorNonTrivial(b) && BehaviorEvalsCode(codePatch(input),b) && b[0] == s))
     }
     
     predicate nonTrivialBehaviorPreconditionsVuln(s:state,vulnBehaviors:seq<behavior>)
         requires ValidState(s)
     {
-        (forall b :: b in vulnBehaviors <==> (exists input :: validInput(s,input) && BehaviorEvalsCode(codeVuln(input),b) && b[0] == s))
+        // reveal_BehaviorEvalsCode();
+        (forall b :: b in vulnBehaviors <==> (exists input :: validInput(s,input) &&  ValidBehaviorNonTrivial(b) && BehaviorEvalsCode(codeVuln(input),b) && b[0] == s))
     }
 
     predicate validPatchBehavior(b:behavior)

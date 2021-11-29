@@ -16,26 +16,43 @@ module simpleBugBenignLemmas{
         requires b[0] == s;
         requires s.o.Nil?;
 
-        ensures  forall input :: (validInput(s,input) && OperandContents(s,input).val < 2 && BehaviorEvalsCode(codeVuln(input),b)) 
+        ensures  forall input :: (validInput(s,input) && OperandContents(s,input).val < 2 && ValidBehaviorNonTrivial(b) &&BehaviorEvalsCode(codeVuln(input),b)) 
                                   ==> (behaviorOutput(b) == [Nil,Nil,Nil,Out((Int(1,IntType(1,false)))),Out((Int(1,IntType(1,false))))]);
-        ensures  forall input :: (validInput(s,input) && OperandContents(s,input).val >= 2 && BehaviorEvalsCode(codeVuln(input),b)) 
+        ensures  forall input :: (validInput(s,input) && OperandContents(s,input).val >= 2 && ValidBehaviorNonTrivial(b) && BehaviorEvalsCode(codeVuln(input),b)) 
                                   ==> (behaviorOutput(b) == [Nil,Nil,Nil,Out((Int(0,IntType(1,false)))),Out((Int(0,IntType(1,false))))]);
     {
         var inputWitness := D(Int(1,IntType(4,false)));
         assert validInput(s,inputWitness);
-        forall input | validInput(s,input) && OperandContents(s,input).val < 2 && BehaviorEvalsCode(codeVuln(input),b)
+        forall input | validInput(s,input) && OperandContents(s,input).val < 2 && ValidBehaviorNonTrivial(b) && BehaviorEvalsCode(codeVuln(input),b)
             ensures (behaviorOutput(b) == [Nil,Nil,Nil,Out((Int(1,IntType(1,false)))),Out((Int(1,IntType(1,false))))]);
         {
             var input :| validInput(s,input) && OperandContents(s,input).val < 2 && BehaviorEvalsCode(codeVuln(input),b);
             var b' := unwrapVulnBehaviors(s,input);
         }
-        forall input | validInput(s,input) && OperandContents(s,input).val >= 2 && BehaviorEvalsCode(codeVuln(input),b)
+        forall input | validInput(s,input) && OperandContents(s,input).val >= 2 && ValidBehaviorNonTrivial(b) && BehaviorEvalsCode(codeVuln(input),b)
             ensures (behaviorOutput(b) == [Nil,Nil,Nil,Out((Int(0,IntType(1,false)))),Out((Int(0,IntType(1,false))))]);
         {
             var input :| validInput(s,input) && OperandContents(s,input).val >= 2 && BehaviorEvalsCode(codeVuln(input),b);
             var b' := unwrapVulnBehaviors(s,input);
         }
      
+    }
+lemma existsVulnBehavor(s:state,b:behavior,vulnBehaviors:seq<behavior>)
+        requires ValidState(s);
+        requires validPatchBehavior(b)
+        requires |b| > 0;
+        requires |vulnBehaviors| > 0; 
+        requires b[0] == s;
+        requires forall v :: v in vulnBehaviors <==> (exists input :: validInput(s,input) && ValidBehaviorNonTrivial(v) && BehaviorEvalsCode(codeVuln(input),v) && v[0] == s)
+        requires forall input :: validInput(s,input) ==> (exists b :: ValidBehaviorNonTrivial(b) && BehaviorEvalsCode(codeVuln(input),b) && b[0] == s)
+        ensures exists vuln, vulnIn :: vuln in vulnBehaviors && validInput(s,vulnIn)  && OperandContents(s,vulnIn).val < 2 && BehaviorEvalsCode(codeVuln(vulnIn),vuln);
+
+    {
+        reveal_BehaviorEvalsCode();
+        // validInputVulnImpliesBehavior(s);
+        var input :| BehaviorEvalsCode(codePatch(input),b) && |b| > 0 && validInput(b[0],input);
+        var b' := unwrapPatchBehaviors(s,input);
+        assert exists vuln, vulnIn :: vuln in vulnBehaviors && validInput(s,vulnIn)  && OperandContents(s,vulnIn).val < 2 && BehaviorEvalsCode(codeVuln(vulnIn),vuln);
     }
 
     lemma vulnBehaviorIncludesPatchedBehavior(s:state,b:behavior,vulnBehaviors:seq<behavior>)
@@ -44,17 +61,16 @@ module simpleBugBenignLemmas{
         requires |b| > 0;
         requires |vulnBehaviors| > 0; 
         requires b[0] == s;
-        requires forall v :: v in vulnBehaviors <==> (exists input :: validInput(s,input) && BehaviorEvalsCode(codeVuln(input),v) && v[0] == s)
+        requires forall v :: v in vulnBehaviors <==> (exists input :: validInput(s,input) && ValidBehaviorNonTrivial(v) && BehaviorEvalsCode(codeVuln(input),v) && v[0] == s)
         ensures exists v :: (v in vulnBehaviors && equalOutput(behaviorOutput(v), [Nil,Nil,Nil,Out((Int(1,IntType(1,false)))),Out((Int(1,IntType(1,false))))]));
-        // ensures  [Nil,Nil,Nil,Out((Int(1,IntType(1,false)))),Out((Int(1,IntType(1,false))))] in allBehaviorOutput(vulnBehaviors);
 
     {
+        reveal_BehaviorEvalsCode();
         validInputVulnImpliesBehavior(s);
         var input :| BehaviorEvalsCode(codePatch(input),b) && |b| > 0 && validInput(b[0],input);
         var b' := unwrapPatchBehaviors(s,input);
-        // assert equalOutput(behaviorOutput(b),[Nil,Nil,Nil,Out((Int(1,IntType(1,false)))),Out((Int(1,IntType(1,false))))]);
-        // equalOutputLemma(behaviorOutput(b),[Nil,Nil,Nil,Out((Int(1,IntType(1,false)))),Out((Int(1,IntType(1,false))))]);
-        assert exists vuln, vulnIn :: vuln in vulnBehaviors && validInput(s,vulnIn)  && OperandContents(s,vulnIn).val < 2 && BehaviorEvalsCode(codeVuln(vulnIn),vuln);
+       
+        existsVulnBehavor(s,b,vulnBehaviors);
         var vuln, vulnIn :| vuln in vulnBehaviors && validInput(s,vulnIn)  && OperandContents(s,vulnIn).val < 2 && BehaviorEvalsCode(codeVuln(vulnIn),vuln);
         possibleVulnOutputs(s,vuln);
         assert equalOutput(behaviorOutput(vuln),[Nil,Nil,Nil,Out((Int(1,IntType(1,false)))),Out((Int(1,IntType(1,false))))]);
@@ -72,8 +88,8 @@ module simpleBugBenignLemmas{
         requires |patchBehaviors| == 0
         requires |patchOut| == 0
         requires ValidState(s);
-        requires forall b :: b in vulnBehaviors <==> (exists input :: validInput(s,input) && BehaviorEvalsCode(codeVuln(input),b) && b[0] == s)
-        requires forall b :: b in patchBehaviors <==> (exists input :: validInput(s,input) && BehaviorEvalsCode(codePatch(input),b) && b[0] == s)
+        requires forall b :: b in vulnBehaviors <==> (exists input :: validInput(s,input) &&  ValidBehaviorNonTrivial(b) && BehaviorEvalsCode(codeVuln(input),b) && b[0] == s)
+        requires forall b :: b in patchBehaviors <==> (exists input :: validInput(s,input) &&  ValidBehaviorNonTrivial(b) && BehaviorEvalsCode(codePatch(input),b) && b[0] == s)
 
         ensures forall p :: p in patchOut ==> p in vulnOut
         {
@@ -98,6 +114,7 @@ module simpleBugBenignLemmas{
         ensures forall p :: p in patchBehaviors ==> behaviorOutput(p) in vulnOut;
         ensures forall p :: p in patchBehaviors ==> behaviorOutput(p) in patchOut;
     {
+        reveal_BehaviorEvalsCode();
         validInputVulnImpliesBehavior(s);
         assert |patchBehaviors| > 0;
         assert forall p :: p in patchBehaviors ==> validPatchBehavior(p);
@@ -128,25 +145,25 @@ module simpleBugBenignLemmas{
 
    lemma validInputPatchImpliesBehavior(s:state)
         requires ValidState(s);
-        ensures forall input :: validInput(s,input) ==> (exists b :: BehaviorEvalsCode(codePatch(input),b) && b[0] == s)
+        ensures forall input :: validInput(s,input) ==> (exists b :: ValidBehaviorNonTrivial(b) &&  BehaviorEvalsCode(codePatch(input),b) && b[0] == s)
     {
         forall input | validInput(s,input)
-            ensures exists b :: BehaviorEvalsCode(codePatch(input),b) && b[0] == s
+            ensures exists b :: ValidBehaviorNonTrivial(b) && BehaviorEvalsCode(codePatch(input),b) && b[0] == s
         {
             var b := unwrapPatchBehaviors(s,input);
-            assert exists b' :: BehaviorEvalsCode(codePatch(input),b') && b'[0] == s;
+            assert exists b' :: ValidBehaviorNonTrivial(b') && BehaviorEvalsCode(codePatch(input),b') && b'[0] == s;
         }
     }
 
     lemma validInputVulnImpliesBehavior(s:state)
         requires ValidState(s);
-        ensures forall input :: validInput(s,input) ==> (exists b :: BehaviorEvalsCode(codeVuln(input),b) && b[0] == s)
+        ensures forall input :: validInput(s,input) ==> (exists b :: ValidBehaviorNonTrivial(b) && BehaviorEvalsCode(codeVuln(input),b) && b[0] == s)
     {
         forall input | validInput(s,input)
-            ensures exists b :: BehaviorEvalsCode(codeVuln(input),b) && b[0] == s
+            ensures exists b :: ValidBehaviorNonTrivial(b) && BehaviorEvalsCode(codeVuln(input),b) && b[0] == s
         {
             var b := unwrapVulnBehaviors(s,input);
-            assert exists b' :: BehaviorEvalsCode(codeVuln(input),b') && b'[0] == s;
+            assert exists b' :: ValidBehaviorNonTrivial(b') && BehaviorEvalsCode(codeVuln(input),b') && b'[0] == s;
         }
     }
 

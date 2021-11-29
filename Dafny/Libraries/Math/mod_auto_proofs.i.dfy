@@ -71,6 +71,7 @@ lemma lemma_mod_auto_basics(n:int)
   ensures  forall x:int {:trigger (x - n) / n} :: (x - n) / n == x / n - 1
   ensures  forall x:int {:trigger x % n} :: 0 <= x < n <==> x % n == x
 {
+    reveal_MulAuto();
   forall x:int
     ensures 0 <= x < n <==> x % n == x
   {
