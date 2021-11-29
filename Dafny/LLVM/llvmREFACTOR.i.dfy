@@ -72,6 +72,18 @@ module LLVM_defRE {
         |b| >= 2 && b == [b[0]] + evalCodeRE(c,b[0])
     }
 
+    lemma behaviorThatEvalsSameCodeWithSameInitIsEqual(s:state,c:codeRe,b:behavior)
+        requires ValidState(s);
+        requires ValidBehaviorNonTrivial(b);
+        requires BehaviorEvalsCode(c,b);
+        ensures forall b' :: (|b'| > 0 && BehaviorEvalsCode(c,b')  && b'[0] == b[0]) ==> b' == b;
+     {  
+         reveal_BehaviorEvalsCode();
+         assert forall b' :: (|b'| > 0 && BehaviorEvalsCode(c,b')  && b'[0] == b[0]) ==> b' == b;
+     }
+
+
+
     function {:opaque} behaviorOutput(b:behavior) : (bOut:seq<output>)
         ensures |bOut| == |b| 
         ensures forall i :: (i >= 0 && i < |b|) ==> bOut[i] == b[i].o

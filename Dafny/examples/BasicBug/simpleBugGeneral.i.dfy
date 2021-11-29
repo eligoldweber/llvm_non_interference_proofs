@@ -21,26 +21,12 @@ module simpleBugGeneral{
     predicate RemovedBehaviors(b:behavior)
     {
 
-        && ValidBehaviorNonTrivial(b)
-        && ValidState(last(b))
-        && (exists result:LocalVar :: (result in last(b).lvs 
-                                    && ValidOperand(last(b),LV(result))
-                                    && OperandContents(last(b),LV(result)).Int?
-                                    && OperandContents(last(b),LV(result)).val == 0))
-        // && exists s:state :: (&& s in b 
-        //                       && ValidState(s)
-        //                       && ValidOperand(s,result)
-        //                       && OperandContents(s,result).Int?
-        //                       && OperandContents(s,result).val == 0)
-    }
-    predicate RemovedBehaviorsUpdated(b:behavior)
-    {
-        // var result := LV("result"); 
-        && ValidBehaviorNonTrivial(b)
+       && ValidBehaviorNonTrivial(b)
         && exists s:state,result:operand :: (&& s in b
                                             && last(b) == s 
                                             && ValidState(s)
                                             && result.LV?
+                                            && result.l == "result"
                                             && result.l in s.lvs
                                             && ValidOperand(s,result)
                                             && OperandContents(s,result).Int?
@@ -49,7 +35,7 @@ module simpleBugGeneral{
 
     predicate MiniSpec(b:behavior)
     {
-        RemovedBehaviorsUpdated(b)
+        RemovedBehaviors(b)
     }
 
     // successfulPatch: "The patch prunes the BAD (defined by MiniSpec) behaviors"

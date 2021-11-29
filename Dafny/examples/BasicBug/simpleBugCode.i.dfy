@@ -149,10 +149,17 @@ module simpleBugCode{
         // ensures forall b' :: (BehaviorEvalsCode(codePatch(input),b')  && b'[0] == b[0]) ==> b' == b
 
         ensures exists patch :: BehaviorEvalsCode(codePatch(input),patch) && b == patch;
-        // ensures  exists result :: (
-        //                 && ValidOperand(last(b),result)
-        //                 && OperandContents(last(b),result).Int?
-        //                 && OperandContents(last(b),result).val == 1);
+        // ensures forall b' :: (|b'| > 0 && BehaviorEvalsCode(codePatch(input),b')  && b'[0] == b[0]) ==> b' == b
+
+        ensures  !(exists s:state,result:operand :: (&& s in b
+                                                        && last(b) == s 
+                                                        && ValidState(s)
+                                                        && result.LV?
+                                                        && result.l == "result"
+                                                        && result.l in s.lvs
+                                                        && ValidOperand(s,result)
+                                                        && OperandContents(s,result).Int?
+                                                        && OperandContents(s,result).val == 0 ));
         ensures (behaviorOutput(b) == [Nil,Nil,Nil,Out((Int(1,IntType(1,false)))),Out((Int(1,IntType(1,false))))]);
 
         {
@@ -242,14 +249,15 @@ module simpleBugCode{
             //                   && OperandContents(s,result).Int?
             //                   && OperandContents(s,result).val == 1));
 
-            // assert (exists s:state,result:operand :: (&& s in b
-            //                                         && last(b) == s 
-            //                                         && ValidState(s)
-            //                                         && result.LV?
-            //                                         && result.l in s.lvs
-            //                                         && ValidOperand(s,result)
-            //                                         && OperandContents(s,result).Int?
-            //                                         && OperandContents(s,result).val == 1));
+        //    assert  !(exists s:state,result:operand :: (&& s in b
+        //                                                 && last(b) == s 
+        //                                                 && ValidState(s)
+        //                                                 && result.LV?
+        //                                                 && result.l == "result"
+        //                                                 && result.l in s.lvs
+        //                                                 && ValidOperand(s,result)
+        //                                                 && OperandContents(s,result).Int?
+        //                                                 && OperandContents(s,result).val == 0 ));
 
 
         }
@@ -261,14 +269,14 @@ module simpleBugCode{
         requires validInput(s,input);
         ensures |b| == 5;
         ensures b[0] == s;
-        ensures forall i :: i > 0 && i < |b|-1 ==> b[i] == evalInsRe(codeVuln(input).block[i-1].ins,b[i-1]);
-        ensures b[|b|-1] == b[|b|-2];
+        // ensures forall i :: i > 0 && i < |b|-1 ==> b[i] == evalInsRe(codeVuln(input).block[i-1].ins,b[i-1]);
+        // ensures b[|b|-1] == b[|b|-2];
         // ensures b == [s] + evalCodeRE(c,s)
 
 
         ensures ValidBehaviorNonTrivial(b);
         ensures BehaviorEvalsCode(codeVuln(input),b);
-        ensures forall b' :: (|b'| > 0 && BehaviorEvalsCode(codeVuln(input),b')  && b'[0] == b[0]) ==> b' == b
+        // ensures forall b' :: (|b'| > 0 && BehaviorEvalsCode(codeVuln(input),b')  && b'[0] == b[0]) ==> b' == b
 
         ensures exists input :: |b| > 0 && validInput(s,input) && BehaviorEvalsCode(codeVuln(input),b) && b[0] == s
 
@@ -362,13 +370,14 @@ module simpleBugCode{
 
             assert behaviorOutput(b) == [Nil,Nil,Nil,Out(OperandContents(b[2],result)),Out(OperandContents(b[2],result))];
 
-            assert OperandContents(s,input).val == 2 ==>( exists result:operand :: 
-                                                            (&& ValidState(last(b))
-                                                            && result.LV?
-                                                            && result.l in last(b).lvs
-                                                            && ValidOperand(last(b),result)
-                                                            && OperandContents(last(b),result).Int?
-                                                            && OperandContents(last(b),result).val == 0));
+            // assert OperandContents(s,input).val == 2 ==>  (exists s:state,result:operand :: (&& s in b
+            //                                                 && last(b) == s 
+            //                                                 && ValidState(s)
+            //                                                 && result.LV?
+            //                                                 && result.l in s.lvs
+            //                                                 && ValidOperand(s,result)
+            //                                                 && OperandContents(s,result).Int?
+            //                                                 && OperandContents(s,result).val == 0));
 
         }
 
