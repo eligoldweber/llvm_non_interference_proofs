@@ -20,9 +20,10 @@ function all_but_last<T>(s:seq<T>):seq<T>
   s[..|s|-1]
 }
 
-function all_but_first<T>(s:seq<T>):seq<T>
+function all_but_first<T>(s:seq<T>): (t:seq<T>)
   requires |s| > 0
   ensures |all_but_first(s)| == |s| - 1
+  ensures forall n :: n in t ==> n in s 
 {
   s[1..]
 }

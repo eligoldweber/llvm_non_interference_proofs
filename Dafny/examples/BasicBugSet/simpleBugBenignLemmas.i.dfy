@@ -2,13 +2,14 @@ include "simpleBugCode.i.dfy"
 include "simpleBugGeneral.i.dfy"
 include "../../LLVM/llvmREFACTOR.i.dfy"
 include "../../LLVM/types.dfy"
+include "../../Libraries/Sets.i.dfy"
 
 module simpleBugBenignLemmas{
     import opened simpleBugCode
     import opened simpleBugGeneral
     import opened LLVM_defRE
     import opened types
-
+    import opened Collections__Sets_i
 
     lemma possibleVulnOutputs(s:state, b:behavior) 
         requires ValidState(s);
@@ -39,7 +40,7 @@ module simpleBugBenignLemmas{
         }
      
     }
-lemma existsVulnBehavor(s:state,b:behavior,vulnBehaviors:seq<behavior>,input:operand)
+lemma existsVulnBehavor(s:state,b:behavior,vulnBehaviors:set<behavior>,input:operand)
         requires ValidState(s);
         requires validPatchBehavior(b)
         requires |b| > 0;
@@ -58,7 +59,7 @@ lemma existsVulnBehavor(s:state,b:behavior,vulnBehaviors:seq<behavior>,input:ope
         assert exists vuln, vulnIn :: vuln in vulnBehaviors && validInput(s,vulnIn)  && OperandContents(s,vulnIn).val < 2 && BehaviorEvalsCode(codeVuln(vulnIn),vuln);
     }
 
-    lemma vulnBehaviorIncludesPatchedBehavior(s:state,b:behavior,vulnBehaviors:seq<behavior>)
+    lemma vulnBehaviorIncludesPatchedBehavior(s:state,b:behavior,vulnBehaviors:set<behavior>)
         requires ValidState(s);
         requires validPatchBehavior(b)
         requires |b| > 0;
@@ -80,14 +81,14 @@ lemma existsVulnBehavor(s:state,b:behavior,vulnBehaviors:seq<behavior>,input:ope
         
         assert vuln in vulnBehaviors && equalOutput(behaviorOutput(vuln), behaviorOutput(b));
         assert exists v :: (v in vulnBehaviors && equalOutput(behaviorOutput(v), behaviorOutput(b)));
-        var vulnOut := allBehaviorOutput(vulnBehaviors);
+        var vulnOut := allBehaviorOutputSet(vulnBehaviors);
         assert forall v :: v in vulnBehaviors ==> behaviorOutput(v) in vulnOut;
         assert [Nil,Nil,Nil,Out((Int(1,IntType(1,false)))),Out((Int(1,IntType(1,false))))] in vulnOut;
 
     }
 
 
-    lemma patchIsBenignTrivial(s:state,vulnBehaviors:seq<behavior>,patchBehaviors:seq<behavior>,vulnOut:seq<seq<output>>,patchOut:seq<seq<output>>)
+    lemma patchIsBenignTrivial(s:state,vulnBehaviors:set<behavior>,patchBehaviors:set<behavior>,vulnOut:set<seq<output>>,patchOut:set<seq<output>>)
         requires |patchBehaviors| == 0
         requires |patchOut| == 0
         requires ValidState(s);
@@ -106,23 +107,35 @@ lemma existsVulnBehavor(s:state,b:behavior,vulnBehaviors:seq<behavior>,input:ope
         }
 
 
-    lemma patchIsBenignNonTrivial(s:state,vulnBehaviors:seq<behavior>,patchBehaviors:seq<behavior>,vulnOut:seq<seq<output>>,patchOut:seq<seq<output>>)
+    lemma patchIsBenignNonTrivial(s:state,vulnBehaviors:set<behavior>,patchBehaviors:set<behavior>,vulnOut:set<seq<output>>,patchOut:set<seq<output>>)
         requires nonTrivialBehaviorPreconditions(s,vulnBehaviors,patchBehaviors)
         requires |patchBehaviors| > 0;
-        requires vulnOut == allBehaviorOutput(vulnBehaviors);
-        requires patchOut ==  allBehaviorOutput(patchBehaviors);
+        requires vulnOut == allBehaviorOutputSet(vulnBehaviors);
+        requires patchOut ==  allBehaviorOutputSet(patchBehaviors);
+        // requires expandedAllBehaviorsSurjective(vulnBehaviors,vulnOut);
+        // requires expandedAllBehaviorsSurjective(patchBehaviors,patchOut);
 
+        // requires SurjectiveOver(vulnBehaviors,vulnOut, x => behaviorOutput(x));
+        // requires SurjectiveOver(patchBehaviors,patchOut, x => behaviorOutput(x));
         ensures forall p :: p in patchBehaviors ==> exists v :: (v in vulnBehaviors && equalOutput(behaviorOutput(v), behaviorOutput(p)));
         ensures forall p :: p in patchBehaviors ==> equalOutput(behaviorOutput(p),[Nil,Nil,Nil,Out((Int(1,IntType(1,false)))),Out((Int(1,IntType(1,false))))]);
         ensures forall p :: p in patchBehaviors ==> behaviorOutput(p) in vulnOut;
         ensures forall p :: p in patchBehaviors ==> behaviorOutput(p) in patchOut;
     {
         reveal_BehaviorEvalsCode();
-        validInputVulnImpliesBehavior(s);
+        // validInputVulnImpliesBehavior(s);
+        // reveal_expandedAllBehaviorsSurjective();
         reveal_nonTrivialBehaviorPreconditionsVuln();
         reveal_nonTrivialBehaviorPreconditionsPatch();
+        // reveal_allBehaviorOutputSet();
         assert |patchBehaviors| > 0;
         assert forall p :: p in patchBehaviors ==> validPatchBehavior(p);
+
+        // allBehaviorEqualityIsInjective(vulnBehaviors,vulnOut);
+        //         assert SurjectiveOver(vulnBehaviors,vulnOut, x => behaviorOutput(x));// ==> forall y :: y in vulnOut ==> (exists x :: x in vulnBehaviors && behaviorOutput(x) == y);
+
+        // allBehaviorsSetSurjective(vulnBehaviors,vulnOut);
+        // assert  
         // assert forall x :: x in allBehaviors(patchBehaviors) ==> equalOutput(x,[Nil,Nil,Nil,Out((Int(1,IntType(1,false)))),Out((Int(1,IntType(1,false))))]);
         forall p | p in patchBehaviors
             ensures exists v :: (v in vulnBehaviors && equalOutput(behaviorOutput(v), behaviorOutput(p)));
@@ -142,9 +155,19 @@ lemma existsVulnBehavor(s:state,b:behavior,vulnBehaviors:seq<behavior>,input:ope
                 
                 transitiveEquality(behaviorOutput(p),behaviorOutput(v),[Nil,Nil,Nil,Out((Int(1,IntType(1,false)))),Out((Int(1,IntType(1,false))))]);
                 assert behaviorOutput(p) == behaviorOutput(v);
-                equalOutputIsTransitive(behaviorOutput(v),behaviorOutput(p),vulnOut);
+                equalOutputIsTransitiveSet(behaviorOutput(v),behaviorOutput(p),vulnOut);
                 assert behaviorOutput(p) in vulnOut;
             }
+        assert forall p :: p in patchBehaviors ==> behaviorOutput(p) in vulnOut;
+        // assert forall p :: behaviorOutput(p) in patchOut ==> behaviorOutput(p) in vulnOut;
+        // forall p | p in patchOut
+        // {
+        //     assert exists x :: x in patchBehaviors && behaviorOutput(x) == p;
+
+        //     assert equalOutput(p, [Nil,Nil,Nil,Out((Int(1,IntType(1,false)))),Out((Int(1,IntType(1,false))))]);
+        // }
+        // assert forall p :: p in patchOut ==> equalOutput(p, [Nil,Nil,Nil,Out((Int(1,IntType(1,false)))),Out((Int(1,IntType(1,false))))]);
+               
             
     }
 

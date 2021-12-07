@@ -26,6 +26,15 @@ abstract module GeneralNonInterferenceProperties {
     {
         forall p :: MiniSpec(p) ==> !(p in b)
        
+    }    
+    // completePatch: "The patch preserves the GOOD behavior" // Name; complete -> preserving ? 
+    predicate completePatch(a:seq<System_s.behavior>,b:seq<System_s.behavior>)
+    {
+        // forall p :: (p in a && !MiniSpec(p)) ==> p in b
+
+        var aOut := allBehaviorOutput(a);
+        var bOut := allBehaviorOutput(b);
+        forall p :: (behaviorOutput(p) in aOut && !MiniSpec(p)) ==> behaviorOutput(p) in bOut
     }
 
     //     // successfulPatch: "The patch prunes the BAD (defined by MiniSpec) behaviors"
@@ -37,18 +46,7 @@ abstract module GeneralNonInterferenceProperties {
     //     forall p :: (behaviorOutput(p) in aOut && MiniSpec(p)) ==> !(behaviorOutput(p) in bOut)
 
     // }
-
     
-    // completePatch: "The patch preserves the GOOD behavior" // Name; complete -> preserving ? 
-    predicate completePatch(a:seq<System_s.behavior>,b:seq<System_s.behavior>)
-    {
-        // forall p :: (p in a && !MiniSpec(p)) ==> p in b
-
-        var aOut := allBehaviorOutput(a);
-        var bOut := allBehaviorOutput(b);
-        forall p :: (behaviorOutput(p) in aOut && !MiniSpec(p)) ==> behaviorOutput(p) in bOut
-    }
-
     // The conjuntion of benign, successful and complete imply that; that after apply the patch, b retains all good behavior from a and 
     // is pruned of all bad behavior. 
     predicate safePatch(a:seq<System_s.behavior>,b:seq<System_s.behavior>)
@@ -65,7 +63,9 @@ abstract module GeneralNonInterferenceProperties {
         requires completePatch(a,b);
         ensures safePatch(a,b);
         // {
-        //     assert (forall p :: (p in a && !MiniSpec(p)) <==> p in b);
+        //     var aOut := allBehaviorOutput(a);
+        //     var bOut := allBehaviorOutput(b);
+        //     assert forall p :: (behaviorOutput(p) in aOut && !MiniSpec(p)) <==> behaviorOutput(p) in bOut;
         // }
 
 

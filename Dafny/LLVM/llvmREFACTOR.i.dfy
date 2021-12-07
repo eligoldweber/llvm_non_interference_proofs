@@ -7,6 +7,7 @@ include "./Operations/binaryOperations.i.dfy"
 include "./Operations/otherOperations.i.dfy"
 include "../Libraries/SeqIsUniqueDef.i.dfy"
 include "../Libraries/Seqs.s.dfy"
+include "../Libraries/Sets.i.dfy"
 
 
 module LLVM_defRE {
@@ -20,7 +21,7 @@ module LLVM_defRE {
     import opened binary_operations_i
     import opened other_operations_i
     import opened Collections__Seqs_s
-
+    import opened Collections__Sets_i
 
 
     type addr = int
@@ -93,32 +94,242 @@ module LLVM_defRE {
             []
         else 
             [b[0].o] + behaviorOutput(all_but_first(b))
-            // if b[0].o.Nil? then
-            //     [] + behaviorOutput(all_but_first(b))
-            // else
-            //     [b[0].o.o] + behaviorOutput(all_but_first(b))
     }
 
+    predicate {:opaque} expandedAllBehaviorsSurjective(bSet:set<behavior>,allBOut:set<seq<output>>)
+    {
+        (forall y :: y in allBOut ==> (exists x :: x in bSet && behaviorOutput(x) == y))
+    }
 
-    // function allBehaviors(a:set<behavior>) : (bOut:set<seq<output>>)
-    //     // ensures |bOut| == |a|
-    //     ensures forall aa :: aa in a ==> behaviorOutput(aa) in bOut;
-    //     ensures forall b :: b in bOut ==> exists aa :: aa in a && behaviorOutput(aa) == b
-    //     decreases |a|
+    lemma allBehaviorsSetSurjective(bSet:set<behavior>,allBOut:set<seq<output>>)
+        requires SurjectiveOver(bSet,allBOut, x => behaviorOutput(x));
+        ensures expandedAllBehaviorsSurjective(bSet,allBOut);
+        ensures (forall y :: y in allBOut ==> (exists x :: x in bSet && behaviorOutput(x) == y))
+    {
+        //  reveal_SurjectiveOver();
+         reveal_expandedAllBehaviorsSurjective();
+         assert expandedAllBehaviorsSurjective(bSet,allBOut);
+         assert  (forall y :: y in allBOut ==> (exists x :: x in bSet && behaviorOutput(x) == y));
+    }
+
+    lemma allBehaviorEqualityIsInjective(bSet:set<behavior>,allBOut:set<seq<output>>)
+       requires allBOut == allBehaviorOutputSet(bSet);
+       ensures SurjectiveOver(bSet,allBOut, x => behaviorOutput(x));
+       ensures  SurjectiveOver(bSet,allBOut, x => behaviorOutput(x)) ==> (forall y :: y in allBOut ==> (exists x :: x in bSet && behaviorOutput(x) == y));
+        // ensures (forall y :: y in allBOut ==> (exists x :: x in bSet && behaviorOutput(x) == y));
+    
+    {
+       reveal_behaviorOutput();
+        reveal_expandedAllBehaviorsSurjective();
+       assert SurjectiveOver(bSet,allBOut, x => behaviorOutput(x));
+       assert SurjectiveOver(bSet,allBOut, x => behaviorOutput(x)) ==> (forall y :: y in allBOut ==> (exists x :: x in bSet && behaviorOutput(x) == y));
+    //    allBehaviorsSetSurjective(bSet,allBOut);
+    // //    assert (forall y :: y in allBOut ==> (exists x :: x in bSet && behaviorOutput(x) == y));
+    // //    assert false;
+    }
+
+    lemma subsetOfBehaviorImpliesSubsetOfOutput(superset:set<behavior>,subset:set<behavior>,f:behavior->bool)
+        requires subset == MakeSubset(superset,f);
+        ensures forall x :: x in allBehaviorOutputSet(subset) ==> x in allBehaviorOutputSet(superset);
+    {
+        assert forall elem :: elem in subset ==> elem in superset;
+        var superOut := allBehaviorOutputSet(superset);
+        var subOut := allBehaviorOutputSet(subset);
+
+        assert forall x :: x in subOut ==> x in superOut;
+    }
+
+    lemma subsetOfBehaviorImpliesSubsetOfOutputFull(superset:set<behavior>,subset:set<behavior>,superOut:set<seq<output>>,subOut:set<seq<output>>,f:behavior->bool)
+        requires subset == MakeSubset(superset,f);
+        requires superOut == allBehaviorOutputSet(superset);
+        requires subOut == allBehaviorOutputSet(subset);
+
+        ensures forall x :: x in subOut ==> x in superOut;
+    {
+        assert forall elem :: elem in subset ==> elem in superset;
+        assert forall x :: x in subOut ==> x in superOut;
+    }
+
+    function  allBehaviorOutputSet(bSet:set<behavior>) : (allBOut:set<seq<output>>)
+        // ensures |bOut| == |a|
+        ensures SurjectiveOver(bSet,allBOut, x => behaviorOutput(x));
+        ensures forall b :: b in bSet ==> behaviorOutput(b) in allBOut;
+        ensures (allBOut == allBehaviorOutputSet(bSet)) ==> SurjectiveOver(bSet,allBOut, x => behaviorOutput(x));
+        ensures |bSet| > 0 ==> |allBOut| > 0
+                // ensures forall y :: y in allBOut ==> (exists x :: x in bSet && behaviorOutput(x) == y);
+        // ensures forall p :: behaviorOutput(p) in allBOut ==> (exists x :: x in bSet && behaviorOutput(x) == y);
+        // ensures allBOut == MakeSubset(bSet, x => exists y :: y in bSet && x == behaviorOutput(y));
+        // ensures forall x :: !(exists b :: b in bSet && behaviorOutput(b) == behaviorOutput(x)) ==> !(behaviorOutput(x) in allBOut);
+        // ensures forall a,b :: a == b ==> allBehaviorOutputSet(a) == allBehaviorOutputSet(b);
+
+        // ensures forall b :: behaviorOutput(b) in allBOut ==> (exists elem :: elem in bSet && behaviorOutput(elem) == behaviorOutput(b))
+        // ensures forall x :: !(exists b :: b in bSet && behaviorOutput(x) == behaviorOutput(b)) ==> !(behaviorOutput(x) in allBOut);
+
+        ensures |bSet| == 0 ==> |allBOut| == 0;
+        decreases |bSet|
+    {
+        // reveal_SurjectiveOver();
+        reveal_behaviorOutput();
+        if |bSet| == 0 then
+            var out := {};
+            assert forall b :: behaviorOutput(b) in out ==> (exists elem :: elem in bSet && behaviorOutput(elem) == behaviorOutput(b));
+                         allBehaviorsSetSurjective(bSet,out);
+
+            out
+        else   
+             var behavior :| behavior in bSet;
+             var bSubset := bSet - {behavior};
+             var singleOutput := {behaviorOutput(behavior)};
+             var rest := allBehaviorOutputSet(bSubset);
+            //  assert forall b :: behaviorOutput(b) in rest ==> (exists elem :: elem in bSubset && behaviorOutput(elem) == behaviorOutput(b));
+             var out := singleOutput + rest;
+             subsetUnion(singleOutput,rest,behaviorOutput(behavior));
+             assert behaviorOutput(behavior) in out;
+             assert forall b :: b in rest ==> b in out;
+             assert forall b :: b in bSubset ==> b in bSet;
+             assert out == {behaviorOutput(behavior)} + allBehaviorOutputSet(bSubset);
+            //  assert forall b :: behaviorOutput(b) in out ==> (behaviorOutput(behavior) == behaviorOutput(b) 
+                                                            // || exists elem :: elem in bSubset && behaviorOutput(elem) == behaviorOutput(b));
+       
+            //  assert exists b :: b in bSet && behaviorOutput() == behaviorOutput(behavior)
+             assert behavior in bSet && behaviorOutput(behavior) == behaviorOutput(behavior);
+             allBehaviorsSetSurjective(bSet,out);
+             out
+
+    }
+
+    lemma identicalBehaviorSetsHaveSameOutput(a:set<behavior>,b:set<behavior>)
+        requires a == b
+        ensures allBehaviorOutputSet(a) == allBehaviorOutputSet(b)
+    {
+    }
+
+    lemma setsWithIdenticalOutputsHaveSameOutput(a:set<behavior>,b:set<behavior>)
+        // requires forall elem :: elem in a ==> 
+    {
+
+    }
+    // lemma identicalOutputSetsAreEqual(bSet:set<behavior>,allBOut:set<seq<output>>,equalOut:set<seq<output>>)
+    //     requires allBOut == allBehaviorOutputSet(bSet);
+    //     requires forall x :: x in bSet ==> behaviorOutput(x) in allBOut;
+    //     requires forall x :: x in bSet ==> behaviorOutput(x) in equalOut;
     // {
-    //     if |a| == 0 then
-    //         var empty := {};
-    //         assert |empty| == |a|; 
-    //         empty
-    //     else   
-    //         var x :| x in a;
-    //         var a' := a - {x};
-    //         var singleton := {behaviorOutput(x)};
-    //         var s := singleton + allBehaviors(a');
-            
-    //         s
-    //         //{behaviorOutput(x)} + allBehaviors(a')
+    //     if (|bSet| == 0)
+    //     {
+    //         assert |allBOut| == 0;
+    //     //     assert allBOut == equalOut;
+    //     }
+    //     // var test:set<seq<output>> := MapSetToSetOver(bSet, x => exists y :: y in bSet && equalOutput(x,behaviorOutput(y)));
+    //     // assert allBOut == equalOut;
     // }
+
+    // lemma reducedAllOutputSetLessThanOrEqual(bSet:set<behavior>,bSetReduced:set<behavior>,b:behavior)
+    //     requires |bSet| == |bSetReduced| + 1;
+    //     requires forall reducedB :: reducedB in bSetReduced ==> reducedB in bSet
+    //     requires b in bSet
+    //     requires !(b in bSetReduced)
+    // {
+    //     var allOut := allBehaviorOutputSet(bSet);
+    //     var reducedOut := allBehaviorOutputSet(bSetReduced);
+    //     assert behaviorOutput(b) in allOut;
+    //     assert (exists y :: y in bSetReduced && behaviorOutput(b) == behaviorOutput(y) && b != y) ==> behaviorOutput(b) in reducedOut;
+    //     // assert (forall other :: (other in bSetReduced && other != b) ==> behaviorOutput(other) != behaviorOutput(b)) ==> !(behaviorOutput(b) in reducedOut);
+
+
+    //     var test := MakeSubset(allOut, x => exists y :: y in bSetReduced && x == behaviorOutput(y));
+    //     // assert reducedOut <= allOut;
+    //     assert forall rOut :: rOut in test ==> rOut in allOut;
+    //     assert test <= allOut;
+    //     assert forall x :: x in bSetReduced ==> behaviorOutput(x) in reducedOut;
+    //     assert forall x :: x in bSetReduced ==> behaviorOutput(x) in test;
+
+    //     assert (forall x :: x in bSetReduced && (exists y :: y in bSet && behaviorOutput(x) == behaviorOutput(y))) ==>  allOut == reducedOut;
+    //     assert (forall x :: x in bSetReduced ==> behaviorOutput(x) != behaviorOutput(b)) ==> |reducedOut| <= |allOut|;    
+    //     // assert                 
+    //     // assert (reducedOut == allOut) ==> (exists otherB :: otherB in bSetReduced && behaviorOutput(b) == behaviorOutput(otherB));
+
+    //     // assert (allOut == reducedOut) ==> 
+    //     // assert (forall p :: p in bSet ==> (exists rp :: rp in bSetReduced && behaviorOutput(p) == behaviorOutput(rp))) ==> allOut == reducedOut;
+    //     // assert forall x :: x in MakeSubset(xs, f) <==> x in xs && f(x)
+    //     // assert test ==  reducedOut;
+    //     // assert (exists y :: y in bSetReduced && behaviorOutput(b) == behaviorOutput(y) && b != y) ==> allOut == reducedOut;
+    // }
+
+    // lemma allBOutputSetLemma(bSet:set<behavior>,allBOut:set<seq<output>>)
+    //     requires allBOut == allBehaviorOutputSet(bSet)
+    //     // ensures forall b :: behaviorOutput(b) in allBOut ==> (exists elem :: elem in bSet && behaviorOutput(elem) == behaviorOutput(b));
+    // {
+        
+    //     if (|bSet| == 0){
+    //         assert forall b :: behaviorOutput(b) in allBOut ==> (exists elem :: elem in bSet && behaviorOutput(elem) == behaviorOutput(b));
+    //     }else{
+    //         if (|bSet| == 1)
+    //         {
+    //             assert forall b :: b in bSet ==> behaviorOutput(b) in allBOut;
+    //             var x :| x in bSet;
+    //             assert bSet - {x} == {};
+    //             assert behaviorOutput(x) in allBOut;
+    //             assert forall b :: behaviorOutput(b) in allBOut ==> (exists elem :: elem in bSet && behaviorOutput(elem) == behaviorOutput(b));
+    //         }else{
+    //             assert |bSet| > 1;
+    //             var x :| x in bSet;
+    //             var reducedBSet := bSet - {x};
+    //             assert  |reducedBSet| >= 1;
+    //             assert |reducedBSet| < |bSet|;
+    //             assert forall elems :: elems in reducedBSet ==> elems in bSet;
+    //             assert behaviorOutput(x) in allBOut;
+    //             // var test := MakeSubset(allBOut, val =>  behaviorOutput(x) != val);
+    //             var reducedTotalB := allBehaviorOutputSet(reducedBSet);
+    //             // assert (reducedTotalB == allBOut) ==> (exists otherB :: otherB in reducedBSet && behaviorOutput(x) == behaviorOutput(otherB));
+    //             assert (exists y :: y in bSet && behaviorOutput(x) == behaviorOutput(y) && x != y) ==> behaviorOutput(x) in reducedTotalB;
+    //             // assert !(exists y :: y in bSet && behaviorOutput(x) == behaviorOutput(y) && x != y) ==> |reducedTotalB| < |allBOut|;
+    //             // assert forall b :: behaviorOutput(b) in allBOut ==> (exists elem :: elem in bSet && behaviorOutput(elem) == behaviorOutput(b));
+    //             // assert |reducedTotalB| <= |allBOut|;
+    //             assert behaviorOutput(x) in allBOut;
+    //             var xBehavior :| xBehavior == behaviorOutput(x) && behaviorOutput(x) in allBOut;
+    //             allBOutputSetLemma(reducedBSet,reducedTotalB);
+    //         }
+    //     }
+        
+    // }
+    // lemma allBOutputSetLemmaV2(bSet:set<behavior>,allBOut:set<seq<output>>)
+    //     requires allBOut == allBehaviorOutputSet(bSet)
+    //     // requires forall b :: b in bSet ==> behaviorOutput(b) in allBOut;
+    //     // ensures forall b :: behaviorOutput(b) in allBOut ==> (exists elem :: elem in bSet && behaviorOutput(elem) == behaviorOutput(b));
+    // {
+        
+    //     if (|bSet| == 0){
+    //         assert forall b :: behaviorOutput(b) in allBOut ==> (exists elem :: elem in bSet && behaviorOutput(elem) == behaviorOutput(b));
+    //     }else{
+    //         if (|bSet| == 1)
+    //         {
+    //             assert forall b :: b in bSet ==> behaviorOutput(b) in allBOut;
+    //             var x :| x in bSet;
+    //             assert bSet - {x} == {};
+    //             assert behaviorOutput(x) in allBOut;
+    //             assert forall b :: behaviorOutput(b) in allBOut ==> (exists elem :: elem in bSet && behaviorOutput(elem) == behaviorOutput(b));
+    //         }else{
+    //             assert |bSet| > 1;
+    //             var pick :| pick in bSet;
+    //             var suspects:set<behavior> := (set x | x in bSet && behaviorOutput(x) == behaviorOutput(pick));
+    //             assert pick in suspects;
+    //             assert |suspects| >= 1;
+    //             var reducedBSet := bSet - suspects;
+    //             var reducedTotalB := allBehaviorOutputSet(reducedBSet);
+    //             var removedOut := allBOut - {behaviorOutput(pick)};
+    //             // assert forall x :: x in suspects ==> !(exists b :: b in reducedTotalB && behaviorOutput(x) == b);
+    //             assert forall b :: b in reducedBSet ==> behaviorOutput(b) in removedOut;
+    //             // assert reducedTotalB == removedOut;
+    //             //  allBOutputSetLemma(reducedBSet,removedOut);
+    //             // assert reducedTotalB == (allBOut - {behaviorOutput(pick)});
+    //         }
+    //     }
+        
+    // }
+
+    // lemma reducedEquality(bSet:set<behavior>,allBOut:set<seq<output>>)
+    //     requires allBOut == allBehaviorOutputSet(bSet)
+
 
     function allBehaviorOutput(a:seq<behavior>) : (bOut:seq<seq<output>>)
         ensures |bOut| == |a|
@@ -180,6 +391,14 @@ module LLVM_defRE {
         assert b in all;
     }
 
+lemma equalOutputIsTransitiveSet(a:seq<output>,b:seq<output>,all:set<seq<output>>)
+        requires a == b;
+        requires a in all;
+        ensures b in all;
+    {
+        assert b in all;
+    }
+
 
 
     // lemma behaviorOutputAll(a:set<behavior>,bOut:seq<seq<output>>)
@@ -193,7 +412,7 @@ module LLVM_defRE {
 
 ///
 
-    function evalCodeRE(c:codeRe, s:state) : (b:behavior)
+    function  evalCodeRE(c:codeRe, s:state) : (b:behavior)
         ensures |b| > 0
         ensures (c.Ins?) ==> |b| == 1
         ensures c.Block? ==> |b| == |evalBlockRE(c.block, s)|
@@ -526,6 +745,7 @@ module LLVM_defRE {
             // requires |block| > 0;
             
         {
+            // reveal_evalCodeRE();
             reveal_ValidBehavior();
             if (|block| == 0 || first(block).CNil?) {
                 assert b == [s,s];

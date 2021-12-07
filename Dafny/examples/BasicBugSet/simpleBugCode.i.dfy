@@ -374,7 +374,7 @@ module simpleBugCode{
             assert ValidOperand(last(b),z);
             assert OperandContents(s,input).val > 0 ==> OperandContents(b[1],z).val > 0;
             assert |b| == 5;
-            assert Out(OperandContents(b[2],result)) in behaviorOutput(b);
+            // assert Out(OperandContents(b[2],result)) in behaviorOutput(b);
             assert (OperandContents(b[2],result) == (Int(1,IntType(1,false)))) || (OperandContents(b[2],result) == (Int(0,IntType(1,false))));
 
             assert behaviorOutput(b) == [Nil,Nil,Nil,Out(OperandContents(b[2],result)),Out(OperandContents(b[2],result))];
@@ -414,7 +414,7 @@ module simpleBugCode{
         }
     }
 
-    predicate nonTrivialBehaviorPreconditions(s:state,vulnBehaviors:seq<behavior>,patchBehaviors:seq<behavior>)
+    predicate nonTrivialBehaviorPreconditions(s:state,vulnBehaviors:set<behavior>,patchBehaviors:set<behavior>)
     {
         && ValidState(s)
         && nonTrivialBehaviorPreconditionsVuln(s,vulnBehaviors)
@@ -423,18 +423,25 @@ module simpleBugCode{
       
     }
 
-    predicate {:opaque} nonTrivialBehaviorPreconditionsPatch(s:state,patchBehaviors:seq<behavior>)
+    predicate {:opaque} nonTrivialBehaviorPreconditionsPatch(s:state,patchBehaviors:set<behavior>)
         requires ValidState(s)
     {   
         // reveal_BehaviorEvalsCode();
         (forall b :: b in patchBehaviors <==> (exists input :: validInput(s,input) &&  ValidBehaviorNonTrivial(b) && BehaviorEvalsCode(codePatch(input),b) && b[0] == s))
     }
     
-    predicate {:opaque} nonTrivialBehaviorPreconditionsVuln(s:state,vulnBehaviors:seq<behavior>)
+    predicate {:opaque} nonTrivialBehaviorPreconditionsVuln(s:state,vulnBehaviors:set<behavior>)
         requires ValidState(s)
     {
         // reveal_BehaviorEvalsCode();
         (forall b :: b in vulnBehaviors <==> (exists input :: validInput(s,input) &&  ValidBehaviorNonTrivial(b) && BehaviorEvalsCode(codeVuln(input),b) && b[0] == s))
+    }
+
+    predicate {:opaque} nonTrivialBehaviorPreconditionsVulnModMs(s:state,vulnBehaviorsModMs:set<behavior>)
+        requires ValidState(s)
+    {
+        // reveal_BehaviorEvalsCode();
+        (forall b :: b in vulnBehaviorsModMs ==> (exists input :: validInput(s,input) &&  ValidBehaviorNonTrivial(b) && BehaviorEvalsCode(codeVuln(input),b) && b[0] == s))
     }
 
     predicate validPatchBehavior(b:behavior)

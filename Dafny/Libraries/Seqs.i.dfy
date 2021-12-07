@@ -115,4 +115,12 @@ lemma lemma_SeqCat_equivalent<T>(seqs:seq<seq<T>>)
   }
 }
 
+// lemma lemma_Seq_Cardinality_transitive<T>(a:seq<T>,b:seq<T>)
+//   requires |a| >= |b|
+// {
+//   var n :| n == |a|;
+//   assert 
+//   assert |b| >= n;
+// }
+
 }

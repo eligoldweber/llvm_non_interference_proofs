@@ -29,7 +29,7 @@ AddOption('--no-verify',
 AddOption('--time-limit',
   dest='time_limit',
   type='int',
-  default=120,
+  default=30,
   action='store',
   help='Specify the time limit to use for each verification')
 
