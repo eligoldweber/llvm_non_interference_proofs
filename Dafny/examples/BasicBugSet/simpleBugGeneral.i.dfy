@@ -3,6 +3,7 @@ include "../../LLVM/types.dfy"
 include "../../Libraries/Seqs.s.dfy"
 include "../../Libraries/Sets.i.dfy"
 include "./simpleBugCode.i.dfy"
+include "../../LLVM/behaviorLemmas.i.dfy"
 
 module simpleBugGeneral{
     import opened simpleBugCode
@@ -10,6 +11,7 @@ module simpleBugGeneral{
     import opened types
     import opened Collections__Seqs_s
     import opened Collections__Sets_i
+    import opened behavior_lemmas
 
         // benignPatch: "The patch does not add any NEW behaviors"
     predicate benignPatch(pre:set<behavior>,post:set<behavior>)
@@ -106,19 +108,28 @@ predicate safePatchMS(pre:set<behavior>,post:set<behavior>)
     predicate {:opaque} nonTrivialBehaviorPreconditionsPatch(s:state,patchBehaviors:set<behavior>)
         requires ValidState(s)
     {   
-        (forall b :: b in patchBehaviors <==> (exists input :: validInput(s,input) &&  ValidBehaviorNonTrivial(b) && BehaviorEvalsCode(codePatch(input),b) && b[0] == s))
+        (forall b :: b in patchBehaviors <==> (exists input ::  && validInput(s,input) 
+                                                                &&  ValidBehaviorNonTrivial(b) 
+                                                                && BehaviorEvalsCode(codePatch(input),b) 
+                                                                && b[0] == s))
     }
     
     predicate {:opaque} nonTrivialBehaviorPreconditionsVuln(s:state,vulnBehaviors:set<behavior>)
         requires ValidState(s)
     {
-        (forall b :: b in vulnBehaviors <==> (exists input :: validInput(s,input) &&  ValidBehaviorNonTrivial(b) && BehaviorEvalsCode(codeVuln(input),b) && b[0] == s))
+        (forall b :: b in vulnBehaviors <==> (exists input :: && validInput(s,input) 
+                                                              &&  ValidBehaviorNonTrivial(b) 
+                                                              && BehaviorEvalsCode(codeVuln(input),b) 
+                                                              && b[0] == s))
     }
 
     predicate {:opaque} nonTrivialBehaviorPreconditionsVulnModMs(s:state,vulnBehaviorsModMs:set<behavior>)
         requires ValidState(s)
     {
-        (forall b :: b in vulnBehaviorsModMs ==> (exists input :: validInput(s,input) &&  ValidBehaviorNonTrivial(b) && BehaviorEvalsCode(codeVuln(input),b) && b[0] == s))
+        (forall b :: b in vulnBehaviorsModMs ==> (exists input :: && validInput(s,input) 
+                                                                  && ValidBehaviorNonTrivial(b) 
+                                                                  && BehaviorEvalsCode(codeVuln(input),b) 
+                                                                  && b[0] == s))
     }
 
     predicate validPatchBehavior(b:behavior)

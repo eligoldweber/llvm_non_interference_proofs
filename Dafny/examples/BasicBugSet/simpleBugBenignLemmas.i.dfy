@@ -3,6 +3,7 @@ include "simpleBugGeneral.i.dfy"
 include "../../LLVM/llvmREFACTOR.i.dfy"
 include "../../LLVM/types.dfy"
 include "../../Libraries/Sets.i.dfy"
+include "../../LLVM/behaviorLemmas.i.dfy"
 
 module simpleBugBenignLemmas{
     import opened simpleBugCode
@@ -10,6 +11,7 @@ module simpleBugBenignLemmas{
     import opened LLVM_defRE
     import opened types
     import opened Collections__Sets_i
+    import opened behavior_lemmas
 
     lemma possibleVulnOutputs(s:state, b:behavior) 
         requires ValidState(s);
