@@ -2,63 +2,63 @@ include "../../LLVM/llvmREFACTOR.i.dfy"
 include "../../LLVM/types.dfy"
 include "../../Libraries/Seqs.s.dfy"
 include "../../Libraries/Sets.i.dfy"
-
+include "./simpleBugCode.i.dfy"
 
 module simpleBugGeneral{
+    import opened simpleBugCode
     import opened LLVM_defRE
     import opened types
     import opened Collections__Seqs_s
     import opened Collections__Sets_i
 
         // benignPatch: "The patch does not add any NEW behaviors"
-    predicate benignPatch(a:set<behavior>,b:set<behavior>)
+    predicate benignPatch(pre:set<behavior>,post:set<behavior>)
     {
-        var aOut := allBehaviorOutputSet(a);
-        var bOut := allBehaviorOutputSet(b);
-        forall p :: p in bOut ==> p in aOut
-
+        var preOutput := allBehaviorOutputSet(pre);
+        var postOutput := allBehaviorOutputSet(post);
+        forall postB :: postB in postOutput ==> postB in preOutput
     }
 
   // successfulPatch: "The patch prunes the BAD (defined by MiniSpec) behaviors"
-    predicate successfulPatch(b:set<behavior>)
+    predicate successfulPatch(post:set<behavior>)
     {
-        forall p :: MiniSpec(p) ==> !(p in b)
+        forall postB :: MiniSpec(postB) ==> !(postB in post)
     }
 
     // completePatch: "The patch preserves the GOOD behavior" // Name; complete -> preserving ? 
-    predicate completePatch(a:set<behavior>,b:set<behavior>)
+    predicate completePatch(pre:set<behavior>,post:set<behavior>)
     {
         // forall p :: (p in a && !MiniSpec(p)) ==> p in b
 
-        var aOut := allBehaviorOutputSet(a);
-        var bOut := allBehaviorOutputSet(b);
-        forall p :: (behaviorOutput(p) in aOut && !MiniSpec(p)) ==> behaviorOutput(p) in bOut
+        var preOutput := allBehaviorOutputSet(pre);
+        var postOutput := allBehaviorOutputSet(post);
+        forall preB :: (behaviorOutput(preB) in preOutput && !MiniSpec(preB)) ==> behaviorOutput(preB) in postOutput
     }
     // completePatch: "The patch preserves the GOOD behavior" // Name; complete -> preserving ? 
-    predicate completePatchMS(a:set<behavior>,b:set<behavior>)
+    predicate completePatchMS(pre:set<behavior>,post:set<behavior>)
     {
         // forall p :: (p in a && !MiniSpec(p)) ==> p in b
-        var aModuloMS := MakeSubset(a, x => !MiniSpec(x));
-        var aOutMS := allBehaviorOutputSet(aModuloMS);
-        var bOut := allBehaviorOutputSet(b);
-        forall p :: behaviorOutput(p) in aOutMS ==> behaviorOutput(p) in bOut
+        var preModMs := MakeSubset(pre, x => !MiniSpec(x));
+        var preModMsOut := allBehaviorOutputSet(preModMs);
+        var postOutput := allBehaviorOutputSet(post);
+        forall preB :: behaviorOutput(preB) in preModMsOut ==> behaviorOutput(preB) in postOutput
     }
 
-  predicate safePatch(a:set<behavior>,b:set<behavior>)
+  predicate safePatch(pre:set<behavior>,post:set<behavior>)
     {
         // forall p :: (p in a && !MiniSpec(p)) <==> p in b
-        var aOut := allBehaviorOutputSet(a);
-        var bOut := allBehaviorOutputSet(b);
-        forall p :: (behaviorOutput(p) in aOut && !MiniSpec(p)) <==> behaviorOutput(p) in bOut
+        var preOutput := allBehaviorOutputSet(pre);
+        var postOutput := allBehaviorOutputSet(post);
+        forall preB :: (behaviorOutput(preB) in preOutput && !MiniSpec(preB)) <==> behaviorOutput(preB) in postOutput
     }
 
-predicate safePatchMS(a:set<behavior>,b:set<behavior>)
+predicate safePatchMS(pre:set<behavior>,post:set<behavior>)
     {           
     //  forall p :: (p in a && !MiniSpec(p)) <==> p in b
-        var aModuloMS := MakeSubset(a, x => !MiniSpec(x));
-        var aOutMS := allBehaviorOutputSet(aModuloMS);
-        var bOut := allBehaviorOutputSet(b);
-        forall p :: behaviorOutput(p) in aOutMS <==> behaviorOutput(p) in bOut
+        var preModMs := MakeSubset(pre, x => !MiniSpec(x));
+        var preModMsOut := allBehaviorOutputSet(preModMs);
+        var postOutput := allBehaviorOutputSet(post);
+        forall preB :: behaviorOutput(preB) in preModMsOut <==> behaviorOutput(preB) in postOutput
     }   
 
 
@@ -91,11 +91,46 @@ predicate safePatchMS(a:set<behavior>,b:set<behavior>)
 
   
 
-
+/////////
     
 
 
-   
+   predicate nonTrivialBehaviorPreconditions(s:state,vulnBehaviors:set<behavior>,patchBehaviors:set<behavior>)
+    {
+        && ValidState(s)
+        && nonTrivialBehaviorPreconditionsVuln(s,vulnBehaviors)
+        && nonTrivialBehaviorPreconditionsPatch(s,patchBehaviors)
+        && |vulnBehaviors| >= |patchBehaviors|
+    }
+
+    predicate {:opaque} nonTrivialBehaviorPreconditionsPatch(s:state,patchBehaviors:set<behavior>)
+        requires ValidState(s)
+    {   
+        (forall b :: b in patchBehaviors <==> (exists input :: validInput(s,input) &&  ValidBehaviorNonTrivial(b) && BehaviorEvalsCode(codePatch(input),b) && b[0] == s))
+    }
+    
+    predicate {:opaque} nonTrivialBehaviorPreconditionsVuln(s:state,vulnBehaviors:set<behavior>)
+        requires ValidState(s)
+    {
+        (forall b :: b in vulnBehaviors <==> (exists input :: validInput(s,input) &&  ValidBehaviorNonTrivial(b) && BehaviorEvalsCode(codeVuln(input),b) && b[0] == s))
+    }
+
+    predicate {:opaque} nonTrivialBehaviorPreconditionsVulnModMs(s:state,vulnBehaviorsModMs:set<behavior>)
+        requires ValidState(s)
+    {
+        (forall b :: b in vulnBehaviorsModMs ==> (exists input :: validInput(s,input) &&  ValidBehaviorNonTrivial(b) && BehaviorEvalsCode(codeVuln(input),b) && b[0] == s))
+    }
+
+    predicate validPatchBehavior(b:behavior)
+    {
+        exists input :: BehaviorEvalsCode(codePatch(input),b) && |b| > 0 && ValidState(b[0]) && validInput(b[0],input)
+    }
+
+    predicate validVulnBehavior(b:behavior)
+    {
+        exists input :: BehaviorEvalsCode(codeVuln(input),b) && ValidBehaviorNonTrivial(b)
+    }
+
 
    
 

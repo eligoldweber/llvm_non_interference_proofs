@@ -13,507 +13,228 @@ module simpleBugCompleteLemmas{
     import opened Collections__Seqs_s
     import opened Collections__Sets_i
 
-lemma possibleVulnOutputs(s:state, b:behavior) 
+    lemma possibleVulnOutputs(s:state, preB:behavior) 
         requires ValidState(s);
-        requires |b| > 0;
-        requires b[0] == s;
+        requires |preB| > 0;
+        requires preB[0] == s;
         requires s.o.Nil?;
 
-        ensures  forall input :: (validInput(s,input) && OperandContents(s,input).val < 2 && BehaviorEvalsCode(codeVuln(input),b)) 
-                                  ==> (behaviorOutput(b) == [Nil,Nil,Nil,Out((Int(1,IntType(1,false)))),Out((Int(1,IntType(1,false))))]);
-        ensures  forall input :: (validInput(s,input) && OperandContents(s,input).val >= 2 && BehaviorEvalsCode(codeVuln(input),b)) 
-                                  ==> (behaviorOutput(b) == [Nil,Nil,Nil,Out((Int(0,IntType(1,false)))),Out((Int(0,IntType(1,false))))]);
+        ensures  forall input :: (validInput(s,input) && OperandContents(s,input).val < 2 && BehaviorEvalsCode(codeVuln(input),preB)) 
+                                  ==> (behaviorOutput(preB) == validOutput());
+        ensures  forall input :: (validInput(s,input) && OperandContents(s,input).val >= 2 && BehaviorEvalsCode(codeVuln(input),preB)) 
+                                  ==> (behaviorOutput(preB) == invalidOutput());
     {
         var inputWitness := D(Int(1,IntType(4,false)));
         assert validInput(s,inputWitness);
-        forall input | validInput(s,input) && OperandContents(s,input).val < 2 && BehaviorEvalsCode(codeVuln(input),b)
-            ensures (behaviorOutput(b) == [Nil,Nil,Nil,Out((Int(1,IntType(1,false)))),Out((Int(1,IntType(1,false))))]);
+        forall input | validInput(s,input) && OperandContents(s,input).val < 2 && BehaviorEvalsCode(codeVuln(input),preB)
+            ensures (behaviorOutput(preB) == validOutput());
         {
-            var input :| validInput(s,input) && OperandContents(s,input).val < 2 && BehaviorEvalsCode(codeVuln(input),b);
-            var b' := unwrapVulnBehaviors(s,input);
-            behaviorThatEvalsSameCodeWithSameInitIsEqual(s,codeVuln(input),b');
+            var input :| validInput(s,input) && OperandContents(s,input).val < 2 && BehaviorEvalsCode(codeVuln(input),preB);
+            var preBWitness := unwrapVulnBehaviors(s,input);
+            behaviorThatEvalsSameCodeWithSameInitIsEqual(s,codeVuln(input),preBWitness);
         }
-        forall input | validInput(s,input) && OperandContents(s,input).val >= 2 && BehaviorEvalsCode(codeVuln(input),b)
-            ensures (behaviorOutput(b) == [Nil,Nil,Nil,Out((Int(0,IntType(1,false)))),Out((Int(0,IntType(1,false))))]);
+        forall input | validInput(s,input) && OperandContents(s,input).val >= 2 && BehaviorEvalsCode(codeVuln(input),preB)
+            ensures (behaviorOutput(preB) == invalidOutput());
         {
-            var input :| validInput(s,input) && OperandContents(s,input).val >= 2 && BehaviorEvalsCode(codeVuln(input),b);
-            var b' := unwrapVulnBehaviors(s,input);
-            behaviorThatEvalsSameCodeWithSameInitIsEqual(s,codeVuln(input),b');
+            var input :| validInput(s,input) && OperandContents(s,input).val >= 2 && BehaviorEvalsCode(codeVuln(input),preB);
+            var preBWitness := unwrapVulnBehaviors(s,input);
+            behaviorThatEvalsSameCodeWithSameInitIsEqual(s,codeVuln(input),preBWitness);
         }
      
     }
 
-    lemma possibleVulnOutputsWithMiniSpec(s:state, b:behavior)
+    lemma possibleVulnOutputsWithMiniSpec(s:state, preB:behavior)
         requires ValidState(s);
-        requires |b| > 0;
-        requires b[0] == s;
+        requires |preB| > 0;
+        requires preB[0] == s;
         requires s.o.Nil?;
-        ensures  forall input :: (validInput(s,input) && OperandContents(s,input).val < 2 && BehaviorEvalsCode(codeVuln(input),b)) 
-                                  ==> !MiniSpec(b);
-        ensures  forall input :: (validInput(s,input) && OperandContents(s,input).val >= 2 && BehaviorEvalsCode(codeVuln(input),b)) 
-                                  ==> MiniSpec(b);
-        ensures forall input :: ( validInput(s,input) && BehaviorEvalsCode(codeVuln(input),b)) ==> 
-                        (!MiniSpec(b) <==> (behaviorOutput(b) == [Nil,Nil,Nil,Out((Int(1,IntType(1,false)))),Out((Int(1,IntType(1,false))))]));
-         ensures forall input :: ( validInput(s,input) && BehaviorEvalsCode(codeVuln(input),b)) ==> 
-                        (MiniSpec(b) <==> (behaviorOutput(b) == [Nil,Nil,Nil,Out((Int(0,IntType(1,false)))),Out((Int(0,IntType(1,false))))]));
+        ensures  forall input :: (validInput(s,input) && OperandContents(s,input).val < 2 && BehaviorEvalsCode(codeVuln(input),preB)) 
+                                  ==> !MiniSpec(preB);
+        ensures  forall input :: (validInput(s,input) && OperandContents(s,input).val >= 2 && BehaviorEvalsCode(codeVuln(input),preB)) 
+                                  ==> MiniSpec(preB);
+        ensures forall input :: ( validInput(s,input) && BehaviorEvalsCode(codeVuln(input),preB)) ==> 
+                        (!MiniSpec(preB) <==> (behaviorOutput(preB) == validOutput()));
+         ensures forall input :: ( validInput(s,input) && BehaviorEvalsCode(codeVuln(input),preB)) ==> 
+                        (MiniSpec(preB) <==> (behaviorOutput(preB) == invalidOutput()));
     {
         // possibleVulnOutputs(s,b);
         var inputWitness := D(Int(1,IntType(4,false)));
         assert validInput(s,inputWitness);
-        forall input | validInput(s,input) && OperandContents(s,input).val < 2 && BehaviorEvalsCode(codeVuln(input),b)
-            ensures !MiniSpec(b);
-            ensures (behaviorOutput(b) == [Nil,Nil,Nil,Out((Int(1,IntType(1,false)))),Out((Int(1,IntType(1,false))))]);
-            ensures !MiniSpec(b) ==> (behaviorOutput(b) == [Nil,Nil,Nil,Out((Int(1,IntType(1,false)))),Out((Int(1,IntType(1,false))))]);
+        forall input | validInput(s,input) && OperandContents(s,input).val < 2 && BehaviorEvalsCode(codeVuln(input),preB)
+            ensures !MiniSpec(preB);
+            ensures (behaviorOutput(preB) == validOutput());
+            ensures !MiniSpec(preB) ==> (behaviorOutput(preB) == validOutput());
         {
-            var input :| validInput(s,input) && OperandContents(s,input).val < 2 && BehaviorEvalsCode(codeVuln(input),b);
-            var b' := unwrapVulnBehaviors(s,input);
-            behaviorThatEvalsSameCodeWithSameInitIsEqual(s,codeVuln(input),b');
-            assert !MiniSpec(b);
-            assert (behaviorOutput(b) == [Nil,Nil,Nil,Out((Int(1,IntType(1,false)))),Out((Int(1,IntType(1,false))))]);
+            var input :| validInput(s,input) && OperandContents(s,input).val < 2 && BehaviorEvalsCode(codeVuln(input),preB);
+            var preBWitness := unwrapVulnBehaviors(s,input);
+            behaviorThatEvalsSameCodeWithSameInitIsEqual(s,codeVuln(input),preBWitness);
+            assert !MiniSpec(preB);
+            assert (behaviorOutput(preB) == validOutput());
         }
-        forall input | validInput(s,input) && OperandContents(s,input).val >= 2 && BehaviorEvalsCode(codeVuln(input),b)
-            ensures MiniSpec(b);
-            ensures !(behaviorOutput(b) == [Nil,Nil,Nil,Out((Int(1,IntType(1,false)))),Out((Int(1,IntType(1,false))))]);
-            ensures MiniSpec(b) <==> (behaviorOutput(b) == [Nil,Nil,Nil,Out((Int(0,IntType(1,false)))),Out((Int(0,IntType(1,false))))]);
+        forall input | validInput(s,input) && OperandContents(s,input).val >= 2 && BehaviorEvalsCode(codeVuln(input),preB)
+            ensures MiniSpec(preB);
+            ensures !(behaviorOutput(preB) == validOutput());
+            ensures MiniSpec(preB) <==> (behaviorOutput(preB) == invalidOutput());
         {
-            var input :| validInput(s,input) && OperandContents(s,input).val >= 2 && BehaviorEvalsCode(codeVuln(input),b);
-            var b' := unwrapVulnBehaviors(s,input);
-            behaviorThatEvalsSameCodeWithSameInitIsEqual(s,codeVuln(input),b');
-            assert MiniSpec(b);
-            assert (behaviorOutput(b) == [Nil,Nil,Nil,Out((Int(0,IntType(1,false)))),Out((Int(0,IntType(1,false))))]);
-            assert !(behaviorOutput(b) == [Nil,Nil,Nil,Out((Int(1,IntType(1,false)))),Out((Int(1,IntType(1,false))))]);
+            var input :| validInput(s,input) && OperandContents(s,input).val >= 2 && BehaviorEvalsCode(codeVuln(input),preB);
+            var preBWitness := unwrapVulnBehaviors(s,input);
+            behaviorThatEvalsSameCodeWithSameInitIsEqual(s,codeVuln(input),preBWitness);
+            assert MiniSpec(preB);
+            assert (behaviorOutput(preB) == invalidOutput());
+            assert !(behaviorOutput(preB) == validOutput());
         }
-        // assert !MiniSpec(b) ==> (behaviorOutput(b) == [Nil,Nil,Nil,Out((Int(1,IntType(1,false)))),Out((Int(1,IntType(1,false))))]);
+        // assert !MiniSpec(b) ==> (behaviorOutput(b) == validOutput());
     }
-    lemma constrainedBehaviorSet(s:state,vulnBehaviors:set<behavior>,patchBehaviors:set<behavior>,vulnOut:set<seq<output>>)
-        requires nonTrivialBehaviorPreconditions(s,vulnBehaviors,patchBehaviors)
-        requires vulnOut == allBehaviorOutputSet(vulnBehaviors);
-        ensures forall p :: (behaviorOutput(p) in vulnOut && !MiniSpec(p)) ==> behaviorOutput(p) in vulnOut;
-        {
-            reveal_nonTrivialBehaviorPreconditionsVuln();
-            reveal_nonTrivialBehaviorPreconditionsPatch();
-            reveal_behaviorOutput();
-            forall p | behaviorOutput(p) in vulnOut
-                ensures !MiniSpec(p) ==> behaviorOutput(p) in vulnOut;
-            {
-                if (MiniSpec(p)){
-                    assert behaviorOutput(p) in vulnOut;
-                }else{
-                    assert !MiniSpec(p);
-                    assert behaviorOutput(p) in vulnOut;
-                }
-            }
-        }
 
 
-lemma ELITEST(s:state,vulnBehaviors:set<behavior>,patchBehaviors:set<behavior>,vulnOut:set<seq<output>>)
-        requires nonTrivialBehaviorPreconditions(s,vulnBehaviors,patchBehaviors)
-        requires vulnOut == allBehaviorOutputSet(vulnBehaviors);
-        ensures forall v :: v in vulnBehaviors ==> (!MiniSpec(v) ==> (behaviorOutput(v) == [Nil,Nil,Nil,Out((Int(1,IntType(1,false)))),Out((Int(1,IntType(1,false))))]));
-        ensures forall p :: constrainedBehavorSet(p,vulnOut) ==> existsSameOutput(vulnBehaviors,p);
+    lemma findModMsSet(s:state,vulnBehaviors:set<behavior>) returns (vulnBehaviorsModMs:set<behavior>)
+        requires ValidState(s);
+        requires nonTrivialBehaviorPreconditionsVuln(s,vulnBehaviors);
+        ensures vulnBehaviorsModMs == MakeSubset(vulnBehaviors, x => !MiniSpec(x));
+        ensures forall p :: p in vulnBehaviorsModMs ==> !MiniSpec(p);
+        ensures nonTrivialBehaviorPreconditionsVulnModMs(s,vulnBehaviorsModMs);
     {
         reveal_nonTrivialBehaviorPreconditionsVuln();
-        reveal_nonTrivialBehaviorPreconditionsPatch();
-        // reveal_existsSameOutput();
-        // reveal_behaviorOutput();
-        // assert forall v :: v in vulnBehaviors  ==> (exists input :: ( validInput(s,input) && BehaviorEvalsCode(codeVuln(input),v)));
-        forall v | v in vulnBehaviors
-            ensures !MiniSpec(v) ==> (behaviorOutput(v) == [Nil,Nil,Nil,Out((Int(1,IntType(1,false)))),Out((Int(1,IntType(1,false))))]);
+        reveal_nonTrivialBehaviorPreconditionsVulnModMs();
+        var vulnBehaviorsMod := MakeSubset(vulnBehaviors, x => !MiniSpec(x));
+        forall preB | preB in vulnBehaviorsMod
+            ensures nonTrivialBehaviorPreconditionsVulnModMs(s,vulnBehaviorsMod);
         {
-            assert (exists input :: ( validInput(s,input) && BehaviorEvalsCode(codeVuln(input),v)));
-            possibleVulnOutputsWithMiniSpec(s,v);
-            assert (!MiniSpec(v) ==>  (exists input :: (validInput(s,input) && OperandContents(s,input).val < 2 && BehaviorEvalsCode(codeVuln(input),v))));
-            assert !MiniSpec(v) ==> (behaviorOutput(v) == [Nil,Nil,Nil,Out((Int(1,IntType(1,false)))),Out((Int(1,IntType(1,false))))]);
-        } 
-
-        assert forall v ::( v in vulnBehaviors &&  !MiniSpec(v)) ==> (behaviorOutput(v) == [Nil,Nil,Nil,Out((Int(1,IntType(1,false)))),Out((Int(1,IntType(1,false))))]);
-        assert SurjectiveOver(vulnBehaviors,vulnOut, x => behaviorOutput(x));
-        allBehaviorsSetSurjective(vulnBehaviors,vulnOut);
-        // assert forall y :: y in vulnOut ==> (exists x :: x in vulnBehaviors && behaviorOutput(x) == y);
-        forall p | behaviorOutput(p) in vulnOut && !MiniSpec(p)
-        {
-            assert (exists x :: x in vulnBehaviors && behaviorOutput(x) == behaviorOutput(p));
-            var back :| back in vulnBehaviors && behaviorOutput(back) == behaviorOutput(p);
-            // possibleVulnOutputsWithMiniSpec(s,back);
-            // assert exists input :: (validInput(s,input) &&  ValidBehaviorNonTrivial(back) && BehaviorEvalsCode(codeVuln(input),back) && back[0] == s);
-            // assert !MiniSpec(back) ==> behaviorOutput(back) == [Nil,Nil,Nil,Out((Int(1,IntType(1,false)))),Out((Int(1,IntType(1,false))))];
+            assert preB in vulnBehaviors;
+            assert (exists input :: validInput(s,input) &&  ValidBehaviorNonTrivial(preB) && BehaviorEvalsCode(codeVuln(input),preB) && preB[0] == s);
         }
-        // var moduloMs :| vulnModMiniSpec(s,vulnBehaviors,moduloMs);
-        // // // assert nonTrivialBehaviorPreconditionsVuln(s,test);
-        // // assert forall p :: p in moduloMs ==> !MiniSpec(p);
-        // var reducedOut := allBehaviorOutputSet(moduloMs);
-
-            var reduced := reducedVulnModMS(s,vulnBehaviors,patchBehaviors,vulnOut);
-        // assert forall r :: r in reduced ==> r in vulnOut;
-        // assert reducedOut == vulnOut;
-
-        // forall p | behaviorOutput(p) in vulnOut
-        //      ensures !MiniSpec(p) ==> behaviorOutput(p) in vulnOut;
-        // {
-        //     if (MiniSpec(p)){
-        //         assert behaviorOutput(p) in vulnOut;
-        //     }else{
-        //         assert !MiniSpec(p);
-        //         assert behaviorOutput(p) in vulnOut;
-        //     }
-        // }
-
-        // assert forall p :: constrainedBehavorSet(p,vulnOut) ==> behaviorInAll(behaviorOutput(p),vulnOut);// behaviorOutput(p) in vulnOut;
-        // assert forall p :: behaviorInAll(behaviorOutput(p),vulnOut) ==> existsSameOutput(vulnBehaviors,p);//(exists p' :: p' in vulnBehaviors && behaviorOutput(p) == behaviorOutput(p'));
-        // assert forall p :: constrainedBehavorSet(p,vulnOut) ==> existsSameOutput(vulnBehaviors,p);//(exists p' :: p' in vulnBehaviors && behaviorOutput(p) == behaviorOutput(p'));
+        vulnBehaviorsModMs := vulnBehaviorsMod;
 
     }
 
-
-
-    lemma allOutputConstrainedImpliesSameBehaviorOExists(s:state,vulnBehaviors:set<behavior>,patchBehaviors:set<behavior>,vulnOut:set<seq<output>>)
-        requires nonTrivialBehaviorPreconditions(s,vulnBehaviors,patchBehaviors)
-        requires vulnOut == allBehaviorOutputSet(vulnBehaviors);
-        ensures forall v :: v in vulnBehaviors ==> (!MiniSpec(v) ==> (behaviorOutput(v) == [Nil,Nil,Nil,Out((Int(1,IntType(1,false)))),Out((Int(1,IntType(1,false))))]));
-        ensures forall p :: constrainedBehavorSet(p,vulnOut) ==> existsSameOutput(vulnBehaviors,p);
-    {
-        reveal_nonTrivialBehaviorPreconditionsVuln();
-        reveal_nonTrivialBehaviorPreconditionsPatch();
-        // reveal_existsSameOutput();
-        // reveal_behaviorOutput();
-        assert forall v :: v in vulnBehaviors  ==> (exists input :: ( validInput(s,input) && BehaviorEvalsCode(codeVuln(input),v)));
-        forall v | v in vulnBehaviors
-            ensures !MiniSpec(v) ==> (behaviorOutput(v) == [Nil,Nil,Nil,Out((Int(1,IntType(1,false)))),Out((Int(1,IntType(1,false))))]);
-        {
-            assert (exists input :: ( validInput(s,input) && BehaviorEvalsCode(codeVuln(input),v)));
-            possibleVulnOutputsWithMiniSpec(s,v);
-            assert (!MiniSpec(v) ==>  (exists input :: (validInput(s,input) && OperandContents(s,input).val < 2 && BehaviorEvalsCode(codeVuln(input),v))));
-            assert !MiniSpec(v) ==> (behaviorOutput(v) == [Nil,Nil,Nil,Out((Int(1,IntType(1,false)))),Out((Int(1,IntType(1,false))))]);
-        } 
-
-
-        forall p | behaviorOutput(p) in vulnOut
-             ensures !MiniSpec(p) ==> behaviorOutput(p) in vulnOut;
-        {
-            if (MiniSpec(p)){
-                assert behaviorOutput(p) in vulnOut;
-            }else{
-                assert !MiniSpec(p);
-                assert behaviorOutput(p) in vulnOut;
-            }
-        }
-
-        assert forall p :: constrainedBehavorSet(p,vulnOut) ==> behaviorInAll(behaviorOutput(p),vulnOut);// behaviorOutput(p) in vulnOut;
-        assert forall p :: behaviorInAll(behaviorOutput(p),vulnOut) ==> existsSameOutput(vulnBehaviors,p);//(exists p' :: p' in vulnBehaviors && behaviorOutput(p) == behaviorOutput(p'));
-        assert forall p :: constrainedBehavorSet(p,vulnOut) ==> existsSameOutput(vulnBehaviors,p);//(exists p' :: p' in vulnBehaviors && behaviorOutput(p) == behaviorOutput(p'));
-
-    }
-
-    predicate  existsSameOutput(vulnBehaviors:set<behavior>,p:behavior)
-    {
-        exists p' :: p' in vulnBehaviors && behaviorOutput(p) == behaviorOutput(p')
-    }
-
-    predicate existsSameOutputConstrained(vulnBehaviors:set<behavior>,p:behavior)
-    {
-        exists p' :: p' in vulnBehaviors && !MiniSpec(p') && behaviorOutput(p) == behaviorOutput(p')
-    }
-    predicate behaviorInAll(out:seq<output>,vulnOut:set<seq<output>>)
-    {
-        out in vulnOut
-    }
-
-    predicate constrainedBehavorSet(b:behavior,vulnOut:set<seq<output>>)
-    {
-        behaviorOutput(b) in vulnOut && !MiniSpec(b)
-    }
-
-    lemma patchIsCompleteTrivial(s:state,vulnBehaviors:set<behavior>,patchBehaviors:set<behavior>,vulnOut:set<seq<output>>,patchOut:set<seq<output>>)
-        requires |vulnBehaviors| == 0
-        requires |vulnOut| == 0
+    lemma vulnModMsOutput(s:state,vulnModMs:set<behavior>,vulnModMsOut:set<seq<output>>)
         requires ValidState(s);
-        requires forall b :: b in vulnBehaviors <==> (exists input :: validInput(s,input) &&  ValidBehaviorNonTrivial(b) && BehaviorEvalsCode(codeVuln(input),b) && b[0] == s)
-        requires forall b :: b in patchBehaviors <==> (exists input :: validInput(s,input) &&  ValidBehaviorNonTrivial(b) && BehaviorEvalsCode(codePatch(input),b) && b[0] == s)
-
-        ensures forall p :: (behaviorOutput(p) in vulnOut && !MiniSpec(p))  ==> behaviorOutput(p) in patchOut
+        requires nonTrivialBehaviorPreconditionsVulnModMs(s,vulnModMs);
+        requires forall preBModMs :: preBModMs in vulnModMs ==> !MiniSpec(preBModMs);
+        requires vulnModMsOut == allBehaviorOutputSet(vulnModMs);
+        ensures forall preBModMs :: preBModMs in vulnModMsOut ==> equalOutput(preBModMs,validOutput());
+    {
+        reveal_nonTrivialBehaviorPreconditionsVulnModMs();
+        forall preBModMs | preBModMs in vulnModMs
+            ensures (behaviorOutput(preBModMs) == validOutput());
         {
-           
-            assert |vulnBehaviors| == 0;
-            assert |vulnOut| == 0;
-            assert forall p :: (behaviorOutput(p) in vulnOut && !MiniSpec(p))  ==> behaviorOutput(p) in patchOut;
-            
+            possibleVulnOutputsWithMiniSpec(s,preBModMs);
+            assert !MiniSpec(preBModMs);
+            assert (behaviorOutput(preBModMs) == validOutput());
         }
+        assert forall preBModMs :: preBModMs in vulnModMsOut ==> equalOutput(preBModMs,validOutput());
+    }
 
-    lemma patchIsCompleteNonTrivial(s:state,vulnBehaviors:set<behavior>,patchBehaviors:set<behavior>,vulnOut:set<seq<output>>,patchOut:set<seq<output>>)
-        requires nonTrivialBehaviorPreconditions(s,vulnBehaviors,patchBehaviors)
-        requires |vulnBehaviors| > 0
-        requires ValidState(s);
-                    
-        requires |patchBehaviors| > 0;
 
-        requires vulnOut == allBehaviorOutputSet(vulnBehaviors);
+    lemma patchIsCompleteEmptyVulnSet(s:state,vulnModMs:set<behavior>,patchBehaviors:set<behavior>,vulnModMsOut:set<seq<output>>,patchOut:set<seq<output>>)
+        requires vulnModMsOut == allBehaviorOutputSet(vulnModMs);
         requires patchOut ==  allBehaviorOutputSet(patchBehaviors);
+        requires |vulnModMs| == 0
+        requires |vulnModMsOut| == 0
+        requires ValidState(s);
+        requires nonTrivialBehaviorPreconditionsVulnModMs(s,vulnModMs);
+        requires nonTrivialBehaviorPreconditionsPatch(s,patchBehaviors);
 
-        ensures forall p :: p in vulnBehaviors && !MiniSpec(p) ==> (behaviorOutput(p) in vulnOut && behaviorOutput(p) in patchOut);
-        // ensures forall p :: (behaviorOutput(p) in vulnOut && !MiniSpec(p))  ==> behaviorOutput(p) in patchOut
-        // ensures forall p :: p in (reducedVulnModMS(s,vulnBehaviors,patchBehaviors,vulnOut)) ==> p in patchOut;
+        ensures forall preBModMs :: preBModMs in vulnModMsOut  ==> preBModMs in patchOut
         {
-            reveal_BehaviorEvalsCode();
-            
-            reveal_nonTrivialBehaviorPreconditionsVuln();
+            reveal_nonTrivialBehaviorPreconditionsVulnModMs();
             reveal_nonTrivialBehaviorPreconditionsPatch();
+            assert |vulnModMs| == 0;
+            assert |vulnModMsOut| == 0;
+            assert forall preBModMs :: preBModMs in vulnModMsOut  ==> preBModMs in patchOut;
             
-            
-            forall p | (p in vulnBehaviors && !MiniSpec(p))
-                ensures equalOutput(behaviorOutput(p),[Nil,Nil,Nil,Out((Int(1,IntType(1,false)))),Out((Int(1,IntType(1,false))))]);
-                ensures behaviorOutput(p) in vulnOut;
-                ensures behaviorOutput(p) in patchOut;
-            {
-                var input :| BehaviorEvalsCode(codeVuln(input),p) && |p| > 0 && validInput(p[0],input);
-                var b' := unwrapVulnBehaviors(s,input);
-                possibleVulnOutputsWithMiniSpec(s,p);
-                assert equalOutput(behaviorOutput(p),[Nil,Nil,Nil,Out((Int(1,IntType(1,false)))),Out((Int(1,IntType(1,false))))]);
-                assert behaviorOutput(p) in vulnOut;
-
-                var singlePatchBehavior :| singlePatchBehavior in patchBehaviors;
-                var patchInput :| BehaviorEvalsCode(codePatch(patchInput),singlePatchBehavior) && |singlePatchBehavior| > 0 && validInput(singlePatchBehavior[0],patchInput);
-                var patch' := unwrapPatchBehaviors(s,patchInput);
-                outputIsEqual(behaviorOutput(patch'),[Nil,Nil,Nil,Out((Int(1,IntType(1,false)))),Out((Int(1,IntType(1,false))))]);
-                assert equalOutput(behaviorOutput(patch'),[Nil,Nil,Nil,Out((Int(1,IntType(1,false)))),Out((Int(1,IntType(1,false))))]);
-                assert behaviorOutput(patch') in patchOut;
-                transitiveEquality(behaviorOutput(patch'),behaviorOutput(p),[Nil,Nil,Nil,Out((Int(1,IntType(1,false)))),Out((Int(1,IntType(1,false))))]);
-                equalOutputIsTransitiveSet(behaviorOutput(patch'),behaviorOutput(p),patchOut);
-
-            }
-             forall p | p in patchBehaviors
-                ensures equalOutput(behaviorOutput(p),[Nil,Nil,Nil,Out((Int(1,IntType(1,false)))),Out((Int(1,IntType(1,false))))]);
-                ensures behaviorOutput(p) in patchOut;
-             {
-                var input :| BehaviorEvalsCode(codePatch(input),p) && |p| > 0 && validInput(p[0],input);
-                var b' := unwrapPatchBehaviors(s,input);
-                assert equalOutput(behaviorOutput(p),[Nil,Nil,Nil,Out((Int(1,IntType(1,false)))),Out((Int(1,IntType(1,false))))]);
-                assert behaviorOutput(p) in patchOut;
-
-             }
-            assert forall p :: (behaviorOutput(p) in vulnOut && !MiniSpec(p)) ==> (equalOutput(behaviorOutput(p),[Nil,Nil,Nil,Out((Int(0,IntType(1,false)))),Out((Int(0,IntType(1,false))))])); 
-
-            allOutputConstrainedImpliesSameBehaviorOExists(s,vulnBehaviors,patchBehaviors,vulnOut);
-            assert forall p :: constrainedBehavorSet(p,vulnOut) ==> existsSameOutput(vulnBehaviors,p);
-            var reduced := reducedVulnModMS(s,vulnBehaviors,patchBehaviors,vulnOut);
-
-            // forall p :: (behaviorOutput(p) in aOut && !MiniSpec(p)) ==> behaviorOutput(p) in bOut
-            // assert forall p :: p in reduced ==> (equalOutput(p,[Nil,Nil,Nil,Out((Int(0,IntType(1,false)))),Out((Int(0,IntType(1,false))))])); 
-            assert forall p :: p in reduced ==> equalOutput(p,[Nil,Nil,Nil,Out((Int(1,IntType(1,false)))),Out((Int(1,IntType(1,false))))]);
-            // assert forall p :: p in patchOut ==> equalOutput(p,[Nil,Nil,Nil,Out((Int(1,IntType(1,false)))),Out((Int(1,IntType(1,false))))]);
-            forall p | p in reduced
-                ensures p in patchOut;
-            {
-                assert equalOutput(p,[Nil,Nil,Nil,Out((Int(1,IntType(1,false)))),Out((Int(1,IntType(1,false))))]);
-                assert exists b :: b in patchOut && equalOutput(b,[Nil,Nil,Nil,Out((Int(1,IntType(1,false)))),Out((Int(1,IntType(1,false))))]);
-                var b :| b in patchOut && equalOutput(b,[Nil,Nil,Nil,Out((Int(1,IntType(1,false)))),Out((Int(1,IntType(1,false))))]);
-                assert b == p;
-                assert p in patchOut;
-            }
-            assert forall p :: p in reduced ==> p in patchOut;
-
         }
 
-            // assert (forall b :: behaviorOutput(b) in vulnOut <==> (exists input :: validInput(s,input) &&  ValidBehaviorNonTrivial(b) && BehaviorEvalsCode(codeVuln(input),b) && b[0] == s));
-
-    lemma reducedVulnModMS(s:state,vulnBehaviors:set<behavior>,patchBehaviors:set<behavior>,vulnOut:set<seq<output>>) returns (moduloMSOut:set<seq<output>>)
-            requires nonTrivialBehaviorPreconditions(s,vulnBehaviors,patchBehaviors)
-            requires vulnOut == allBehaviorOutputSet(vulnBehaviors);
-            requires forall p :: constrainedBehavorSet(p,vulnOut) ==> existsSameOutput(vulnBehaviors,p);
-            ensures forall reducedP :: reducedP in moduloMSOut ==> equalOutput(reducedP,[Nil,Nil,Nil,Out((Int(1,IntType(1,false)))),Out((Int(1,IntType(1,false))))]);
-
+    lemma patchIsCompleteNonTrivial(s:state,vulnModMs:set<behavior>,patchBehaviors:set<behavior>,vulnModMsOut:set<seq<output>>,patchOut:set<seq<output>>)
+        requires vulnModMsOut == allBehaviorOutputSet(vulnModMs);
+        requires patchOut ==  allBehaviorOutputSet(patchBehaviors);
+        requires |vulnModMs|  > 0
+        requires |patchBehaviors|  > 0
+        requires ValidState(s);
+        requires forall p :: p in vulnModMs ==> !MiniSpec(p);
+        requires nonTrivialBehaviorPreconditionsVulnModMs(s,vulnModMs);
+        requires nonTrivialBehaviorPreconditionsPatch(s,patchBehaviors);
+        ensures forall preBModMs :: preBModMs in vulnModMsOut  ==> preBModMs in patchOut;
     {
+        reveal_BehaviorEvalsCode();
         reveal_nonTrivialBehaviorPreconditionsVuln();
         reveal_nonTrivialBehaviorPreconditionsPatch();
-        assert (forall b :: b in vulnBehaviors <==> (exists input :: validInput(s,input) &&  ValidBehaviorNonTrivial(b) && BehaviorEvalsCode(codeVuln(input),b) && b[0] == s));
-        // assert forall i :: (i >= 0 && i < |vulnBehaviors|) ==> vulnOut[i] == behaviorOutput(vulnBehaviors[i]);
-        var moduloMs :| vulnModMiniSpec(s,vulnBehaviors,moduloMs);
-        // assert nonTrivialBehaviorPreconditionsVuln(s,test);
-        var test :=  MakeSubset(vulnBehaviors, x => !MiniSpec(x));
-        assert forall bb :: bb in test ==> (exists input :: validInput(s,input) &&  ValidBehaviorNonTrivial(bb) && BehaviorEvalsCode(codeVuln(input),bb) && bb[0] == s);
-    //    assert test == moduloMs;
-        assert forall p :: p in moduloMs ==> !MiniSpec(p);
-        // assert forall x :: x in moduloMs ==> (exists p :: p in vulnBehaviors && behaviorOutput(x) == behaviorOutput(p));
-                // assert forall x :: x in moduloMs ==> x in vulnBehaviors;
-        // assert forall bb :: bb in vulnBehaviors ==> (exists input :: validInput(s,input) &&  ValidBehaviorNonTrivial(bb) && BehaviorEvalsCode(codeVuln(input),bb) && bb[0] == s);
-        assert forall p :: p in moduloMs ==> !MiniSpec(p);
-        var reducedOut := allBehaviorOutputSet(moduloMs);
-        forall p | p in moduloMs
-            ensures equalOutput(behaviorOutput(p),[Nil,Nil,Nil,Out((Int(1,IntType(1,false)))),Out((Int(1,IntType(1,false))))]);
-            ensures behaviorOutput(p) in reducedOut;
+        reveal_nonTrivialBehaviorPreconditionsVulnModMs();
+        reveal_ValidBehavior();
+
+        vulnModMsOutput(s,vulnModMs,vulnModMsOut);
+        assert forall preBModMs :: preBModMs in vulnModMsOut ==> equalOutput(preBModMs,validOutput());
+
+        forall postB | postB in patchBehaviors
+            ensures equalOutput(behaviorOutput(postB),validOutput());
+            ensures behaviorOutput(postB) in patchOut;
         {
-            possibleVulnOutputsWithMiniSpec(s,p);
-            assert equalOutput(behaviorOutput(p),[Nil,Nil,Nil,Out((Int(1,IntType(1,false)))),Out((Int(1,IntType(1,false))))]);
-            assert behaviorOutput(p) in reducedOut;
+            var input :| BehaviorEvalsCode(codePatch(input),postB) && |postB| > 0 && validInput(postB[0],input);
+            var postBWitness := unwrapPatchBehaviors(s,input);
+            assert equalOutput(behaviorOutput(postB),validOutput());
+            assert behaviorOutput(postB) in patchOut;
         }
-        assert forall reducedP :: reducedP in reducedOut ==> equalOutput(reducedP,[Nil,Nil,Nil,Out((Int(1,IntType(1,false)))),Out((Int(1,IntType(1,false))))]);
-        moduloMSOut := reducedOut;
+
+        var patchB :| patchB in patchBehaviors;
+        var input :| BehaviorEvalsCode(codePatch(input),patchB) && |patchB| > 0 && validInput(patchB[0],input);
+        var postBWitness := unwrapPatchBehaviors(s,input);
+        assert equalOutput(behaviorOutput(patchB),validOutput());
+        assert behaviorOutput(patchB) in patchOut;
+
+        forall preBModMs | preBModMs in vulnModMsOut
+            ensures preBModMs in patchOut;
+        {
+            assert equalOutput(preBModMs,validOutput());
+            transitiveEquality(preBModMs,behaviorOutput(patchB),validOutput());
+            assert preBModMs == behaviorOutput(patchB);
+            equalOutputIsTransitiveSet(behaviorOutput(patchB),preBModMs,patchOut);
+            assert preBModMs in patchOut;
+        }
+        assert forall preBModMs :: preBModMs in vulnModMsOut  ==> preBModMs in patchOut;
     }
 
-    predicate vulnModMiniSpec(s:state,vulnBehaviors:set<behavior>,vulnBehaviorsConstrained:set<behavior> ) //: vulnBehaviorsConstrained:set<behavior> 
+    lemma patchBehaviorsInVulnModMSBehaviors(s:state,vulnModMs:set<behavior>,patchBehaviors:set<behavior>,vulnModMsOut:set<seq<output>>,patchOut:set<seq<output>>)
+        requires vulnModMsOut == allBehaviorOutputSet(vulnModMs);
+        requires patchOut ==  allBehaviorOutputSet(patchBehaviors);
+        requires |vulnModMs|  > 0
+        requires |patchBehaviors|  > 0
         requires ValidState(s);
-        requires nonTrivialBehaviorPreconditionsVuln(s,vulnBehaviors)
-        // ensures forall x :: x in vulnBehaviorsConstrained ==> (exists p :: p in vulnBehaviors && behaviorOutput(x) == behaviorOutput(p));
-        // ensures forall x :: x in vulnBehaviorsConstrained ==> x in vulnBehaviors;
+        requires forall preBModMs :: preBModMs in vulnModMs ==> !MiniSpec(preBModMs);
+        requires nonTrivialBehaviorPreconditionsVulnModMs(s,vulnModMs);
+        requires nonTrivialBehaviorPreconditionsPatch(s,patchBehaviors);
 
-        {
-            && (forall p :: p in vulnBehaviorsConstrained ==> (!MiniSpec(p) && p in vulnBehaviors))
-            && (forall b :: b in vulnBehaviorsConstrained ==> (exists input :: validInput(s,input) &&  ValidBehaviorNonTrivial(b) && BehaviorEvalsCode(codeVuln(input),b) && b[0] == s))
-            // && (forall b :: b in vulnBehaviorsConstrained ==> (exists x :: x))
-
-        }
-////
-
-lemma makeConnection(s:state,vulnBehaviors:set<behavior>,patchBehaviors:set<behavior>,vulnOut:set<seq<output>>)
-            requires nonTrivialBehaviorPreconditions(s,vulnBehaviors,patchBehaviors)
-            requires vulnOut == allBehaviorOutputSet(vulnBehaviors);
-            requires forall p :: constrainedBehavorSet(p,vulnOut) ==> existsSameOutput(vulnBehaviors,p);
-            // requires forall p :: p in vulnBehaviors ==> (equalOutput(behaviorOutput(p),[Nil,Nil,Nil,Out((Int(0,IntType(1,false)))),Out((Int(0,IntType(1,false))))]) 
-            //                 || equalOutput(behaviorOutput(p),[Nil,Nil,Nil,Out((Int(1,IntType(1,false)))),Out((Int(1,IntType(1,false))))])); 
-            requires forall p :: p in vulnBehaviors ==> (!MiniSpec(p) <==> equalOutput(behaviorOutput(p),[Nil,Nil,Nil,Out((Int(1,IntType(1,false)))),Out((Int(1,IntType(1,false))))]));
+        ensures forall postB :: postB in patchBehaviors ==> equalOutput(behaviorOutput(postB),validOutput());
+        ensures forall postB :: postB in patchBehaviors ==> behaviorOutput(postB) in patchOut;
+        ensures forall postB :: postB in patchBehaviors ==> behaviorOutput(postB) in vulnModMsOut;
     {
-            reveal_nonTrivialBehaviorPreconditionsVuln();
-            reveal_nonTrivialBehaviorPreconditionsPatch();
-            reveal_behaviorOutput();
 
-            forall p | constrainedBehavorSet(p,vulnOut)
-                {
-                    var p' :| p' in vulnBehaviors && behaviorOutput(p) == behaviorOutput(p');
-                    possibleVulnOutputs(s,p');
-                    possibleVulnOutputsWithMiniSpec(s,p');
-                    assert (equalOutput(behaviorOutput(p'),[Nil,Nil,Nil,Out((Int(0,IntType(1,false)))),Out((Int(0,IntType(1,false))))]) 
-                            || equalOutput(behaviorOutput(p'),[Nil,Nil,Nil,Out((Int(1,IntType(1,false)))),Out((Int(1,IntType(1,false))))]));
-                    assert (equalOutput(behaviorOutput(p),[Nil,Nil,Nil,Out((Int(0,IntType(1,false)))),Out((Int(0,IntType(1,false))))]) 
-                            || equalOutput(behaviorOutput(p),[Nil,Nil,Nil,Out((Int(1,IntType(1,false)))),Out((Int(1,IntType(1,false))))]));
-                    // assert !MiniSpec(p');
-                    assert !MiniSpec(p);
-                    assert MiniSpec(p') <==> equalOutput(behaviorOutput(p'),[Nil,Nil,Nil,Out((Int(0,IntType(1,false)))),Out((Int(0,IntType(1,false))))]);
-                    assert MiniSpec(p') ==> equalOutput(behaviorOutput(p),[Nil,Nil,Nil,Out((Int(0,IntType(1,false)))),Out((Int(0,IntType(1,false))))]);
-                    assert !MiniSpec(p') ==> equalOutput(behaviorOutput(p),[Nil,Nil,Nil,Out((Int(1,IntType(1,false)))),Out((Int(1,IntType(1,false))))]);
+        reveal_BehaviorEvalsCode();
+        reveal_nonTrivialBehaviorPreconditionsVuln();
+        reveal_nonTrivialBehaviorPreconditionsPatch();
+        reveal_nonTrivialBehaviorPreconditionsVulnModMs();
 
-                    // possibleVulnOutputsWithMiniSpec(s,p);
-                    // assert MiniSpec(p) <==> equalOutput(behaviorOutput(p),[Nil,Nil,Nil,Out((Int(0,IntType(1,false)))),Out((Int(0,IntType(1,false))))]);
-                }
+        vulnModMsOutput(s,vulnModMs,vulnModMsOut);
+        assert forall b :: b in vulnModMsOut ==> equalOutput(b,validOutput());
+        assert |vulnModMsOut| > 0;
+        assert |patchBehaviors| > 0;
+        assert |patchOut| > 0;
+        var vulnMsBehaviorOut :| vulnMsBehaviorOut in vulnModMsOut;
+
+        forall postB | postB in patchBehaviors
+            ensures equalOutput(behaviorOutput(postB),validOutput());
+            ensures behaviorOutput(postB) in patchOut;
+            ensures behaviorOutput(postB) in vulnModMsOut;
+        {
+            var input :| BehaviorEvalsCode(codePatch(input),postB) && |postB| > 0 && validInput(postB[0],input);
+            var b' := unwrapPatchBehaviors(s,input);
+            assert equalOutput(behaviorOutput(postB),validOutput());
+            assert behaviorOutput(postB) in patchOut;
+            transitiveEquality(vulnMsBehaviorOut, behaviorOutput(postB),validOutput());
+            equalOutputIsTransitiveSet(vulnMsBehaviorOut,behaviorOutput(postB),vulnModMsOut);
+            assert behaviorOutput(postB) in vulnModMsOut;
+        }
+
     }
-
-    ////
-    // function vulnModMiniSpecCreate(s:state,vulnBehaviors:seq<behavior>) : (vulnBehaviorsConst:seq<behavior>)
-    //     requires ValidState(s);
-    //     requires nonTrivialBehaviorPreconditionsVuln(s,vulnBehaviors)
-    //     decreases |vulnBehaviors|
-    //     {
-    //         reveal_nonTrivialBehaviorPreconditionsVuln();
-    //         if |vulnBehaviors| == 0 then
-    //             []
-    //         else
-    //             if !MiniSpec(vulnBehaviors[0]) then
-    //                    assert (forall b :: b in all_but_first(vulnBehaviors) ==> (exists input :: validInput(s,input) &&  ValidBehaviorNonTrivial(b) && BehaviorEvalsCode(codeVuln(input),b) && b[0] == s));
-
-    //                 assert nonTrivialBehaviorPreconditionsVuln(s,all_but_first(vulnBehaviors));
-    //                 var out := [vulnBehaviors[0]] + vulnModMiniSpecCreate(s,all_but_first(vulnBehaviors));
-    //                 out
-    //             else
-    //                 vulnModMiniSpecCreate(s,all_but_first(vulnBehaviors))
-    //             // out
-
-    //     }
-
-    // function allBehaviorOutputVuln(s:state,a:seq<behavior>) : (bOut:seq<seq<output>>)
-    //     requires ValidState(s);
-    //     // requires nonTrivialBehaviorPreconditionsVuln(s,a)
-    //     requires (forall b :: b in a ==> (exists input :: validInput(s,input) &&  ValidBehaviorNonTrivial(b) && BehaviorEvalsCode(codeVuln(input),b) && b[0] == s))
-
-    //     ensures |bOut| == |a|
-    //     ensures forall a' :: a' in a ==> behaviorOutput(a') in bOut;
-    //     ensures forall i :: (i >= 0 && i < |a|) ==> bOut[i] == behaviorOutput(a[i])
-    //     ensures |a| == 0 ==> |bOut| == 0;
-    //     //  ensures forall i :: (i >= 0 && i < |a|) ==> (exists input :: validInput(s,input) &&  ValidBehaviorNonTrivial(b) && BehaviorEvalsCode(codeVuln(input),b) && b[0] == s))
-    //     // ensures forall i :: (i >= 0 && i < |a|) ==> (bOut[i] == behaviorOutput(a[i])
-    //     //                                             && (exists input :: validInput(s,input) &&  ValidBehaviorNonTrivial(a[i]) && BehaviorEvalsCode(codeVuln(input),a[i]) && a[i][0] == s))
-    //     // ensures forall b :: behaviorOutput(b) in bOut ==> (exists a' :: a' in a && behaviorOutput(b) == behaviorOutput(a')); 
-    //     ensures forall b :: behaviorOutput(b) in bOut ==> (exists b' :: b' in a && behaviorOutput(b) == behaviorOutput(b'));
-        
-    //     decreases |a|
-    // {
-    //     reveal_nonTrivialBehaviorPreconditionsVuln();
-    //     // assert 
-    //     if |a| == 0 then
-    //         var out := [];
-    //         // assert forall a' :: behaviorOutput(a') in out ==> a' in a;
-    //         out
-    //     else   
-    //         var subset := all_but_first(a);
-    //         if |subset| == 0 then
-    //             var out := [behaviorOutput(a[0])];
-    //             out
-    //         else
-    //             subsetProperty(s,subset);
-    //             var out := [behaviorOutput(a[0])] + allBehaviorOutputVuln(s,subset);
-    //             out
-    // }
-
-    // lemma subsetProperty(s:state,a:seq<behavior>)
-    //     requires ValidState(s);
-    //     requires |a| > 0
-    //     requires (forall b :: b in a ==> (exists input :: validInput(s,input) &&  ValidBehaviorNonTrivial(b) && BehaviorEvalsCode(codeVuln(input),b) && b[0] == s))
-    //     ensures (forall b :: b in all_but_first(a) ==> (exists input :: validInput(s,input) &&  ValidBehaviorNonTrivial(b) && BehaviorEvalsCode(codeVuln(input),b) && b[0] == s));
-
-    // {
-    //    var subset := all_but_first(a);
-    //    assert (forall b :: b in subset ==> (exists input :: validInput(s,input) &&  ValidBehaviorNonTrivial(b) && BehaviorEvalsCode(codeVuln(input),b) && b[0] == s));
-            
-    // }
-
-
-    /// OLD
-
-
-            // forall p | p in vulnBehaviors
-            //     ensures (equalOutput(behaviorOutput(p),[Nil,Nil,Nil,Out((Int(0,IntType(1,false)))),Out((Int(0,IntType(1,false))))]) 
-            //                 || equalOutput(behaviorOutput(p),[Nil,Nil,Nil,Out((Int(1,IntType(1,false)))),Out((Int(1,IntType(1,false))))]));                
-            //     ensures !MiniSpec(p) <==> equalOutput(behaviorOutput(p),[Nil,Nil,Nil,Out((Int(1,IntType(1,false)))),Out((Int(1,IntType(1,false))))]);
-            //     ensures behaviorOutput(p) in vulnOut;
-            //  {
-            //     var input :| BehaviorEvalsCode(codeVuln(input),p) && |p| > 0 && validInput(p[0],input);
-            //     var b' := unwrapVulnBehaviors(s,input);
-            //     possibleVulnOutputs(s,b');
-            //     possibleVulnOutputsWithMiniSpec(s,b');
-            //     assert !MiniSpec(b') <==> equalOutput(behaviorOutput(b'),[Nil,Nil,Nil,Out((Int(1,IntType(1,false)))),Out((Int(1,IntType(1,false))))]);
-            //     assert (equalOutput(behaviorOutput(b'),[Nil,Nil,Nil,Out((Int(0,IntType(1,false)))),Out((Int(0,IntType(1,false))))]) 
-            //                 || equalOutput(behaviorOutput(b'),[Nil,Nil,Nil,Out((Int(1,IntType(1,false)))),Out((Int(1,IntType(1,false))))]));                
-            //     // assert equalOutput(behaviorOutput(p),[Nil,Nil,Nil,Out((Int(1,IntType(1,false)))),Out((Int(1,IntType(1,false))))]);
-            //     // assert behaviorOutput(p) in patchOut;
-            //     assert behaviorOutput(p) in vulnOut;
-
-            //  }
-            // assert forall p :: p in vulnOut ==> equalOutput(p,[Nil,Nil,Nil,Out((Int(0,IntType(1,false)))),Out((Int(0,IntType(1,false))))]) || equalOutput(p,[Nil,Nil,Nil,Out((Int(1,IntType(1,false)))),Out((Int(1,IntType(1,false))))]);
-
-            // assert forall p :: p in patchOut ==> equalOutput(p,[Nil,Nil,Nil,Out((Int(1,IntType(1,false)))),Out((Int(1,IntType(1,false))))]);
-            // assert forall p :: behaviorOutput(p) in patchOut ==> equalOutput(behaviorOutput(p),[Nil,Nil,Nil,Out((Int(1,IntType(1,false)))),Out((Int(1,IntType(1,false))))]);
-            
-            // var p' :| 
-            // assert forall i :: (i >= 0 && i < |vulnOut|) ==> vulnOut[i] == behaviorOutput(vulnBehaviors[i]);
-            // assert forall v :: (v in vulnBehaviors && !MiniSpec(v)) ==> 
-            //             ((behaviorOutput(v) == [Nil,Nil,Nil,Out((Int(1,IntType(1,false)))),Out((Int(1,IntType(1,false))))]));
-            // assert forall p :: constrainedBehavorSet(p,vulnOut) ==> (equalOutput(behaviorOutput(p),[Nil,Nil,Nil,Out((Int(0,IntType(1,false)))),Out((Int(0,IntType(1,false))))]) 
-            //                 || equalOutput(behaviorOutput(p),[Nil,Nil,Nil,Out((Int(1,IntType(1,false)))),Out((Int(1,IntType(1,false))))])); 
-            // assert forall p :: constrainedBehavorSet(p,vulnOut) ==> !MiniSpec(p); 
-
-            // forall p | constrainedBehavorSet(p,vulnOut)
-            // {
-            //     var p' :| p' in vulnBehaviors && behaviorOutput(p) == behaviorOutput(p');
-            // }
-            // assert forall p :: constrainedBehavorSet(p,vulnOut) ==> equalOutput(behaviorOutput(p),[Nil,Nil,Nil,Out((Int(1,IntType(1,false)))),Out((Int(1,IntType(1,false))))]);
-                    
-                    //   assert forall p :: constrainedBehavorSet(p,vulnOut) ==> existsSameOutputConstrained(vulnBehaviors,p);
-
-            // assert forall p :: constrainedBehavorSet(p,vulnOut)==> ((behaviorOutput(p) == [Nil,Nil,Nil,Out((Int(1,IntType(1,false)))),Out((Int(1,IntType(1,false))))]));
-            // assert forall i :: (i >= 0 && i < |vulnOut|) ==> (!MiniSpec(vulnBehaviors[i]) ==>  equalOutput(vulnOut[i],[Nil,Nil,Nil,Out((Int(1,IntType(1,false)))),Out((Int(1,IntType(1,false))))] ));
-            
-            // assert (forall p :: behaviorOutput(p) in vulnOut ==> (exists input :: validInput(s,input) && BehaviorEvalsCode(codeVuln(input),p)));
-            // assert forall p :: (p in vulnBehaviors && !MiniSpec(p)) ==> equalOutput(behaviorOutput(p),[Nil,Nil,Nil,Out((Int(1,IntType(1,false)))),Out((Int(1,IntType(1,false))))] );
-            
-
-
 
 
 }

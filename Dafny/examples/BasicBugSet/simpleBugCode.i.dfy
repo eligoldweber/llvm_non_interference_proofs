@@ -90,14 +90,12 @@ module simpleBugCode{
     predicate validInput(s:state, input:operand)
         requires ValidState(s)
     {
-        // var result := LV("result");
         && s.o.Nil?
         && ValidOperand(s,input)
         && isInt(OperandContents(s,input))
         && typesMatch(OperandContents(s,D(Int(0,IntType(4,false)))),OperandContents(s,input))
         && OperandContents(s,input).val >= 0 
         && OperandContents(s,input).val <= 2
-        // && ValidOperand(s,result)
     }
 
 
@@ -128,31 +126,29 @@ module simpleBugCode{
     }
 
 
-    lemma unwrapPatchBehaviors(s:state, input:operand) returns (b:behavior)
+    lemma unwrapPatchBehaviors(s:state, input:operand) returns (postB:behavior)
         requires ValidState(s);
 
         // -- input is valid -- ie. valid 16 bit integer 
         requires validInput(s,input);
-        ensures |b| == 5;
-        ensures b[0] == s;
-        // ensures forall i :: i > 0 && i < |b|-1 ==> b[i] == evalInsRe(codePatch(input).block[i-1].ins,b[i-1]);
-        ensures b[|b|-1] == b[|b|-2];
-        // ensures b == [s] + evalCodeRE(c,s)
+        ensures |postB| == 5;
+        ensures postB[0] == s;
+        ensures postB[|postB|-1] == postB[|postB|-2];
 
 
-        ensures ValidBehaviorNonTrivial(b);
-        ensures BehaviorEvalsCode(codePatch(input),b);
+        ensures ValidBehaviorNonTrivial(postB);
+        ensures BehaviorEvalsCode(codePatch(input),postB);
 
 
-        ensures ValidBehaviorNonTrivial(b);
-        ensures BehaviorEvalsCode(codePatch(input),b);
+        ensures ValidBehaviorNonTrivial(postB);
+        ensures BehaviorEvalsCode(codePatch(input),postB);
         // ensures forall b' :: (BehaviorEvalsCode(codePatch(input),b')  && b'[0] == b[0]) ==> b' == b
 
-        ensures exists patch :: BehaviorEvalsCode(codePatch(input),patch) && b == patch;
+        ensures exists patchB :: BehaviorEvalsCode(codePatch(input),patchB) && postB == patchB;
         // ensures forall b' :: (|b'| > 0 && BehaviorEvalsCode(codePatch(input),b')  && b'[0] == b[0]) ==> b' == b
 
-        ensures  !(exists s:state,result:operand :: (&& s in b
-                                                        && last(b) == s 
+        ensures  !(exists s:state,result:operand :: (&& s in postB
+                                                        && last(postB) == s 
                                                         && ValidState(s)
                                                         && result.LV?
                                                         && result.l == "result"
@@ -160,16 +156,16 @@ module simpleBugCode{
                                                         && ValidOperand(s,result)
                                                         && OperandContents(s,result).Int?
                                                         && OperandContents(s,result).val == 0 ));
-        ensures (behaviorOutput(b) == [Nil,Nil,Nil,Out((Int(1,IntType(1,false)))),Out((Int(1,IntType(1,false))))]);
+        ensures (behaviorOutput(postB) == validOutput());
 
         {
             reveal_BehaviorEvalsCode();
             var c := codePatch(input);
             assert forall cs :: cs in c.block ==> !cs.CNil?;
             assert |c.block| == 3;
-            b := [s] + evalCodeRE(c,s);
+            postB := [s] + evalCodeRE(c,s);
             
-            var step,remainder, subBehavior := unwrapBlockWitness(b,c.block,s);
+            var step,remainder, subBehavior := unwrapBlockWitness(postB,c.block,s);
 
             step,remainder,subBehavior := unwrapBlockWitness(subBehavior,remainder,last(step));
             step,remainder,subBehavior := unwrapBlockWitness(subBehavior,remainder,last(step));
@@ -186,130 +182,110 @@ module simpleBugCode{
                             Ins(RET(result))]);
 
 
-            assert b[0] == s;
-            assert b[1] == evalInsRe(ADD(z,4,input,y),s);
+            assert postB[0] == s;
+            assert postB[1] == evalInsRe(ADD(z,4,input,y),s);
             
             // ADD
             assert ValidInstruction(s,ADD(z,4,input,y));
-            assert NextStep(s,b[1], Step.evalInsStep(ADD(z,4,input,y))); 
-            assert StateNext(b[0],b[1]);
-            assert ValidState(b[1]);
-            assert b[1] == stateUpdateVar(s,z,evalADD(4,OperandContents(s,D(Int(2147483646,IntType(4,false)))),OperandContents(s,input)));
-            assert OperandContents(b[1],z).Int?;
-            assert ToTwosComp(OperandContents(b[1],z)).val == (Int(2147483646,IntType(4,false)).val + OperandContents(s,input).val) % Pow256(4); 
-            assert OperandContents(s,input).val > 0 ==> OperandContents(b[1],z).val > 0;
+            assert NextStep(s,postB[1], Step.evalInsStep(ADD(z,4,input,y))); 
+            assert StateNext(postB[0],postB[1]);
+            assert ValidState(postB[1]);
+            assert postB[1] == stateUpdateVar(s,z,evalADD(4,OperandContents(s,D(Int(2147483646,IntType(4,false)))),OperandContents(s,input)));
+            assert OperandContents(postB[1],z).Int?;
+            assert ToTwosComp(OperandContents(postB[1],z)).val == (Int(2147483646,IntType(4,false)).val + OperandContents(s,input).val) % Pow256(4); 
+            assert OperandContents(s,input).val > 0 ==> OperandContents(postB[1],z).val > 0;
         
             // ICMP
-            assert ValidOperand(b[1],z);
-            assert ValidOperand(b[1],D(Int(0,IntType(4,false))));
-            assert isInt(OperandContents(b[1],z)) && isInt(OperandContents(b[1],D(Int(0,IntType(4,false)))));
-            assert typesMatch(OperandContents(b[1],z),OperandContents(b[1],D(Int(0,IntType(4,false)))));
-            assert 4 == OperandContents(b[1],z).itype.size;
-            assert ValidInstruction(b[1],ICMP(result,ugt,4,z,D(Int(0,IntType(4,false)))));
-            assert NextStep(b[1],b[2],Step.evalInsStep(ICMP(result,ugt,4,z,D(Int(0,IntType(4,false))))));
-            assert StateNext(b[1],b[2]);
-            assert ValidState(b[2]);
+            assert ValidOperand(postB[1],z);
+            assert ValidOperand(postB[1],D(Int(0,IntType(4,false))));
+            assert isInt(OperandContents(postB[1],z)) && isInt(OperandContents(postB[1],D(Int(0,IntType(4,false)))));
+            assert typesMatch(OperandContents(postB[1],z),OperandContents(postB[1],D(Int(0,IntType(4,false)))));
+            assert 4 == OperandContents(postB[1],z).itype.size;
+            assert ValidInstruction(postB[1],ICMP(result,ugt,4,z,D(Int(0,IntType(4,false)))));
+            assert NextStep(postB[1],postB[2],Step.evalInsStep(ICMP(result,ugt,4,z,D(Int(0,IntType(4,false))))));
+            assert StateNext(postB[1],postB[2]);
+            assert ValidState(postB[2]);
     //
-            assert ValidOperand(b[2],result);
-            assert OperandContents(b[2],result).Int?;
-            assert OperandContents(b[2],result).val == 1;
-            assert ValidInstruction(b[2],RET(result));
-            assert NextStep(b[2],b[3],Step.evalInsStep(RET(result)));
-            assert StateNext(b[2],b[3]);
-            assert OperandContents(b[2],result) == OperandContents(b[3],result);
-            assert ValidState(b[3]);
+            assert ValidOperand(postB[2],result);
+            assert OperandContents(postB[2],result).Int?;
+            assert OperandContents(postB[2],result).val == 1;
+            assert ValidInstruction(postB[2],RET(result));
+            assert NextStep(postB[2],postB[3],Step.evalInsStep(RET(result)));
+            assert StateNext(postB[2],postB[3]);
+            assert OperandContents(postB[2],result) == OperandContents(postB[3],result);
+            assert ValidState(postB[3]);
 
             // LAST STEP
-            assert b[3] == b[4];
-            assert ValidState(b[4]);
-            assert NextStep(b[3],b[4],Step.stutterStep());
-            assert StateNext(b[3],b[4]);
+            assert postB[3] == postB[4];
+            assert ValidState(postB[4]);
+            assert NextStep(postB[3],postB[4],Step.stutterStep());
+            assert StateNext(postB[3],postB[4]);
             
             // Properties
-            assert ValidBehaviorNonTrivial(b);
-            assert BehaviorEvalsCode(c,b);
-            assert OperandContents(b[1],z).val > 0 ==> OperandContents(b[2],result).val == 1;
-            assert ValidOperand(last(b),z);
-            assert OperandContents(s,input).val > 0 ==> OperandContents(b[1],z).val > 0;
-            assert |b| == 5;
+            assert ValidBehaviorNonTrivial(postB);
+            assert BehaviorEvalsCode(c,postB);
+            assert OperandContents(postB[1],z).val > 0 ==> OperandContents(postB[2],result).val == 1;
+            assert ValidOperand(last(postB),z);
+            assert OperandContents(s,input).val > 0 ==> OperandContents(postB[1],z).val > 0;
+            assert |postB| == 5;
             // assert forall b' :: (b' in b && ValidOperand(b',result) && OperandContents(b',result).Int?) ==> OperandContents(b',result).val != 0;
-            assert Out(OperandContents(b[2],result)) in behaviorOutput(b);
-            assert OperandContents(b[2],result) == (Int(1,IntType(1,false)));
+            assert Out(OperandContents(postB[2],result)) in behaviorOutput(postB);
+            assert OperandContents(postB[2],result) == (Int(1,IntType(1,false)));
             // assert OperandContents(b[2],result) == (Int(1,IntType(1,false)));
-            assert behaviorOutput(b) == [Nil,Nil,Nil,Out((Int(1,IntType(1,false)))),Out((Int(1,IntType(1,false))))];
+            assert behaviorOutput(postB) == validOutput();
             // outputIsEqual(behaviorOutput(b) , [Nil,Nil,Nil,Out(OperandContents(b[2],result)),Out(OperandContents(b[2],result))]);
          
-            assert OperandContents(last(b),result).val == 1;
-            uniqueOperandContent(last(b),result);
-            assert !(OperandContents(last(b),result).val == 0);
-            uniqueOperandInState(last(b),result);
-            // assert (exists s:state :: (s == last(b) && s in b 
-            //                   && ValidState(s)
-            //                   && ValidOperand(s,result)
-            //                   && OperandContents(s,result).Int?
-            //                   && OperandContents(s,result).val == 1));
-
-        //    assert  !(exists s:state,result:operand :: (&& s in b
-        //                                                 && last(b) == s 
-        //                                                 && ValidState(s)
-        //                                                 && result.LV?
-        //                                                 && result.l == "result"
-        //                                                 && result.l in s.lvs
-        //                                                 && ValidOperand(s,result)
-        //                                                 && OperandContents(s,result).Int?
-        //                                                 && OperandContents(s,result).val == 0 ));
+            assert OperandContents(last(postB),result).val == 1;
+            uniqueOperandContent(last(postB),result);
+            assert !(OperandContents(last(postB),result).val == 0);
+            uniqueOperandInState(last(postB),result);
 
 
         }
 
-     lemma unwrapVulnBehaviors(s:state, input:operand) returns (b:behavior)
+     lemma unwrapVulnBehaviors(s:state, input:operand) returns (preB:behavior)
         requires ValidState(s);
 
         // -- input is valid -- ie. valid 16 bit integer 
         requires validInput(s,input);
-        ensures |b| == 5;
-        ensures b[0] == s;
-        // ensures forall i :: i > 0 && i < |b|-1 ==> b[i] == evalInsRe(codeVuln(input).block[i-1].ins,b[i-1]);
-        // ensures b[|b|-1] == b[|b|-2];
-        // ensures b == [s] + evalCodeRE(c,s)
+        ensures |preB| == 5;
+        ensures preB[0] == s;
 
+        ensures ValidBehaviorNonTrivial(preB);
+        ensures BehaviorEvalsCode(codeVuln(input),preB);
 
-        ensures ValidBehaviorNonTrivial(b);
-        ensures BehaviorEvalsCode(codeVuln(input),b);
-        // ensures forall b' :: (|b'| > 0 && BehaviorEvalsCode(codeVuln(input),b')  && b'[0] == b[0]) ==> b' == b
+        ensures exists input :: |preB| > 0 && validInput(s,input) && BehaviorEvalsCode(codeVuln(input),preB) && preB[0] == s
 
-        ensures exists input :: |b| > 0 && validInput(s,input) && BehaviorEvalsCode(codeVuln(input),b) && b[0] == s
-
-        ensures ValidBehaviorNonTrivial(b);
-        ensures BehaviorEvalsCode(codeVuln(input),b);
-        ensures (behaviorOutput(b) == [Nil,Nil,Nil,Out((Int(1,IntType(1,false)))),Out((Int(1,IntType(1,false))))])
-                || (behaviorOutput(b) == [Nil,Nil,Nil,Out((Int(0,IntType(1,false)))),Out((Int(0,IntType(1,false))))]);
-        ensures (OperandContents(s,input).val < 2) ==> (behaviorOutput(b) == [Nil,Nil,Nil,Out((Int(1,IntType(1,false)))),Out((Int(1,IntType(1,false))))]);
-        ensures (OperandContents(s,input).val >= 2) ==> (behaviorOutput(b) == [Nil,Nil,Nil,Out((Int(0,IntType(1,false)))),Out((Int(0,IntType(1,false))))]);
+        ensures ValidBehaviorNonTrivial(preB);
+        ensures BehaviorEvalsCode(codeVuln(input),preB);
+        ensures (behaviorOutput(preB) == validOutput())
+                || (behaviorOutput(preB) == invalidOutput());
+        ensures (OperandContents(s,input).val < 2) ==> (behaviorOutput(preB) == validOutput());
+        ensures (OperandContents(s,input).val >= 2) ==> (behaviorOutput(preB) == invalidOutput());
         ensures OperandContents(s,input).val == 2 ==>(exists result:operand :: 
-                                                            (&& ValidState(last(b))
+                                                            (&& ValidState(last(preB))
                                                             && result.LV?
                                                             && result.l == "result"
-                                                            && result.l in last(b).lvs
-                                                            && ValidOperand(last(b),result)
-                                                            && OperandContents(last(b),result).Int?
-                                                            && OperandContents(last(b),result).val == 0));
+                                                            && result.l in last(preB).lvs
+                                                            && ValidOperand(last(preB),result)
+                                                            && OperandContents(last(preB),result).Int?
+                                                            && OperandContents(last(preB),result).val == 0));
         ensures OperandContents(s,input).val < 2 ==> !(exists result:operand :: 
-                                                            (&& ValidState(last(b))
+                                                            (&& ValidState(last(preB))
                                                             && result.LV?
                                                             && result.l == "result"
-                                                            && result.l in last(b).lvs
-                                                            && ValidOperand(last(b),result)
-                                                            && OperandContents(last(b),result).Int?
-                                                            && OperandContents(last(b),result).val == 0));
+                                                            && result.l in last(preB).lvs
+                                                            && ValidOperand(last(preB),result)
+                                                            && OperandContents(last(preB),result).Int?
+                                                            && OperandContents(last(preB),result).val == 0));
         {
             reveal_BehaviorEvalsCode();
             var c := codeVuln(input);
             assert forall cs :: cs in c.block ==> !cs.CNil?;
             assert |c.block| == 3;
-            b := [s] + evalCodeRE(c,s);
+            preB := [s] + evalCodeRE(c,s);
             
-            var step,remainder, subBehavior := unwrapBlockWitness(b,c.block,s);
+            var step,remainder, subBehavior := unwrapBlockWitness(preB,c.block,s);
 
             step,remainder,subBehavior := unwrapBlockWitness(subBehavior,remainder,last(step));
             step,remainder,subBehavior := unwrapBlockWitness(subBehavior,remainder,last(step));
@@ -325,68 +301,59 @@ module simpleBugCode{
                             Ins(RET(result))]);
 
 
-            assert b[0] == s;
-            assert b[1] == evalInsRe(ADD(z,4,input,y),s);
+            assert preB[0] == s;
+            assert preB[1] == evalInsRe(ADD(z,4,input,y),s);
             
             // ADD
             assert ValidInstruction(s,ADD(z,4,input,y));
-            assert NextStep(s,b[1], Step.evalInsStep(ADD(z,4,input,y))); 
-            assert StateNext(b[0],b[1]);
-            assert ValidState(b[1]);
-            assert b[1] == stateUpdateVar(s,z,evalADD(4,OperandContents(s,D(Int(2147483646,IntType(4,false)))),OperandContents(s,input)));
-            assert OperandContents(b[1],z).Int?;
-            assert ToTwosComp(OperandContents(b[1],z)).val == (Int(2147483646,IntType(4,false)).val + OperandContents(s,input).val) % Pow256(4);
-            assert OperandContents(s,input).val == 2 ==>   OperandContents(b[1],z).val == 2147483648;
-            assert OperandContents(s,input).val == 2 ==>  FromTwosComp(OperandContents(b[1],z)).val < 0;
-            assert OperandContents(s,input).val > 0 ==> OperandContents(b[1],z).val > 0;
+            assert NextStep(s,preB[1], Step.evalInsStep(ADD(z,4,input,y))); 
+            assert StateNext(preB[0],preB[1]);
+            assert ValidState(preB[1]);
+            assert preB[1] == stateUpdateVar(s,z,evalADD(4,OperandContents(s,D(Int(2147483646,IntType(4,false)))),OperandContents(s,input)));
+            assert OperandContents(preB[1],z).Int?;
+            assert ToTwosComp(OperandContents(preB[1],z)).val == (Int(2147483646,IntType(4,false)).val + OperandContents(s,input).val) % Pow256(4);
+            assert OperandContents(s,input).val == 2 ==>   OperandContents(preB[1],z).val == 2147483648;
+            assert OperandContents(s,input).val == 2 ==>  FromTwosComp(OperandContents(preB[1],z)).val < 0;
+            assert OperandContents(s,input).val > 0 ==> OperandContents(preB[1],z).val > 0;
         
             // ICMP
-            assert ValidOperand(b[1],z);
-            assert ValidOperand(b[1],D(Int(0,IntType(4,false))));
-            assert isInt(OperandContents(b[1],z)) && isInt(OperandContents(b[1],D(Int(0,IntType(4,false)))));
-            assert typesMatch(OperandContents(b[1],z),OperandContents(b[1],D(Int(0,IntType(4,false)))));
-            assert 4 == OperandContents(b[1],z).itype.size;
-            assert ValidInstruction(b[1],ICMP(result,sgt,4,z,D(Int(0,IntType(4,false)))));
-            assert NextStep(b[1],b[2],Step.evalInsStep(ICMP(result,sgt,4,z,D(Int(0,IntType(4,false))))));
-            assert StateNext(b[1],b[2]);
-            assert ValidState(b[2]);
-            assert (OperandContents(b[1],z).val <= 2147483647) ==> OperandContents(b[2],result).val == 1;
+            assert ValidOperand(preB[1],z);
+            assert ValidOperand(preB[1],D(Int(0,IntType(4,false))));
+            assert isInt(OperandContents(preB[1],z)) && isInt(OperandContents(preB[1],D(Int(0,IntType(4,false)))));
+            assert typesMatch(OperandContents(preB[1],z),OperandContents(preB[1],D(Int(0,IntType(4,false)))));
+            assert 4 == OperandContents(preB[1],z).itype.size;
+            assert ValidInstruction(preB[1],ICMP(result,sgt,4,z,D(Int(0,IntType(4,false)))));
+            assert NextStep(preB[1],preB[2],Step.evalInsStep(ICMP(result,sgt,4,z,D(Int(0,IntType(4,false))))));
+            assert StateNext(preB[1],preB[2]);
+            assert ValidState(preB[2]);
+            assert (OperandContents(preB[1],z).val <= 2147483647) ==> OperandContents(preB[2],result).val == 1;
     //
-            assert ValidOperand(b[2],result);
-            assert ValidInstruction(b[2],RET(result));
-            assert NextStep(b[2],b[3],Step.evalInsStep(RET(result)));
-            assert StateNext(b[2],b[3]);
-            assert OperandContents(b[2],result) == OperandContents(b[3],result);
+            assert ValidOperand(preB[2],result);
+            assert ValidInstruction(preB[2],RET(result));
+            assert NextStep(preB[2],preB[3],Step.evalInsStep(RET(result)));
+            assert StateNext(preB[2],preB[3]);
+            assert OperandContents(preB[2],result) == OperandContents(preB[3],result);
 
-            assert ValidState(b[3]);
+            assert ValidState(preB[3]);
 
             // LAST STEP
-            assert b[3] == b[4];
-            assert ValidState(b[4]);
-            assert NextStep(b[3],b[4],Step.stutterStep());
-            assert StateNext(b[3],b[4]);
+            assert preB[3] == preB[4];
+            assert ValidState(preB[4]);
+            assert NextStep(preB[3],preB[4],Step.stutterStep());
+            assert StateNext(preB[3],preB[4]);
             
             // Properties
-            assert ValidBehaviorNonTrivial(b);
-            assert BehaviorEvalsCode(c,b);
-            assert OperandContents(s,input).val < 2 ==> OperandContents(b[2],result).val == 1;
-            assert OperandContents(s,input).val == 2 ==> OperandContents(last(b),result).val == 0;
-            assert ValidOperand(last(b),z);
-            assert OperandContents(s,input).val > 0 ==> OperandContents(b[1],z).val > 0;
-            assert |b| == 5;
-            // assert Out(OperandContents(b[2],result)) in behaviorOutput(b);
-            assert (OperandContents(b[2],result) == (Int(1,IntType(1,false)))) || (OperandContents(b[2],result) == (Int(0,IntType(1,false))));
+            assert ValidBehaviorNonTrivial(preB);
+            assert BehaviorEvalsCode(c,preB);
+            assert OperandContents(s,input).val < 2 ==> OperandContents(preB[2],result).val == 1;
+            assert OperandContents(s,input).val == 2 ==> OperandContents(last(preB),result).val == 0;
+            assert ValidOperand(last(preB),z);
+            assert OperandContents(s,input).val > 0 ==> OperandContents(preB[1],z).val > 0;
+            assert |preB| == 5;
+            assert (OperandContents(preB[2],result) == (Int(1,IntType(1,false)))) || (OperandContents(preB[2],result) == (Int(0,IntType(1,false))));
 
-            assert behaviorOutput(b) == [Nil,Nil,Nil,Out(OperandContents(b[2],result)),Out(OperandContents(b[2],result))];
+            assert behaviorOutput(preB) == [Nil,Nil,Nil,Out(OperandContents(preB[2],result)),Out(OperandContents(preB[2],result))];
 
-            // assert OperandContents(s,input).val == 2 ==>  (exists s:state,result:operand :: (&& s in b
-            //                                                 && last(b) == s 
-            //                                                 && ValidState(s)
-            //                                                 && result.LV?
-            //                                                 && result.l in s.lvs
-            //                                                 && ValidOperand(s,result)
-            //                                                 && OperandContents(s,result).Int?
-            //                                                 && OperandContents(s,result).val == 0));
 
         }
 
@@ -414,44 +381,15 @@ module simpleBugCode{
         }
     }
 
-    predicate nonTrivialBehaviorPreconditions(s:state,vulnBehaviors:set<behavior>,patchBehaviors:set<behavior>)
+    function validOutput():(validOut:seq<output>)
     {
-        && ValidState(s)
-        && nonTrivialBehaviorPreconditionsVuln(s,vulnBehaviors)
-        && nonTrivialBehaviorPreconditionsPatch(s,patchBehaviors)
-        && |vulnBehaviors| >= |patchBehaviors|
-      
+        [Nil,Nil,Nil,Out((Int(1,IntType(1,false)))),Out((Int(1,IntType(1,false))))]
     }
 
-    predicate {:opaque} nonTrivialBehaviorPreconditionsPatch(s:state,patchBehaviors:set<behavior>)
-        requires ValidState(s)
-    {   
-        // reveal_BehaviorEvalsCode();
-        (forall b :: b in patchBehaviors <==> (exists input :: validInput(s,input) &&  ValidBehaviorNonTrivial(b) && BehaviorEvalsCode(codePatch(input),b) && b[0] == s))
+    function invalidOutput():(invalidOut:seq<output>)
+    {
+        [Nil,Nil,Nil,Out((Int(0,IntType(1,false)))),Out((Int(0,IntType(1,false))))]
     }
+
     
-    predicate {:opaque} nonTrivialBehaviorPreconditionsVuln(s:state,vulnBehaviors:set<behavior>)
-        requires ValidState(s)
-    {
-        // reveal_BehaviorEvalsCode();
-        (forall b :: b in vulnBehaviors <==> (exists input :: validInput(s,input) &&  ValidBehaviorNonTrivial(b) && BehaviorEvalsCode(codeVuln(input),b) && b[0] == s))
-    }
-
-    predicate {:opaque} nonTrivialBehaviorPreconditionsVulnModMs(s:state,vulnBehaviorsModMs:set<behavior>)
-        requires ValidState(s)
-    {
-        // reveal_BehaviorEvalsCode();
-        (forall b :: b in vulnBehaviorsModMs ==> (exists input :: validInput(s,input) &&  ValidBehaviorNonTrivial(b) && BehaviorEvalsCode(codeVuln(input),b) && b[0] == s))
-    }
-
-    predicate validPatchBehavior(b:behavior)
-    {
-        exists input :: BehaviorEvalsCode(codePatch(input),b) && |b| > 0 && ValidState(b[0]) && validInput(b[0],input)
-    }
-
-    predicate validVulnBehavior(b:behavior)
-    {
-        exists input :: BehaviorEvalsCode(codeVuln(input),b) && ValidBehaviorNonTrivial(b)
-    }
-
 }
