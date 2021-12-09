@@ -46,7 +46,7 @@ module simpleBugGeneral{
         forall preB :: behaviorOutput(preB) in preModMsOut ==> behaviorOutput(preB) in postOutput
     }
 
-  predicate safePatch(pre:set<behavior>,post:set<behavior>)
+    predicate safePatch(pre:set<behavior>,post:set<behavior>)
     {
         // forall p :: (p in a && !MiniSpec(p)) <==> p in b
         var preOutput := allBehaviorOutputSet(pre);
@@ -54,7 +54,7 @@ module simpleBugGeneral{
         forall preB :: (behaviorOutput(preB) in preOutput && !MiniSpec(preB)) <==> behaviorOutput(preB) in postOutput
     }
 
-predicate safePatchMS(pre:set<behavior>,post:set<behavior>)
+    predicate safePatchMS(pre:set<behavior>,post:set<behavior>)
     {           
     //  forall p :: (p in a && !MiniSpec(p)) <==> p in b
         var preModMs := MakeSubset(pre, x => !MiniSpec(x));
@@ -109,7 +109,7 @@ predicate safePatchMS(pre:set<behavior>,post:set<behavior>)
         requires ValidState(s)
     {   
         (forall b :: b in patchBehaviors <==> (exists input ::  && validInput(s,input) 
-                                                                &&  ValidBehaviorNonTrivial(b) 
+                                                                && ValidBehaviorNonTrivial(b) 
                                                                 && BehaviorEvalsCode(codePatch(input),b) 
                                                                 && b[0] == s))
     }
@@ -118,7 +118,7 @@ predicate safePatchMS(pre:set<behavior>,post:set<behavior>)
         requires ValidState(s)
     {
         (forall b :: b in vulnBehaviors <==> (exists input :: && validInput(s,input) 
-                                                              &&  ValidBehaviorNonTrivial(b) 
+                                                              && ValidBehaviorNonTrivial(b) 
                                                               && BehaviorEvalsCode(codeVuln(input),b) 
                                                               && b[0] == s))
     }

@@ -62,7 +62,6 @@ predicate  SurjectiveOver<X, Y>(xs:set<X>, ys:set<Y>, f:X-->Y)
   reads f.reads
   requires forall x :: x in xs ==> f.requires(x)
 {
-  // forall x1, x2 :: x1 in xs && x2 in xs && f(x1) in ys && f(x2) in ys && f(x1) == f(x2) ==> x1 == x2
   forall y :: y in ys ==> (exists x :: x in xs && f(x) == y)
 }
 

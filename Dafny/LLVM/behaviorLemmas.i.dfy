@@ -31,6 +31,16 @@ module behavior_lemmas
          assert forall b' :: (|b'| > 0 && BehaviorEvalsCode(c,b')  && b'[0] == b[0]) ==> b' == b;
      }
 
+    lemma behaviorThatEvalsSameCodeWithSameInitHasEqualOut(s:state,c:codeRe,b:behavior)
+        requires ValidState(s);
+        requires ValidBehaviorNonTrivial(b);
+        requires BehaviorEvalsCode(c,b);
+        ensures forall b' :: (|b'| > 0 && BehaviorEvalsCode(c,b')  && b'[0] == b[0]) ==> behaviorOutput(b') == behaviorOutput(b);
+     {  
+         reveal_BehaviorEvalsCode();
+         assert forall b' :: (|b'| > 0 && BehaviorEvalsCode(c,b')  && b'[0] == b[0]) ==> behaviorOutput(b') == behaviorOutput(b);
+     }
+
 
     function {:opaque} behaviorOutput(b:behavior) : (bOut:seq<output>)
         ensures |bOut| == |b| 
@@ -47,7 +57,7 @@ module behavior_lemmas
         // ensures |bOut| == |a|
         ensures SurjectiveOver(bSet,allBOut, x => behaviorOutput(x));
         ensures forall b :: b in bSet ==> behaviorOutput(b) in allBOut;
-        ensures (allBOut == allBehaviorOutputSet(bSet)) ==> SurjectiveOver(bSet,allBOut, x => behaviorOutput(x));
+        // ensures (allBOut == allBehaviorOutputSet(bSet)) ==> SurjectiveOver(bSet,allBOut, x => behaviorOutput(x));
         ensures |bSet| > 0 ==> |allBOut| > 0
         ensures |bSet| == 0 ==> |allBOut| == 0;
         decreases |bSet|
@@ -73,6 +83,12 @@ module behavior_lemmas
 
     predicate {:opaque} expandedAllBehaviorsSurjective(bSet:set<behavior>,allBOut:set<seq<output>>)
     {
+
+        // |ys| > 0
+        // var y :| y in ys
+        // assert SurjectiveOver(bSet,allBOut, x => behaviorOutput(x));
+        // x :| x in xs && behaviorOutput(x) == y)
+
         (forall y :: y in allBOut ==> (exists x :: x in bSet && behaviorOutput(x) == y))
     }
 
@@ -101,13 +117,13 @@ module behavior_lemmas
 
     lemma subsetOfBehaviorImpliesSubsetOfOutput(superset:set<behavior>,subset:set<behavior>,f:behavior->bool)
         requires subset == MakeSubset(superset,f);
-        ensures forall subsetOut :: subsetOut in allBehaviorOutputSet(subset) ==> subsetOut in allBehaviorOutputSet(superset);
+        ensures forall subsetElem :: subsetElem in allBehaviorOutputSet(subset) ==> subsetElem in allBehaviorOutputSet(superset);
     {
         assert forall subElem :: subElem in subset ==> subElem in superset;
         var superOut := allBehaviorOutputSet(superset);
         var subOut := allBehaviorOutputSet(subset);
 
-        assert forall subsetOut :: subsetOut in subOut ==> subsetOut in superOut;
+        assert forall subsetElem :: subsetElem in subOut ==> subsetElem in superOut;
     }
 
     lemma subsetOfBehaviorImpliesSubsetOfOutputFull(superset:set<behavior>,subset:set<behavior>,superOut:set<seq<output>>,subOut:set<seq<output>>,f:behavior->bool)
@@ -115,10 +131,10 @@ module behavior_lemmas
         requires superOut == allBehaviorOutputSet(superset);
         requires subOut == allBehaviorOutputSet(subset);
 
-        ensures forall subsetOut :: subsetOut in subOut ==> subsetOut in superOut;
+        ensures forall subsetElem :: subsetElem in subOut ==> subsetElem in superOut;
     {
         assert forall subElem :: subElem in subset ==> subElem in superset;
-        assert forall subsetOut :: subsetOut in subOut ==> subsetOut in superOut;
+        assert forall subsetElem :: subsetElem in subOut ==> subsetElem in superOut;
     }
 
    

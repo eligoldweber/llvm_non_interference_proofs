@@ -135,7 +135,7 @@ module simpleBugProperties{
         assert  forall p :: MiniSpec(p) ==> !(p in patchBehaviors);
         // subsetOfBehaviorImpliesSubsetOfOutputFull(vulnBehaviors,aModuloMS,aOut,aOutMS,x => !MiniSpec(x));
         // assert forall p :: p in aOutMS ==> p in aOut;
-
+ 
         if(|aModuloMS| > 0)
         {
             patchBehaviorsInVulnModMSBehaviors(s,aModuloMS,patchBehaviors,aOutMS,bOut);
