@@ -54,7 +54,7 @@ To verify these proofs locally, without Docker, you will need the following depe
 
 This applies to verifying files locally or using docker. 
 
- * For Challenge Problem 5: `scons --dafny-path=/opt/dafny --verify-root=./Dafny/examples/Challenge6/Challenge6Properties.i.dfy` <br \> <br \> 
+ * For Challenge Problem 6: `scons --dafny-path=/opt/dafny --verify-root=./Dafny/examples/Challenge6/Challenge6Properties.i.dfy` <br \> <br \> 
 
  * In general, use `scons --dafny-path=/path/to/directory/with/dafny/`
  
@@ -62,7 +62,7 @@ This applies to verifying files locally or using docker.
  > **Note:** Dafny is installed in `/opt/dafny` in the Docker image
  
  
- The default verification will verify most `.dfy` files in the `src/Dafny/examples` directory and all of their dependencies. (Including the proofs for Challenge Problem 6)
+ The default verification will verify most `.dfy` files in the `src/Dafny/examples` directory and all of their dependencies. (Including the proofs for Challenge Problem 6, but excluding `Challenge6PropertiesSideEffect.i.dfy`)
 
  > **Note:** The first time running this, it will take some time as it will verify all `.dfy` files and all of their dependencies. The verification result is cached in a corresponding `.vdfy` file and upon running `scons` again if a specific dependency has not been modified, the cached verification results will be reused at runtime. 
  
@@ -89,7 +89,7 @@ If a file is unable to verified (for any assortment of reasons), the final outpu
 
 # Challenge Problem 6
 
-Link to video showing setup and explanation for challenge problem 6: [UPDATE](https://www.youtube.com/watch?v=V-L_8Offet4)
+Link to video showing setup and explanation for challenge problem 6: [https://youtu.be/aCRA0xDVP3c](https://youtu.be/aCRA0xDVP3c)
 
 The main files of interest are located in the following directory: `Dafny/examples/Challenge6`
 
@@ -131,7 +131,7 @@ To prove full non-interference we aim to prove 3 properties, and show that the c
 
 
 ```
-    predicate successfulPatch(post:set<System_s.behavior>)
+    predicate successfulPatch(post:set<behavior>)
     {
         forall postB :: MiniSpec(postB) ==> !(postB in post)
     }
