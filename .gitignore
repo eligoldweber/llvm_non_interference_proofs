@@ -1,0 +1,10 @@
+*.dll
+*.dll.mdb
+*.vdfy
+*.tmp
+
+Binaries/* 
+Source/*/bin/
+Source/*/obj/
+.idea/*
+.sconsign.dblite
