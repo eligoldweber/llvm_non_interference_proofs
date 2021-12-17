@@ -72,13 +72,17 @@ predicate ByteMemValid(b:Block, offset:nat)
 // A block is valid so long as its stored bytes are well-formed; that is, numbers
 // of size n start on an index divisible by n and fill the entire n space
 predicate BlockValid(b:Block) {
-    forall offset | 0 < offset < |b| :: (b[offset].mb? ==> (b[offset].size > 0 && ByteMemValid(b, offset)))
+    forall offset :: (0 < offset < |b| && b[offset].mb?) ==> (b[offset].size > 0 && ByteMemValid(b, offset))
 }
 
 // Need to check every step to make sure memory is still valid
+// predicate MemValid(s:MemState) {
+//     && (forall bid | bid in s.mem :: bid < s.nextBlock)
+//     && (forall bid | bid in s.mem :: BlockValid(s.mem[bid]))
+// }
 predicate MemValid(s:MemState) {
-    && (forall bid | bid in s.mem :: bid < s.nextBlock)
-    && (forall bid | bid in s.mem :: BlockValid(s.mem[bid]))
+    && (forall bid :: bid in s.mem ==> bid < s.nextBlock)
+    && (forall bid :: bid in s.mem ==> BlockValid(s.mem[bid]))
 }
 
 datatype MemStep = 
@@ -95,6 +99,7 @@ predicate NextMemStep(s:MemState, s':MemState, step:MemStep)
         case freeStep(bid) => Free(s,s',bid)
         case storeStep(bid,offset,data,n) => (&& IsValidPtr(s, bid, offset,n)
                                             && data.Int? && IntType(1, false) == data.itype
+                                            && MemValid(s)
                                             && (Store(s,s',bid,offset,data)))
         case memCpyStep(bid,bid') => bid' in s'.mem && bid in s.mem && s'.mem[bid'] == s.mem[bid]
         case stutterStep() => s == s'
@@ -142,22 +147,38 @@ predicate Load(s:MemState, s':MemState, bid:nat, offset:nat, data:Data) {
 predicate Store(s:MemState, s':MemState, bid:nat, offset:nat, data:Data)
     requires IsValidPtr(s, bid, offset,1)
     requires data.Int? && IntType(1, false) == data.itype;
+    requires MemValid(s);
 {
     && s'.nextBlock == s.nextBlock
     && s'.mem == s.mem[bid := s.mem[bid][offset := mb(data.itype.size, DataToUInt8(data))]]
+    // && MemValid(s')
     // && NextMemStep(s,s',MemStep.storeStep(bid,offset,data,1))
 }
-lemma StoreImpliesStoreStep(s:MemState, s':MemState, bid:nat, offset:nat, data:Data)
+
+function evalStore(s:MemState, bid:nat, offset:nat, data:Data) : (s':MemState)
     requires IsValidPtr(s, bid, offset,1)
     requires data.Int? && IntType(1, false) == data.itype;
-    requires Store(s,s',bid,offset,data);
-    ensures NextMemStep(s, s', MemStep.storeStep(bid,offset,data,1));
+    requires MemValid(s);
+    requires s.mem[bid][offset].mb? && s.mem[bid][offset].size == data.itype.size;
+    ensures MemValid(s')// ==> Store(s,s',bid,offset,data);
 {
-    assert IsValidPtr(s, bid, offset,1);
-    assert data.Int? && IntType(1, false) == data.itype;
-    assert (Store(s,s',bid,offset,data));
-    assert NextMemStep(s, s', MemStep.storeStep(bid,offset,data,1));
+    var s' := s.(mem := s.mem[bid := s.mem[bid][offset := mb(data.itype.size, DataToUInt8(data))]]);
+    assert MemValid(s');
+    s'
 }
+
+
+// lemma StoreImpliesStoreStep(s:MemState, s':MemState, bid:nat, offset:nat, data:Data)
+//     requires IsValidPtr(s, bid, offset,1)
+//     requires data.Int? && IntType(1, false) == data.itype;
+//     requires Store(s,s',bid,offset,data);
+//     ensures NextMemStep(s, s', MemStep.storeStep(bid,offset,data,1));
+// {
+//     assert IsValidPtr(s, bid, offset,1);
+//     assert data.Int? && IntType(1, false) == data.itype;
+//     assert (Store(s,s',bid,offset,data));
+//     assert NextMemStep(s, s', MemStep.storeStep(bid,offset,data,1));
+// }
 // // Memory Access and Addressing Operations // 
 function evalLOAD(s:MemState,s':MemState,t:bitWidth,op1:Data): (out:Data)
     requires MemValid(s)
@@ -194,7 +215,6 @@ function evalGETELEMENTPTR(s:MemState,t:bitWidth,op1:Data,op2:Data): (out:Data)
     Ptr(op1.block,op1.bid,newOffset,t)
 }
 
-	
 function evalALLOCA(s:MemState, size:nat): (out:Data)
     requires MemValid(s)
     // requires Alloc(s,s',s.nextBlock,size);
@@ -209,6 +229,7 @@ function evalALLOCA(s:MemState, size:nat): (out:Data)
     var d := (Ptr(bid,bid,0,size));
     d
 }
+
 function AllocaStep(s:MemState, size:nat): (out:MemState)
     requires MemValid(s);
     ensures forall b :: b in s.mem ==> b in out.mem;
@@ -227,6 +248,38 @@ function AllocaStep(s:MemState, size:nat): (out:MemState)
      assert MemValid(y);
      y
 }
+
+    predicate memCpy(s:MemState, dstPtr:Data, oPtr:Data, s':MemState)
+        requires MemValid(s)
+        requires dstPtr.Ptr?;
+        requires oPtr.Ptr?;  
+        requires IsValidPtr(s,dstPtr.bid,dstPtr.offset,dstPtr.size) 
+        requires IsValidPtr(s,oPtr.bid,oPtr.offset,oPtr.size) 
+
+        
+    {
+        var bSrc:Block := s.mem[oPtr.bid];
+        && s' == s.(mem := (s.mem[dstPtr.bid := bSrc] ))
+        && s'.mem[dstPtr.bid] == s'.mem[oPtr.bid]
+        && forall b :: b in s.mem <==> b in s'.mem
+        && NextMemStep(s,s',MemStep.memCpyStep(oPtr.bid,dstPtr.bid))
+    }
+
+ function evalMemCpy(s:MemState, dstPtr:Data, oPtr:Data) : (s':MemState)
+        requires MemValid(s)
+        requires dstPtr.Ptr?;
+        requires oPtr.Ptr?;  
+        requires IsValidPtr(s,dstPtr.bid,dstPtr.offset,dstPtr.size) 
+        requires IsValidPtr(s,oPtr.bid,oPtr.offset,oPtr.size) 
+    {
+        var bSrc:Block := s.mem[oPtr.bid];
+        var s' := s.(mem := (s.mem[dstPtr.bid := bSrc]));
+        assert memCpy(s,dstPtr,oPtr,s');
+        s'
+    }
+    
+
+
 
 
 }

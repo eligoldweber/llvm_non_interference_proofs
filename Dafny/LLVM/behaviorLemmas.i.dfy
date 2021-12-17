@@ -42,16 +42,7 @@ module behavior_lemmas
      }
 
 
-    function {:opaque} behaviorOutput(b:behavior) : (bOut:seq<output>)
-        ensures |bOut| == |b| 
-        ensures forall i :: (i >= 0 && i < |b|) ==> bOut[i] == b[i].o
-        decreases |b|
-    {
-        if |b| == 0 then
-            []
-        else 
-            [b[0].o] + behaviorOutput(all_but_first(b))
-    }
+
 
      function  allBehaviorOutputSet(bSet:set<behavior>) : (allBOut:set<seq<output>>)
         // ensures |bOut| == |a|

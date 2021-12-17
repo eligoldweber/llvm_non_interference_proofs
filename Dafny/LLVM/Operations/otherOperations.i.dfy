@@ -7,6 +7,7 @@ include "../types.dfy"
 module other_operations_i {
     import opened ops
     import opened types
+    
 
      // eq | ne | ugt | uge | ult | ule | sgt | sge | slt | sle
 
@@ -17,6 +18,7 @@ module other_operations_i {
         ensures out.Int? && !out.itype.signed
         ensures out.itype.size == 1 
         ensures out.val == 0 || out.val == 1
+        ensures IntFits(out.val,out.itype)
     {
         match c
             case eq => boolToData(v0.val == v1.val)

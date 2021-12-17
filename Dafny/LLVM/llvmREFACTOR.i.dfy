@@ -8,7 +8,7 @@ include "./Operations/otherOperations.i.dfy"
 include "../Libraries/SeqIsUniqueDef.i.dfy"
 include "../Libraries/Seqs.s.dfy"
 include "../Libraries/Sets.i.dfy"
-
+// include "./behaviorLemmas.i.dfy"
 
 module LLVM_defRE {
 
@@ -22,7 +22,7 @@ module LLVM_defRE {
     import opened other_operations_i
     import opened Collections__Seqs_s
     import opened Collections__Sets_i
-
+    // import opened behavior_lemmas
 
     type addr = int
     type LocalVar = string
@@ -42,7 +42,7 @@ module LLVM_defRE {
 
 ///
 
-    datatype output = Out(o:Data) | Nil
+    datatype output = Out(o:Data) | SubOut(os:seq<output>) |Nil
 
     type codeSeq = seq<codeRe>
 
@@ -63,6 +63,22 @@ module LLVM_defRE {
     }
 
 
+    function {:opaque} behaviorOutput(b:behavior) : (bOut:seq<output>)
+        ensures |bOut| == |b| 
+        ensures forall i :: (i >= 0 && i < |b|) 
+            ==> if (b[i].o == SubOut([Nil])) then
+                bOut[i] == Nil
+                else bOut[i] == b[i].o
+        decreases |b|
+    {
+        if |b| == 0 then
+            []
+        else
+            if b[0].o == SubOut([Nil]) then
+                [Nil] + behaviorOutput(all_but_first(b))
+            else
+                [b[0].o] + behaviorOutput(all_but_first(b))
+    }
 ///
 
     function  evalCodeRE(c:codeRe, s:state) : (b:behavior)
@@ -116,6 +132,8 @@ module LLVM_defRE {
          ensures dst.LV? ==> forall lv :: (lv in s.lvs && lv != dst.l) ==> s'.lvs[lv] == s.lvs[lv];
          ensures dst.GV? ==> forall gv :: (gv in s.gvs && gv != dst.g) ==> s'.gvs[gv] == s.gvs[gv]; 
          ensures ValidOperand(s',dst)
+         ensures ValidState(s) ==> evalUpdate(s,dst,d,s');
+
 
          {
              if dst.LV? then
@@ -140,6 +158,8 @@ module LLVM_defRE {
         ensures (!ValidState(s) || !ValidInstruction(s, ins)) ==> !s'.ok;
 
     {
+        reveal_ValidBehavior();
+        reveal_behaviorOutput();
         if (!ValidState(s) || !ValidInstruction(s, ins)) then 
             var notOK := s.(ok := false);
             notOK
@@ -159,6 +179,7 @@ module LLVM_defRE {
                 var s' := stateUpdateVar(s,dst,evalSUB(t,OperandContents(s,src1),OperandContents(s,src2)));
                 if ValidData(s',evalSUB(t,OperandContents(s,src1),OperandContents(s,src2))) then 
                     // assert NextStep(s,s', Step.evalInsStep(ins));
+                    assert dst.LV? ==> forall lv :: (lv in s.lvs && lv != dst.l) ==> s'.lvs[lv] == s.lvs[lv];
                     assert MemStateNext(s.m,s'.m,MemStep.stutterStep);
                     assert validEvalIns(ins,s,s');
                     s'
@@ -167,12 +188,64 @@ module LLVM_defRE {
                     notOk
             case ICMP(dst,cond,t,src1,src2) => 
                 var s' := stateUpdateVar(s,dst,evalICMP(cond,t,OperandContents(s,src1),OperandContents(s,src2)));
-                if ValidData(s',evalSUB(t,OperandContents(s,src1),OperandContents(s,src2))) then 
+                assert ValidData(s',evalICMP(cond,t,OperandContents(s,src1),OperandContents(s,src2)));
+                // if ValidData(s',evalICMP(cond,t,OperandContents(s,src1),OperandContents(s,src2))) then 
                     assert MemStateNext(s.m,s'.m,MemStep.stutterStep);
+                    assert validEvalIns(ins,s,s');
+                    s'
+                // else
+                //     var notOk := s'.(ok := false);
+                //     assert NextStep(s,notOk, Step.errorStateStep());
+                //     notOk
+            // ValidState(s') && Store(s.m,s'.m,OperandContents(s,ptr).bid,OperandContents(s,ptr).offset,OperandContents(s,valueToStore))
+            //                                      && (MemValid(s'.m))
+            case STORE(valueToStore,ptr) =>
+                var s' := s.(m := evalStore(s.m,OperandContents(s,ptr).bid,OperandContents(s,ptr).offset,OperandContents(s,valueToStore)));
+                if MemValid(s'.m) then
+                    assert MemStateNext(s.m,s'.m,MemStep.storeStep(OperandContents(s,ptr).bid,OperandContents(s,ptr).offset,OperandContents(s,valueToStore),1));
                     assert validEvalIns(ins,s,s');
                     s'
                 else
                     var notOk := s'.(ok := false);
+                    assert NextStep(s,notOk, Step.errorStateStep());
+                    notOk
+            case LLVM_MEMCPY(dst,src,len,volatile) => 
+                var s' := s.(o := Nil,m := evalMemCpy(s.m,OperandContents(s,dst),OperandContents(s,src)));
+                if MemValid(s'.m) && ValidState(s') then
+                    assert MemStateNext(s.m,s'.m,MemStep.memCpyStep(OperandContents(s,src).bid,OperandContents(s,dst).bid));
+                    assert validEvalIns(ins,s,s');
+                    s'
+                else
+                    var notOk := s'.(ok := false);
+                    assert NextStep(s,notOk, Step.errorStateStep());
+                    notOk
+            case CALL(dst,fnc) =>
+                var subB := evalBlockRE(fnc,s);
+                if ValidBehavior(subB) && ValidOperand(last(subB),dst) then
+                    assert |subB| > 0;
+                    assert ValidState(last(subB));
+                    if dst.GV? || dst.LV? then
+                        var stemp := last(subB);
+                        // var stemp := stateUpdateVar(last(subB),dst,OperandContents(last(subB),dst));
+                        var subO := behaviorOutput(subB);
+                        if true then // forall o :: o in subO ==> o == Nil
+                            var s' := stemp.(o := Nil);
+                            assert validEvalIns(ins,s,s');
+                            assert s' == last(subB).(o := Nil);
+                            s'
+                        else
+                            var s' := stemp.(o := SubOut(behaviorOutput(subB)));
+                            assert s'.o == SubOut(behaviorOutput(subB));
+                            assert validEvalIns(ins,s,s');
+                            s'
+                    else 
+                        var subO := behaviorOutput(subB);
+                        var s' := s.(o := SubOut(behaviorOutput(subB)));
+                        assert s'.o == SubOut(behaviorOutput(subB));
+                        assert validEvalIns(ins,s,s');
+                        s'
+                else
+                    var notOk := s.(ok := false);
                     assert NextStep(s,notOk, Step.errorStateStep());
                     notOk
             case RET(val) => 
@@ -193,6 +266,9 @@ module LLVM_defRE {
     | ADD(dst:operand, size:nat, src1ADD:operand, src2ADD:operand)
     | SUB(dst:operand, size:nat, src1SUB:operand, src2SUB:operand)
     | ICMP(dst:operand,cond:condition,size:nat,src1:operand,src2:operand)
+    | STORE(valueToStore:operand,ptr:operand)
+    | LLVM_MEMCPY(dst:operand,src:operand,len:bitWidth,volatile:bool)
+    | CALL(dst:operand,fnc:codeSeq)
     // | BR(if_cond:operand, labelTrue:codeRe,labelFalse:codeRe)
     | RET(val:operand)
 
@@ -327,8 +403,20 @@ module LLVM_defRE {
                                             && isInt(OperandContents(s,src1)) && isInt(OperandContents(s,src2))
                                             && t == OperandContents(s,src1).itype.size
                                             && typesMatch(OperandContents(s,src1),OperandContents(s,src2))
+            case STORE(valueToStore,ptr) => && ValidOperand(s,valueToStore) && ValidOperand(s,ptr)
+                                        && OperandContents(s,valueToStore).Int? && (IntType(1, false) == OperandContents(s,valueToStore).itype)
+                                        && MemValid(s.m) && OperandContents(s,ptr).Ptr? 
+                                        && IsValidPtr(s.m,OperandContents(s,ptr).bid,OperandContents(s,ptr).offset,1)
+                                        && s.m.mem[OperandContents(s,ptr).bid][OperandContents(s,ptr).offset].mb? 
+                                        && s.m.mem[OperandContents(s,ptr).bid][OperandContents(s,ptr).offset].size == OperandContents(s,valueToStore).itype.size
+            case LLVM_MEMCPY(dst,src,len,volatile) => && ValidOperand(s,dst) && ValidOperand(s,src) && OperandContents(s,dst).Ptr?
+                                                     && OperandContents(s,src).Ptr? && OperandContents(s,dst).size >= OperandContents(s,src).size
+                                                     && validBitWidth(len) && !volatile // dont support volatile right now
             case RET(val) => && ValidOperand(s,val)
+            case CALL(dst,fnc) => (dst.LV? || dst.GV? || (dst.D? && dst.d.Void?)) && ValidOperand(s,dst) && |fnc| > 0
+
     }
+
 
 
     predicate evalUpdate(s:state, o:operand, data:Data, s':state)
@@ -360,7 +448,13 @@ module LLVM_defRE {
             case ICMP(dst,cond,t,src1,src2) => ValidState(s') 
                                 && ValidData(s',evalICMP(cond,t,OperandContents(s,src1),OperandContents(s,src2)))
                                 && evalUpdate(s, dst, evalICMP(cond,t,OperandContents(s,src1),OperandContents(s,src2)),s')
-            case RET(val) => ValidState(s') && s'.m == s.m && s'.o == Out(OperandContents(s,val))     
+            case STORE(valueToStore,ptr) => ValidState(s') && Store(s.m,s'.m,OperandContents(s,ptr).bid,OperandContents(s,ptr).offset,OperandContents(s,valueToStore))
+                                        && (MemValid(s'.m))
+            case LLVM_MEMCPY(dst,src,len,volatile) => ValidState(s') && memCpy(s.m, OperandContents(s,dst),OperandContents(s,src), s'.m)                            
+            case RET(val) => ValidState(s') && s'.m == s.m && s'.o == Out(OperandContents(s,val))   
+            case CALL(dst,fnc)  =>  ValidState(s') && ValidOperand(s',dst) && ValidData(s',OperandContents(s',dst))// maybe adjsut //&& evalUpdate(s, dst, OperandContents(s',dst),s')
+
+  
     
     }
 
@@ -368,6 +462,7 @@ module LLVM_defRE {
         lemma unwrapBlockWitness(b:behavior,block:codeSeq,s:state) 
             returns (step:behavior,remainder:codeSeq,subBehavior:behavior)
             requires b == [s] + evalBlockRE(block,s);
+            // requires forall ins :: (ins in block && ins.Ins?) ==> !ins.ins.CALL? // doesnt work with CALLL rn
             // requires ValidState(s);
             ensures |step| > 0
             ensures (|block| > 0 && !first(block).CNil?) ==> (b == [s] + step + evalCodeRE(Block(remainder),last(step)));
@@ -398,7 +493,8 @@ module LLVM_defRE {
             }else{
                 assert !(|block| == 0 || first(block).CNil?);
                 var metaBehavior := evalCodeRE(first(block),s);
-                assert (first(block).Ins? && ValidInstruction(s,first(block).ins)) ==> ValidBehavior([s] + metaBehavior);
+                // assert (first(block).Ins? && ValidInstruction(s,first(block).ins)) ==> ValidBehavior([s] + metaBehavior);
+                assert (first(block).Ins? && first(block).ins.CALL?) ==> metaBehavior == [evalInsRe(first(block).ins,s)];
                 var theRest := evalBlockRE(all_but_first(block),last(metaBehavior));
                 assert evalBlockRE(block,s) == metaBehavior + theRest;
                 assert b == [s] + evalBlockRE(block,s);
@@ -411,7 +507,7 @@ module LLVM_defRE {
                 subBehavior := b[|step|..];
                 // assert subBehavior == [last(step)] + evalBlockRE(remainder,last(step));
                 assert evalBlockRE([],last(step)) == [last(step)];
-                assert b == [s] + b[1..|step|] + b[|step|..];
+                // assert b == [s] + b[1..|step|] + b[|step|..];
                 assert b == [s] + step + all_but_first(subBehavior);
             }
         }
