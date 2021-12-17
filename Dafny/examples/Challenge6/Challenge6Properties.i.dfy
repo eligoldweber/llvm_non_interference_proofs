@@ -5,6 +5,7 @@ include "../../LLVM/behaviorLemmas.i.dfy"
 include "../../LLVM/llvmREFACTOR.i.dfy"
 include "../../LLVM/types.dfy"
 include "../../Libraries/Sets.i.dfy"
+include "Challenge6Common.i.dfy"
 
 module challenge6Properties{
     import opened challenge6Code
@@ -14,6 +15,7 @@ module challenge6Properties{
     import opened LLVM_defRE
     import opened types
     import opened Collections__Sets_i
+    import opened challenge6common
 
         // benignPatch: "The patch does not add any NEW behaviors"
     predicate benignPatch(pre:set<behavior>,post:set<behavior>)
@@ -88,20 +90,7 @@ module challenge6Properties{
         // }
     }
 
-    function validBehaviorsOuts():(validOut:seq<output>)
-    {
-        [Nil,
-        Nil,
-        Nil,
-        Nil,
-        Nil,
-        Nil,
-        Nil,
-        Nil,
-        Nil,
-        SubOut([Out((Int(16,IntType(4,false)))),Out(Int(4,IntType(1,false))),Out(Int(4,IntType(1,false)))]),
-        SubOut([Out((Int(16,IntType(4,false)))),Out(Int(4,IntType(1,false))),Out(Int(4,IntType(1,false)))])]
-    }
+
 
   predicate validPatchBehavior(b:behavior)
     {

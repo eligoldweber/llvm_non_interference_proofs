@@ -18,25 +18,20 @@ module challenge6Code{
     function challenge_prob_6_code_write_encrypted_simple_vuln():codeRe
     {
 
-       // [temp] dummy ptrs
-        // var call := D(Ptr(0,0,0,1));
+
         var call := LV("call");
-
-        var mblock := D(Ptr(0,0,0,1));
+        var mblock := LV("mblock");
         var call1 := LV("call1");
-        // var call2 := D(Ptr(0,0,0,1));
-        var call2 := LV("call2");//D(Int(0,IntType(1,false)));
-        var call3 := LV("call3");//D(Int(1,IntType(4,false)));
+        var call2 := LV("call2");
+        var call3 := LV("call3");
         var INTEGRITY_SIZE := LV("INTEGRITY_SIZE");
-
-        // var call3 := D(Ptr(0,0,0,1));
         var call4 := D(Ptr(0,0,0,1));
         var IV_SIZE := D(Int(16,IntType(4,false)));
         var KEY := D(Int(16,IntType(4,false)));
         var cipherText := D(Ptr(0,0,0,1));
         var bytes_written := D(Ptr(0,0,0,1));
 
-        var cmp := LV("cmp");//D(Int(0,IntType(1,false)));
+        var cmp := LV("cmp");
         var cmp5 := D(Int(0,IntType(1,false)));
  
         var var_1 := D(Ptr(0,0,0,1));
@@ -75,31 +70,24 @@ module challenge6Code{
     {
 
        // [temp] dummy ptrs
-        // var call := D(Ptr(0,0,0,1));
+       
         var call := LV("call");
 
         var mblock := LV("mblock");
         var call1 := LV("call1");
-        // var call2 := D(Ptr(0,0,0,1));
-        var call2 := LV("call2");//D(Int(0,IntType(1,false)));
-        var call3 := LV("call3");//D(Int(1,IntType(4,false)));
+        var call2 := LV("call2");
+        var call3 := LV("call3");
         var INTEGRITY_SIZE := LV("INTEGRITY_SIZE");
         var digestLength :=  LV("digestLength");
-        // var call3 := D(Ptr(0,0,0,1));
         var call4 := D(Ptr(0,0,0,1));
         var IV_SIZE := D(Int(16,IntType(4,false)));
         var KEY := D(Int(16,IntType(4,false)));
         var cipherText := D(Ptr(0,0,0,1));
         var bytes_written := D(Ptr(0,0,0,1));
 
-        var cmp := LV("cmp");//D(Int(0,IntType(1,false)));
+        var cmp := LV("cmp");
         var cmp5 := D(Int(0,IntType(1,false)));
  
-        var var_1 := D(Ptr(0,0,0,1));
-        var var_2 := D(Int(0,IntType(4,false)));
-        var var_3 := D(Ptr(0,0,0,1));
-    
-        var conv := D(Int(0,IntType(8,false)));
 
 
     //   %bytes_written = alloca i32, align 4
@@ -131,33 +119,23 @@ module challenge6Code{
     function challenge_prob_6_code_write_encrypted_simple_patch_side_effect():codeRe
     {
 
-       // [temp] dummy ptrs
-        // var call := D(Ptr(0,0,0,1));
         var call := LV("call");
 
         var mblock := D(Ptr(0,0,0,1));
         var call1 := LV("call1");
-        // var call2 := D(Ptr(0,0,0,1));
-        var call2 := LV("call2");//D(Int(0,IntType(1,false)));
-        var call3 := LV("call3");//D(Int(1,IntType(4,false)));
+        var call2 := LV("call2");
+        var call3 := LV("call3");
         var INTEGRITY_SIZE := LV("INTEGRITY_SIZE");
         var digestLength :=  LV("digestLength");
 
-        // var call3 := D(Ptr(0,0,0,1));
         var call4 := D(Ptr(0,0,0,1));
         var IV_SIZE := D(Int(16,IntType(4,false)));
         var KEY := D(Int(16,IntType(4,false)));
         var cipherText := D(Ptr(0,0,0,1));
         var bytes_written := D(Ptr(0,0,0,1));
 
-        var cmp := LV("cmp");//D(Int(0,IntType(1,false)));
-        var cmp5 := D(Int(0,IntType(1,false)));
- 
-        var var_1 := D(Ptr(0,0,0,1));
-        var var_2 := D(Int(0,IntType(4,false)));
-        var var_3 := D(Ptr(0,0,0,1));
-    
-        var conv := D(Int(0,IntType(8,false)));
+        var cmp := LV("cmp");
+
 
 
     //   %bytes_written = alloca i32, align 4
@@ -182,21 +160,12 @@ module challenge6Code{
             Ins(CALL(call3,fwrite_empty(bytes_written,4,1,D(Ptr(0,0,0,1))))),
             Ins(ICMP(cmp,eq,4,call3,D(Int(0,IntType(4,false))))),
             Ins(CALL(D(Void),stateOutputDump(KEY,INTEGRITY_SIZE)))])
-
-    //    Block([Ins(CALL(call,malloc(Int(0,IntType(8,false))))),
-    //           Ins(LLVM_MEMCPY(call,mblock,1,false)),
-    //           Ins(CALL(call1,malloc(Ptr(0,0,0,1)))),
-    //           Ins(CALL(call2,encrypt_side_effects(INTEGRITY_SIZE))),
-    //           Ins(STORE(call2,bytes_written)),
-    //           Ins(CALL(call3,fwrite_empty(bytes_written,4,1,D(Ptr(0,0,0,1))))),
-    //           Ins(ICMP(cmp,eq,4,call3,D(Int(0,IntType(4,false))))),
-    //           Ins(CALL(D(Void),stateOutputDump(INTEGRITY_SIZE,IV_SIZE)))])
     }
 
-    function stateOutputDump(KEY:operand,IV_SIZE:operand):codeSeq
+    function stateOutputDump(op1:operand,op2:operand):codeSeq
     {
-        [Ins(RET(KEY)),
-         Ins(RET(IV_SIZE))]
+        [Ins(RET(op1)),
+         Ins(RET(op2))]
     }
  
     function encrypt(plainText:operand,size:nat,KEY:operand,IV:operand,cipherText:operand):codeSeq
@@ -213,7 +182,6 @@ module challenge6Code{
     function digest(digest:operand,INTEGRITY_SIZE:operand,mblock:operand):codeSeq //stub
     {
         [CNil]
-        // [Ins(ADD(digest,1,INTEGRITY_SIZE,digest))] + [CNil]
     }
 
 
@@ -322,7 +290,6 @@ module challenge6Code{
         && s.lvs["digestLength"] == Int(0,IntType(1,false))
         && s.m.mem[0][0].mb? 
         && s.m.mem[0][0].size == 1
-        // && operandsUnique(s,[call,call1,call2,call3,mblock,bytes_written,cmp,INTEGRITY_SIZE])
         
     }
 

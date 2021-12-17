@@ -5,6 +5,7 @@ include "../../LLVM/behaviorLemmas.i.dfy"
 include "../../Libraries/Seqs.s.dfy"
 include "../../LLVM/memory.i.dfy"
 include "Challenge6Code.s.dfy"
+include "Challenge6Common.i.dfy"
 
 module challenge6CodeLemmasPatch{
     import opened control_flow
@@ -14,50 +15,23 @@ module challenge6CodeLemmasPatch{
     import opened behavior_lemmas
     import opened memory
     import opened challenge6Code
+    import opened challenge6common
 
-
-// -- hechenxi@umich : chenxi
 
 lemma unwrapPatchBehaviors(s:state, c:codeRe) returns (preB:behavior)
         requires ValidState(s);
         requires validStartingState(s);
         requires c == challenge_prob_6_code_write_encrypted_simple_patch();
 
-        // -- input is valid -- ie. valid 16 bit integer 
         requires validInput(s);
         
-        // ensures ValidBehaviorNonTrivial(preB);
         ensures BehaviorEvalsCode(challenge_prob_6_code_write_encrypted_simple_patch(),preB);
         ensures |preB| == 11;
         ensures preB[0] == s;
         
-        ensures StateNext(preB[0],preB[1]);
-        ensures StateNext(preB[1],preB[2]);
-        ensures ValidState(preB[0]);
-        ensures ValidState(preB[1]);
-        ensures ValidState(preB[2]);
-        // ensures preB[2] == preB[3];
-        ensures ValidState(preB[3]);
-        ensures preB[3] == preB[4];
-        ensures ValidState(preB[4]);
-        ensures ValidState(preB[5]);
-        ensures StateNext(preB[0],preB[1]);
-        ensures StateNext(preB[1],preB[2]);
-        ensures StateNext(preB[2],preB[3]);
-        ensures StateNext(preB[3],preB[4]);
-        ensures StateNext(preB[4],preB[5]);
-        ensures StateNext(preB[5],preB[6]);
-        ensures ValidState(preB[6]);
-        ensures StateNext(preB[6],preB[7]);
-        ensures ValidState(preB[7]);
-        ensures StateNext(preB[7],preB[8]);
-        ensures ValidState(preB[8]);
-        ensures StateNext(preB[8],preB[9]);
-        ensures ValidState(preB[9]);
-          ensures StateNext(preB[9],preB[10]);
-        ensures ValidState(preB[10]);
-        // // ensures preB == [s] + evalCodeRE(c,s);
-        // // ensures 
+        ensures validPracticalBehavior(preB);
+
+
         ensures behaviorOutput(preB) == [Nil,
                                         Nil,
                                         Nil,
@@ -153,8 +127,7 @@ lemma unwrapPatchBehaviors(s:state, c:codeRe) returns (preB:behavior)
         assert ValidState(preB[7]);
         
         assert cmp.LV?;
-        // var r := D(Int(0,IntType(4,false)));
-        // assert  IntFits(r.d.val,r.d.itype);
+
         var src2 := validZero16bitInt(preB[7]);
         assert ValidOperand(preB[7],call3);// 
         assert ValidOperand(preB[7],src2);
@@ -165,7 +138,6 @@ lemma unwrapPatchBehaviors(s:state, c:codeRe) returns (preB:behavior)
         intsTypeMatch(OperandContents(preB[7],call3),OperandContents(preB[7],src2));
         assert typesMatch(OperandContents(preB[7],call3),OperandContents(preB[7],src2));
 
-        // assert (Int(1,IntType(4,false))) == OperandContents(preB[7],call3);
         assert ValidInstruction(preB[7],ICMP(cmp,eq,4,call3,src2));
 
         assert preB[8] == evalInsRe(ICMP(cmp,eq,4,call3,src2),preB[7]);
@@ -224,91 +196,6 @@ lemma unwrapPatchBehaviors(s:state, c:codeRe) returns (preB:behavior)
 
 
     }
-
-
-
-    lemma equalStatesAreStutter(s:state,s':state)
-        requires s==s'
-        requires ValidState(s);
-        ensures ValidState(s');
-        ensures NextStep(s,s',Step.stutterStep());
-        ensures StateNext(s,s');
-    {
-         assert ValidState(s');
-         assert NextStep(s,s',Step.stutterStep());
-         assert StateNext(s,s');
-    }
-
-    lemma intsTypeMatch(x:Data,y:Data)
-        requires (isInt(x) && isInt(y))
-        requires x.itype.size == y.itype.size
-        requires x.itype.signed == y.itype.signed
-        ensures typesMatch(x,y);
-    {
-        assert typesMatch(x,y);
-    }
-
-    function validZero16bitInt(s:state) : (val:operand)
-        ensures val.D?;
-        ensures val.d.Int?;
-        ensures ValidData(s, val.d)
-        ensures !val.d.itype.signed
-        ensures val.d.itype.size == 4
-    {
-        var val := D(Int(0,IntType(4,false)));
-        assert  IntFits(val.d.val,val.d.itype);
-        val
-    }
-
-
-    lemma unwrapDumpWitness(s:state,op1:operand,op2:operand,sNext:state) returns (b:behavior)
-        requires ValidState(s)
-        requires ValidOperand(s,op1)
-        requires ValidOperand(s,op2)
-        requires sNext == evalInsRe(CALL(D(Void),stateOutputDump(op1,op2)),s)
-        requires ValidInstruction(s,CALL(D(Void),stateOutputDump(op1,op2)));
-        requires s.o == Nil
-
-        ensures |b| == 4
-        ensures ValidBehavior(b);
-        ensures ValidOperand(last(b),D(Void));
-        // ensures ValidOperand(b[1],op2);
-        ensures behaviorOutput(b) == [Nil,Out(OperandContents(s,op1)),Out(OperandContents(s,op2)),Out(OperandContents(s,op2))];
-        ensures NextStep(s,sNext,Step.evalInsStep(CALL(D(Void),stateOutputDump(op1,op2))));
-        ensures StateNext(s,sNext);
-        ensures ValidState(sNext);
-        ensures sNext.o == SubOut([Out(OperandContents(s,op1)),Out(OperandContents(s,op2)),Out(OperandContents(s,op2))]);
-
-    {
-        reveal_behaviorOutput();
-        var subB := [s] + evalCodeRE(Block(stateOutputDump(op1,op2)),s);// alBlockRE(stateOutputDump(op1,op2),s);
-        assert stateOutputDump(op1,op2) == [Ins(RET((op1))),Ins(RET((op2)))];
-
-        var step,remainder,subBehavior := unwrapBlockWitness(subB,stateOutputDump(op1,op2),s);
-        step,remainder,subBehavior := unwrapBlockWitness(subBehavior,remainder,last(step));
-        step,remainder,subBehavior := unwrapBlockWitness(subBehavior,remainder,last(step));
-        
-        assert subB[0] == s;
-        assert NextStep(subB[0],subB[1],Step.evalInsStep(RET((op1))));
-        assert ValidState(subB[1]);
-        assert subB[1].o == Out(OperandContents(s,op1));
-        assert NextStep(subB[1],subB[2],Step.evalInsStep(RET((op2))));
-        assert ValidState(subB[2]);
-        assert subB[2].o == Out(OperandContents(s,op2));
-        assert subB[2] == subB[3];
-        equalStatesAreStutter(subB[2],subB[3]);
-        assert StateNext(subB[2],subB[3]);
-        assert behaviorOutput(subB) == [Nil,Out(OperandContents(s,op1)),Out(OperandContents(s,op2)),Out(OperandContents(s,op2))];
-        assert sNext == evalInsRe(CALL(D(Void),stateOutputDump(op1,op2)),s);
-        assert sNext.ok;
-        var rest := evalBlockRE(stateOutputDump(op1,op2),s);
-        assert subB == [s] + rest;
-        assert behaviorOutput(rest) == [Out(OperandContents(s,op1)),Out(OperandContents(s,op2)),Out(OperandContents(s,op2))];
-        assert sNext.o == SubOut(behaviorOutput(rest));
-        return subB;
-    }
-
-
 
 
 }

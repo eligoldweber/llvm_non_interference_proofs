@@ -8,7 +8,6 @@ include "./Operations/otherOperations.i.dfy"
 include "../Libraries/SeqIsUniqueDef.i.dfy"
 include "../Libraries/Seqs.s.dfy"
 include "../Libraries/Sets.i.dfy"
-// include "./behaviorLemmas.i.dfy"
 
 module LLVM_defRE {
 
@@ -22,7 +21,6 @@ module LLVM_defRE {
     import opened other_operations_i
     import opened Collections__Seqs_s
     import opened Collections__Sets_i
-    // import opened behavior_lemmas
 
     type addr = int
     type LocalVar = string
@@ -53,211 +51,6 @@ module LLVM_defRE {
     | CNil
             
     type behavior = seq<state>
-    predicate {:opaque} ValidBehavior(states:behavior)
-    {
-        || |states| == 0
-        || (|states| == 1 && ValidState(states[0])) 
-        || (&& |states| >= 2
-            && forall s :: s in states ==> ValidState(s)
-            && forall i :: 0 <= i < |states|- 1 ==> StateNext(states[i],states[i+1]))
-    }
-
-
-    function {:opaque} behaviorOutput(b:behavior) : (bOut:seq<output>)
-        ensures |bOut| == |b| 
-        ensures forall i :: (i >= 0 && i < |b|) 
-            ==> if (b[i].o == SubOut([Nil])) then
-                bOut[i] == Nil
-                else bOut[i] == b[i].o
-        decreases |b|
-    {
-        if |b| == 0 then
-            []
-        else
-            if b[0].o == SubOut([Nil]) then
-                [Nil] + behaviorOutput(all_but_first(b))
-            else
-                [b[0].o] + behaviorOutput(all_but_first(b))
-    }
-///
-
-    function  evalCodeRE(c:codeRe, s:state) : (b:behavior)
-        ensures |b| > 0
-        ensures (c.Ins?) ==> |b| == 1
-        ensures c.Block? ==> |b| == |evalBlockRE(c.block, s)|
-        ensures c.IfElse? ==> if c.ifCond then |b| == |evalBlockRE(c.ifTrue,s)| else |b| == |evalBlockRE(c.ifFalse,s)|
-        ensures (c.Ins? && validEvalIns(c.ins,s,b[0]) && b[0].ok) ==> ValidBehavior([s] + b)
-        
-        decreases c, 0
-    {
-        reveal_ValidBehavior();
-        match c
-            case Ins(ins) => [evalInsRe(ins,s)]
-            case Block(block) => evalBlockRE(block, s) 
-            case IfElse(ifCond, ifT, ifF) => if ifCond then evalBlockRE(ifT, s) else evalBlockRE(ifF,s)
-            case CNil => [s]
-    }
-
-  function evalBlockRE(block:codeSeq, s:state): (b:behavior)
-        ensures |b| > 0
-        // ensures (first(block).CNil?) ==> |b| == 1
-
-    {
-        if |block| == 0 then
-            [s]
-        else
-            assert |block| > 0;
-            if first(block).CNil? then
-                [s]
-            else
-                assert |block| > 0;
-                var metaBehavior := evalCodeRE(first(block),s);
-                assert |block| > 0;
-                var theRest := evalBlockRE(all_but_first(block),last(metaBehavior));
-                var fullBlock := metaBehavior + theRest;
-                assert |metaBehavior| == |evalCodeRE(first(block),s)|;
-                assert |theRest| == |evalBlockRE(all_but_first(block),last(evalCodeRE(first(block),s)))|;
-                assert |fullBlock| == |metaBehavior| + |theRest|;
-
-                fullBlock
-    }
-
-    function stateUpdateVar(s:state, dst:operand, d:Data): (s':state)
-         requires dst.LV? || dst.GV?
-         requires MemValid(s.m) 
-         requires ValidData(s,d)
-         ensures MemStateNext(s.m,s'.m,MemStep.stutterStep);
-         ensures forall lv :: lv in s.lvs ==> lv in s'.lvs
-         ensures forall gv :: gv in s.gvs ==> gv in s'.gvs
-         ensures dst.LV? ==> forall lv :: (lv in s.lvs && lv != dst.l) ==> s'.lvs[lv] == s.lvs[lv];
-         ensures dst.GV? ==> forall gv :: (gv in s.gvs && gv != dst.g) ==> s'.gvs[gv] == s.gvs[gv]; 
-         ensures ValidOperand(s',dst)
-         ensures ValidState(s) ==> evalUpdate(s,dst,d,s');
-
-
-         {
-             if dst.LV? then
-                if (dst.l in s.lvs) then
-                    var s' := s.(lvs := s.lvs[dst.l := d],o := Nil);
-                    assert MemStateNext(s.m,s'.m,MemStep.stutterStep);
-                    s'
-                else
-                    var s' := s.(lvs := s.lvs[dst.l := d],o := Nil);
-                    assert MemStateNext(s.m,s'.m,MemStep.stutterStep);
-                    s'
-             else
-                var s' := s.(gvs := s.gvs[dst.g := d],o := Nil);
-                    assert MemStateNext(s.m,s'.m,MemStep.stutterStep);
-                    s'
-         }
-
-    function evalInsRe(ins:ins,s:state) : (s':state)
-        // requires ValidInstruction(s, ins)
-        // ensures ValidState(s) && ValidInstruction(s, ins) ==> StateNext(s,s')
-        ensures s'.ok ==> NextStep(s,s',Step.evalInsStep(ins)) && StateNext(s,s');
-        ensures (!ValidState(s) || !ValidInstruction(s, ins)) ==> !s'.ok;
-
-    {
-        reveal_ValidBehavior();
-        reveal_behaviorOutput();
-        if (!ValidState(s) || !ValidInstruction(s, ins)) then 
-            var notOK := s.(ok := false);
-            notOK
-        else match ins
-            case ADD(dst,t,src1,src2) => 
-                var s' := stateUpdateVar(s,dst,evalADD(t,OperandContents(s,src1),OperandContents(s,src2)));
-                if ValidData(s',evalADD(t,OperandContents(s,src1),OperandContents(s,src2))) then 
-                    // assert NextStep(s,s', Step.evalInsStep(ins));
-                    assert MemStateNext(s.m,s'.m,MemStep.stutterStep);
-                    assert validEvalIns(ins,s,s');
-                    assert s'.ok;
-                    s'
-                else
-                    var notOk := s'.(ok := false);
-                    notOk
-            case SUB(dst,t,src1,src2) => 
-                var s' := stateUpdateVar(s,dst,evalSUB(t,OperandContents(s,src1),OperandContents(s,src2)));
-                if ValidData(s',evalSUB(t,OperandContents(s,src1),OperandContents(s,src2))) then 
-                    // assert NextStep(s,s', Step.evalInsStep(ins));
-                    assert dst.LV? ==> forall lv :: (lv in s.lvs && lv != dst.l) ==> s'.lvs[lv] == s.lvs[lv];
-                    assert MemStateNext(s.m,s'.m,MemStep.stutterStep);
-                    assert validEvalIns(ins,s,s');
-                    s'
-                else
-                    var notOk := s'.(ok := false);
-                    notOk
-            case ICMP(dst,cond,t,src1,src2) => 
-                var s' := stateUpdateVar(s,dst,evalICMP(cond,t,OperandContents(s,src1),OperandContents(s,src2)));
-                assert ValidData(s',evalICMP(cond,t,OperandContents(s,src1),OperandContents(s,src2)));
-                // if ValidData(s',evalICMP(cond,t,OperandContents(s,src1),OperandContents(s,src2))) then 
-                    assert MemStateNext(s.m,s'.m,MemStep.stutterStep);
-                    assert validEvalIns(ins,s,s');
-                    s'
-                // else
-                //     var notOk := s'.(ok := false);
-                //     assert NextStep(s,notOk, Step.errorStateStep());
-                //     notOk
-            // ValidState(s') && Store(s.m,s'.m,OperandContents(s,ptr).bid,OperandContents(s,ptr).offset,OperandContents(s,valueToStore))
-            //                                      && (MemValid(s'.m))
-            case STORE(valueToStore,ptr) =>
-                var s' := s.(m := evalStore(s.m,OperandContents(s,ptr).bid,OperandContents(s,ptr).offset,OperandContents(s,valueToStore)));
-                if MemValid(s'.m) then
-                    assert MemStateNext(s.m,s'.m,MemStep.storeStep(OperandContents(s,ptr).bid,OperandContents(s,ptr).offset,OperandContents(s,valueToStore),1));
-                    assert validEvalIns(ins,s,s');
-                    s'
-                else
-                    var notOk := s'.(ok := false);
-                    assert NextStep(s,notOk, Step.errorStateStep());
-                    notOk
-            case LLVM_MEMCPY(dst,src,len,volatile) => 
-                var s' := s.(o := Nil,m := evalMemCpy(s.m,OperandContents(s,dst),OperandContents(s,src)));
-                if MemValid(s'.m) && ValidState(s') then
-                    assert MemStateNext(s.m,s'.m,MemStep.memCpyStep(OperandContents(s,src).bid,OperandContents(s,dst).bid));
-                    assert validEvalIns(ins,s,s');
-                    s'
-                else
-                    var notOk := s'.(ok := false);
-                    assert NextStep(s,notOk, Step.errorStateStep());
-                    notOk
-            case CALL(dst,fnc) =>
-                var subB := evalBlockRE(fnc,s);
-                if ValidBehavior(subB) && ValidOperand(last(subB),dst) then
-                    assert |subB| > 0;
-                    assert ValidState(last(subB));
-                    if dst.GV? || dst.LV? then
-                        var stemp := last(subB);
-                        // var stemp := stateUpdateVar(last(subB),dst,OperandContents(last(subB),dst));
-                        var subO := behaviorOutput(subB);
-                        if true then // forall o :: o in subO ==> o == Nil
-                            var s' := stemp.(o := Nil);
-                            assert validEvalIns(ins,s,s');
-                            assert s' == last(subB).(o := Nil);
-                            s'
-                        else
-                            var s' := stemp.(o := SubOut(behaviorOutput(subB)));
-                            assert s'.o == SubOut(behaviorOutput(subB));
-                            assert validEvalIns(ins,s,s');
-                            s'
-                    else 
-                        var subO := behaviorOutput(subB);
-                        var s' := s.(o := SubOut(behaviorOutput(subB)));
-                        assert s'.o == SubOut(behaviorOutput(subB));
-                        assert validEvalIns(ins,s,s');
-                        s'
-                else
-                    var notOk := s.(ok := false);
-                    assert NextStep(s,notOk, Step.errorStateStep());
-                    notOk
-            case RET(val) => 
-                var s' := s.(o := Out(OperandContents(s,val)));
-                assert ValidState(s');
-                assert MemStateNext(s.m,s'.m,MemStep.stutterStep);
-                assert validEvalIns(ins,s,s');
-                s'
-                //s
-    }
-    
-////
 
     datatype operand = D(d:Data) | LV(l:LocalVar) | GV(g:GlobalVar)
     
@@ -273,15 +66,7 @@ module LLVM_defRE {
     | RET(val:operand)
 
 
-    datatype behaviors = preBehavior(preB:behavior) | postBehavior(postB:behavior)
-
-    function getBehavior(b:behaviors) : behavior
-    {
-        match b
-            case preBehavior(preB) => preB
-            case postBehavior(postB) => postB
-    }
-
+// STATE TRANSITIONS
     predicate State_Init(s:state)
     {
         s.ok 
@@ -347,6 +132,257 @@ module LLVM_defRE {
     }
 
 
+    predicate {:opaque} ValidBehavior(states:behavior)
+    {
+        || |states| == 0
+        || (|states| == 1 && ValidState(states[0])) 
+        || (&& |states| >= 2
+            && forall s :: s in states ==> ValidState(s)
+            && forall i :: 0 <= i < |states|- 1 ==> StateNext(states[i],states[i+1]))
+    }
+
+
+    function {:opaque} behaviorOutput(b:behavior) : (bOut:seq<output>)
+        ensures |bOut| == |b| 
+        ensures forall i :: (i >= 0 && i < |b|) 
+            ==> (if (b[i].o == SubOut([Nil])) then
+                    bOut[i] == Nil
+                else 
+                    bOut[i] == b[i].o)
+        decreases |b|
+    {
+        if |b| == 0 then
+            []
+        else
+            if b[0].o == SubOut([Nil]) then
+                [Nil] + behaviorOutput(all_but_first(b))
+            else
+                [b[0].o] + behaviorOutput(all_but_first(b))
+    }
+
+/// EVAL CODE / CONTROL FLOW
+
+    function  evalCodeRE(c:codeRe, s:state) : (b:behavior)
+        ensures |b| > 0
+        ensures (c.Ins?) ==> |b| == 1
+        ensures c.Block? ==> |b| == |evalBlockRE(c.block, s)|
+        ensures c.IfElse? ==> if c.ifCond then |b| == |evalBlockRE(c.ifTrue,s)| else |b| == |evalBlockRE(c.ifFalse,s)|
+        ensures (c.Ins? && validEvalIns(c.ins,s,b[0]) && b[0].ok) ==> ValidBehavior([s] + b)
+        
+        decreases c, 0
+    {
+        reveal_ValidBehavior();
+        match c
+            case Ins(ins) => [evalInsRe(ins,s)]
+            case Block(block) => evalBlockRE(block, s) 
+            case IfElse(ifCond, ifT, ifF) => if ifCond then evalBlockRE(ifT, s) else evalBlockRE(ifF,s)
+            case CNil => [s]
+    }
+
+  function evalBlockRE(block:codeSeq, s:state): (b:behavior)
+        ensures |b| > 0
+        // ensures (first(block).CNil?) ==> |b| == 1
+
+    {
+        if |block| == 0 then
+            [s]
+        else
+            assert |block| > 0;
+            if first(block).CNil? then
+                [s]
+            else
+                assert |block| > 0;
+                var metaBehavior := evalCodeRE(first(block),s);
+                assert |block| > 0;
+                var theRest := evalBlockRE(all_but_first(block),last(metaBehavior));
+                var fullBlock := metaBehavior + theRest;
+                assert |metaBehavior| == |evalCodeRE(first(block),s)|;
+                assert |theRest| == |evalBlockRE(all_but_first(block),last(evalCodeRE(first(block),s)))|;
+                assert |fullBlock| == |metaBehavior| + |theRest|;
+
+                fullBlock
+    }
+
+    function evalInsRe(ins:ins,s:state) : (s':state)
+        // requires ValidInstruction(s, ins)
+        // ensures ValidState(s) && ValidInstruction(s, ins) ==> StateNext(s,s')
+        ensures s'.ok ==> NextStep(s,s',Step.evalInsStep(ins)) && StateNext(s,s');
+        ensures (!ValidState(s) || !ValidInstruction(s, ins)) ==> !s'.ok;
+
+    {
+        reveal_ValidBehavior();
+        reveal_behaviorOutput();
+        if (!ValidState(s) || !ValidInstruction(s, ins)) then 
+            var notOK := s.(ok := false);
+            notOK
+        else match ins
+            case ADD(dst,t,src1,src2) => 
+                var s' := stateUpdateVar(s,dst,evalADD(t,OperandContents(s,src1),OperandContents(s,src2)));
+                if ValidData(s',evalADD(t,OperandContents(s,src1),OperandContents(s,src2))) then 
+                    assert MemStateNext(s.m,s'.m,MemStep.stutterStep);
+                    assert validEvalIns(ins,s,s');
+                    assert s'.ok;
+                    s'
+                else
+                    var notOk := s'.(ok := false);
+                    notOk
+            case SUB(dst,t,src1,src2) => 
+                var s' := stateUpdateVar(s,dst,evalSUB(t,OperandContents(s,src1),OperandContents(s,src2)));
+                if ValidData(s',evalSUB(t,OperandContents(s,src1),OperandContents(s,src2))) then 
+                    assert dst.LV? ==> forall lv :: (lv in s.lvs && lv != dst.l) ==> s'.lvs[lv] == s.lvs[lv];
+                    assert MemStateNext(s.m,s'.m,MemStep.stutterStep);
+                    assert validEvalIns(ins,s,s');
+                    s'
+                else
+                    var notOk := s'.(ok := false);
+                    notOk
+            case ICMP(dst,cond,t,src1,src2) => 
+                var s' := stateUpdateVar(s,dst,evalICMP(cond,t,OperandContents(s,src1),OperandContents(s,src2)));
+                assert ValidData(s',evalICMP(cond,t,OperandContents(s,src1),OperandContents(s,src2)));
+                    assert MemStateNext(s.m,s'.m,MemStep.stutterStep);
+                    assert validEvalIns(ins,s,s');
+                    s'
+            case STORE(valueToStore,ptr) =>
+                var s' := s.(m := evalStore(s.m,OperandContents(s,ptr).bid,OperandContents(s,ptr).offset,OperandContents(s,valueToStore)));
+                if MemValid(s'.m) then
+                    assert MemStateNext(s.m,s'.m,MemStep.storeStep(OperandContents(s,ptr).bid,OperandContents(s,ptr).offset,OperandContents(s,valueToStore),1));
+                    assert validEvalIns(ins,s,s');
+                    s'
+                else
+                    var notOk := s'.(ok := false);
+                    assert NextStep(s,notOk, Step.errorStateStep());
+                    notOk
+            case LLVM_MEMCPY(dst,src,len,volatile) => 
+                var s' := s.(o := Nil,m := evalMemCpy(s.m,OperandContents(s,dst),OperandContents(s,src)));
+                if MemValid(s'.m) && ValidState(s') then
+                    assert MemStateNext(s.m,s'.m,MemStep.memCpyStep(OperandContents(s,src).bid,OperandContents(s,dst).bid));
+                    assert validEvalIns(ins,s,s');
+                    s'
+                else
+                    var notOk := s'.(ok := false);
+                    assert NextStep(s,notOk, Step.errorStateStep());
+                    notOk
+            case CALL(dst,fnc) =>
+                var subB := evalBlockRE(fnc,s);
+                if ValidBehavior(subB) && ValidOperand(last(subB),dst) then
+                    assert |subB| > 0;
+                    assert ValidState(last(subB));
+                    if dst.GV? || dst.LV? then
+                        var stemp := last(subB);
+                        var subO := behaviorOutput(subB);
+                        if true then // forall o :: o in subO ==> o == Nil
+                            var s' := stemp.(o := Nil);
+                            assert validEvalIns(ins,s,s');
+                            assert s' == last(subB).(o := Nil);
+                            s'
+                        else
+                            var s' := stemp.(o := SubOut(behaviorOutput(subB)));
+                            assert s'.o == SubOut(behaviorOutput(subB));
+                            assert validEvalIns(ins,s,s');
+                            s'
+                    else 
+                        var subO := behaviorOutput(subB);
+                        var s' := s.(o := SubOut(behaviorOutput(subB)));
+                        assert s'.o == SubOut(behaviorOutput(subB));
+                        assert validEvalIns(ins,s,s');
+                        s'
+                else
+                    var notOk := s.(ok := false);
+                    assert NextStep(s,notOk, Step.errorStateStep());
+                    notOk
+            case RET(val) => 
+                var s' := s.(o := Out(OperandContents(s,val)));
+                assert ValidState(s');
+                assert MemStateNext(s.m,s'.m,MemStep.stutterStep);
+                assert validEvalIns(ins,s,s');
+                s'
+    }
+
+    predicate ValidInstruction(s:state, ins:ins)
+    {
+        ValidState(s) && match ins
+            case ADD(dst,t,src1,src2) => (dst.LV? || dst.GV?) && ValidOperand(s,src1) && ValidOperand(s,src2)
+                                         && isInt(OperandContents(s,src1)) && isInt(OperandContents(s,src2))
+                                         && typesMatch(OperandContents(s,src1),OperandContents(s,src2))
+                                         && t == OperandContents(s,src1).itype.size
+            case SUB(dst,t,src1,src2) => (dst.LV? || dst.GV?) && ValidOperand(s,dst) && ValidOperand(s,src1) && ValidOperand(s,src2) 
+                                         && isInt(OperandContents(s,src1)) && isInt(OperandContents(s,src2))
+                                         && typesMatch(OperandContents(s,src1),OperandContents(s,src2))
+                                         && t == OperandContents(s,src1).itype.size
+            case ICMP(dst,cond,t,src1,src2) => (dst.LV? || dst.GV?) && ValidOperand(s,src1) && ValidOperand(s,src2)
+                                            && isInt(OperandContents(s,src1)) && isInt(OperandContents(s,src2))
+                                            && t == OperandContents(s,src1).itype.size
+                                            && typesMatch(OperandContents(s,src1),OperandContents(s,src2))
+            case STORE(valueToStore,ptr) => && ValidOperand(s,valueToStore) && ValidOperand(s,ptr)
+                                        && OperandContents(s,valueToStore).Int? && (IntType(1, false) == OperandContents(s,valueToStore).itype)
+                                        && MemValid(s.m) && OperandContents(s,ptr).Ptr? 
+                                        && IsValidPtr(s.m,OperandContents(s,ptr).bid,OperandContents(s,ptr).offset,1)
+                                        && s.m.mem[OperandContents(s,ptr).bid][OperandContents(s,ptr).offset].mb? 
+                                        && s.m.mem[OperandContents(s,ptr).bid][OperandContents(s,ptr).offset].size == OperandContents(s,valueToStore).itype.size
+            case LLVM_MEMCPY(dst,src,len,volatile) => && ValidOperand(s,dst) && ValidOperand(s,src) && OperandContents(s,dst).Ptr?
+                                                     && OperandContents(s,src).Ptr? && OperandContents(s,dst).size >= OperandContents(s,src).size
+                                                     && validBitWidth(len) && !volatile // dont support volatile right now
+            case RET(val) => && ValidOperand(s,val)
+            case CALL(dst,fnc) => (dst.LV? || dst.GV? || (dst.D? && dst.d.Void?)) && ValidOperand(s,dst) && |fnc| > 0
+
+    }
+
+    predicate validEvalIns(ins:ins, s:state, s':state)
+    {   
+        && s.ok 
+        && ValidInstruction(s, ins) 
+        && match ins
+            case ADD(dst,t,src1,src2) => ValidState(s')
+                                && ValidData(s',evalADD(t,OperandContents(s,src1),OperandContents(s,src2))) 
+                                && evalUpdate(s, dst, evalADD(t,OperandContents(s,src1),OperandContents(s,src2)),s')
+            case SUB(dst,t,src1,src2) => ValidState(s') 
+                                && ValidData(s',evalSUB(t,OperandContents(s,src1),OperandContents(s,src2))) 
+                                && evalUpdate(s, dst, evalSUB(t,OperandContents(s,src1),OperandContents(s,src2)),s')
+            case ICMP(dst,cond,t,src1,src2) => ValidState(s') 
+                                && ValidData(s',evalICMP(cond,t,OperandContents(s,src1),OperandContents(s,src2)))
+                                && evalUpdate(s, dst, evalICMP(cond,t,OperandContents(s,src1),OperandContents(s,src2)),s')
+            case STORE(valueToStore,ptr) => ValidState(s') && Store(s.m,s'.m,OperandContents(s,ptr).bid,OperandContents(s,ptr).offset,OperandContents(s,valueToStore))
+                                        && (MemValid(s'.m))
+            case LLVM_MEMCPY(dst,src,len,volatile) => ValidState(s') && memCpy(s.m, OperandContents(s,dst),OperandContents(s,src), s'.m)                            
+            case RET(val) => ValidState(s') && s'.m == s.m && s'.o == Out(OperandContents(s,val))   
+            case CALL(dst,fnc)  =>  ValidState(s') && ValidOperand(s',dst) && ValidData(s',OperandContents(s',dst))// maybe adjsut //&& evalUpdate(s, dst, OperandContents(s',dst),s')
+    }
+
+
+
+    function stateUpdateVar(s:state, dst:operand, d:Data): (s':state)
+         requires dst.LV? || dst.GV?
+         requires MemValid(s.m) 
+         requires ValidData(s,d)
+         ensures MemStateNext(s.m,s'.m,MemStep.stutterStep);
+         ensures forall lv :: lv in s.lvs ==> lv in s'.lvs
+         ensures forall gv :: gv in s.gvs ==> gv in s'.gvs
+         ensures dst.LV? ==> forall lv :: (lv in s.lvs && lv != dst.l) ==> s'.lvs[lv] == s.lvs[lv];
+         ensures dst.GV? ==> forall gv :: (gv in s.gvs && gv != dst.g) ==> s'.gvs[gv] == s.gvs[gv]; 
+         ensures ValidOperand(s',dst)
+         ensures ValidState(s) ==> evalUpdate(s,dst,d,s');
+
+
+         {
+             if dst.LV? then
+                if (dst.l in s.lvs) then
+                    var s' := s.(lvs := s.lvs[dst.l := d],o := Nil);
+                    assert MemStateNext(s.m,s'.m,MemStep.stutterStep);
+                    s'
+                else
+                    var s' := s.(lvs := s.lvs[dst.l := d],o := Nil);
+                    assert MemStateNext(s.m,s'.m,MemStep.stutterStep);
+                    s'
+             else
+                var s' := s.(gvs := s.gvs[dst.g := d],o := Nil);
+                    assert MemStateNext(s.m,s'.m,MemStep.stutterStep);
+                    s'
+         }
+
+    
+    
+//// Util Predicates
+
     predicate ValidOperand(s:state,o:operand)
     {
         match o
@@ -388,36 +424,6 @@ module LLVM_defRE {
                                                 && y== o) ==> x == y;
     }
 
-    predicate ValidInstruction(s:state, ins:ins)
-    {
-        ValidState(s) && match ins
-            case ADD(dst,t,src1,src2) => (dst.LV? || dst.GV?) && ValidOperand(s,src1) && ValidOperand(s,src2)
-                                         && isInt(OperandContents(s,src1)) && isInt(OperandContents(s,src2))
-                                         && typesMatch(OperandContents(s,src1),OperandContents(s,src2))
-                                         && t == OperandContents(s,src1).itype.size
-            case SUB(dst,t,src1,src2) => (dst.LV? || dst.GV?) && ValidOperand(s,dst) && ValidOperand(s,src1) && ValidOperand(s,src2) 
-                                         && isInt(OperandContents(s,src1)) && isInt(OperandContents(s,src2))
-                                         && typesMatch(OperandContents(s,src1),OperandContents(s,src2))
-                                         && t == OperandContents(s,src1).itype.size
-            case ICMP(dst,cond,t,src1,src2) => (dst.LV? || dst.GV?) && ValidOperand(s,src1) && ValidOperand(s,src2)
-                                            && isInt(OperandContents(s,src1)) && isInt(OperandContents(s,src2))
-                                            && t == OperandContents(s,src1).itype.size
-                                            && typesMatch(OperandContents(s,src1),OperandContents(s,src2))
-            case STORE(valueToStore,ptr) => && ValidOperand(s,valueToStore) && ValidOperand(s,ptr)
-                                        && OperandContents(s,valueToStore).Int? && (IntType(1, false) == OperandContents(s,valueToStore).itype)
-                                        && MemValid(s.m) && OperandContents(s,ptr).Ptr? 
-                                        && IsValidPtr(s.m,OperandContents(s,ptr).bid,OperandContents(s,ptr).offset,1)
-                                        && s.m.mem[OperandContents(s,ptr).bid][OperandContents(s,ptr).offset].mb? 
-                                        && s.m.mem[OperandContents(s,ptr).bid][OperandContents(s,ptr).offset].size == OperandContents(s,valueToStore).itype.size
-            case LLVM_MEMCPY(dst,src,len,volatile) => && ValidOperand(s,dst) && ValidOperand(s,src) && OperandContents(s,dst).Ptr?
-                                                     && OperandContents(s,src).Ptr? && OperandContents(s,dst).size >= OperandContents(s,src).size
-                                                     && validBitWidth(len) && !volatile // dont support volatile right now
-            case RET(val) => && ValidOperand(s,val)
-            case CALL(dst,fnc) => (dst.LV? || dst.GV? || (dst.D? && dst.d.Void?)) && ValidOperand(s,dst) && |fnc| > 0
-
-    }
-
-
 
     predicate evalUpdate(s:state, o:operand, data:Data, s':state)
         requires ValidState(s)
@@ -434,31 +440,9 @@ module LLVM_defRE {
     }
 
 
-    predicate validEvalIns(ins:ins, s:state, s':state)
-    {   
-        && s.ok 
-        && ValidInstruction(s, ins) 
-        && match ins
-            case ADD(dst,t,src1,src2) => ValidState(s')
-                                && ValidData(s',evalADD(t,OperandContents(s,src1),OperandContents(s,src2))) 
-                                && evalUpdate(s, dst, evalADD(t,OperandContents(s,src1),OperandContents(s,src2)),s')
-            case SUB(dst,t,src1,src2) => ValidState(s') 
-                                && ValidData(s',evalSUB(t,OperandContents(s,src1),OperandContents(s,src2))) 
-                                && evalUpdate(s, dst, evalSUB(t,OperandContents(s,src1),OperandContents(s,src2)),s')
-            case ICMP(dst,cond,t,src1,src2) => ValidState(s') 
-                                && ValidData(s',evalICMP(cond,t,OperandContents(s,src1),OperandContents(s,src2)))
-                                && evalUpdate(s, dst, evalICMP(cond,t,OperandContents(s,src1),OperandContents(s,src2)),s')
-            case STORE(valueToStore,ptr) => ValidState(s') && Store(s.m,s'.m,OperandContents(s,ptr).bid,OperandContents(s,ptr).offset,OperandContents(s,valueToStore))
-                                        && (MemValid(s'.m))
-            case LLVM_MEMCPY(dst,src,len,volatile) => ValidState(s') && memCpy(s.m, OperandContents(s,dst),OperandContents(s,src), s'.m)                            
-            case RET(val) => ValidState(s') && s'.m == s.m && s'.o == Out(OperandContents(s,val))   
-            case CALL(dst,fnc)  =>  ValidState(s') && ValidOperand(s',dst) && ValidData(s',OperandContents(s',dst))// maybe adjsut //&& evalUpdate(s, dst, OperandContents(s',dst),s')
 
-  
-    
-    }
 
-    // Control flow 
+    // Control flow unwrap witness
         lemma unwrapBlockWitness(b:behavior,block:codeSeq,s:state) 
             returns (step:behavior,remainder:codeSeq,subBehavior:behavior)
             requires b == [s] + evalBlockRE(block,s);
@@ -511,72 +495,5 @@ module LLVM_defRE {
                 assert b == [s] + step + all_but_first(subBehavior);
             }
         }
-
-
-
-
-    // ghost method testUpdateLV(s:state, o:operand, d:Data) returns (s':state)
-    //     requires o.LV? 
-    //     ensures forall lv :: lv in s.lvs ==> lv in s'.lvs
-    //     ensures forall lv :: (lv in s.lvs && lv != o.l) ==> s'.lvs[lv] == s.lvs[lv]; 
-    //     // modifies o,d
-    // {
-    //     s' := s;
-    //     if o.l in s.lvs {
-    //         s' := s.(lvs := s.lvs[o.l := d]);
-    //         assert forall lv :: (lv in s'.lvs && lv != o.l) ==> s'.lvs[lv] == s.lvs[lv];
-    //         assert |s.lvs| ==  |s'.lvs|;
-    //     }else{
-    //         s' := s.(lvs := s.lvs[o.l := d]);
-    //         assert |s.lvs| ==  |s'.lvs| - 1;
-    //     }
-    //     return s';
-        
-    // }
-
-    // function stateUpdateVar(s:state, dst:operand, d:Data): (s':state)
-    //     //  requires dst.LV? || dst.GV?
-    //      requires MemValid(s.m) 
-    //      requires ValidData(s,d)
-    //      ensures MemStateNext(s.m,s'.m,MemStep.stutterStep);
-    //      ensures forall lv :: lv in s.lvs ==> lv in s'.lvs
-    //      ensures forall gv :: gv in s.gvs ==> gv in s'.gvs
-    //      ensures dst.LV? ==> forall lv :: (lv in s.lvs && lv != dst.l) ==> s'.lvs[lv] == s.lvs[lv];
-    //      ensures dst.GV? ==> forall gv :: (gv in s.gvs && gv != dst.g) ==> s'.gvs[gv] == s.gvs[gv]; 
-    //      ensures ValidOperand(s',dst)
-
-    //      {
-    //          if dst.GV? then
-    //             var s' := s.(gvs := s.gvs[dst.g := d]);
-    //                 assert MemStateNext(s.m,s'.m,MemStep.stutterStep);
-    //                 s'
-    //          else 
-    //             if dst.LV? then
-    //                 if (dst.l in s.lvs) then
-    //                     var s' := s.(lvs := s.lvs[dst.l := d]);
-    //                     assert MemStateNext(s.m,s'.m,MemStep.stutterStep);
-    //                     s'
-    //                 else
-    //                     var s' := s.(lvs := s.lvs[dst.l := d]);
-    //                     assert MemStateNext(s.m,s'.m,MemStep.stutterStep);
-    //                     s'
-    //             else
-    //                 assert dst.D?;
-    //                 var s' := s;
-    //                 assert ValidData(s',dst.d);
-    //                 s'
-    //      }
-
-
-    // predicate evalIfElseRE(cond:bool, ifT:codes, ifF:codes, s:state, s':state)
-    //     decreases if ValidState(s) && cond then ifT else ifF
-    // {
-    //     if ValidState(s) && s.ok then
-    //         exists r :: branchRelation(s, r, cond) && (if cond then evalBlock(ifT, r, s') else evalBlock(ifF, r, s'))
-    //     else
-    //         !s'.ok
-    // }
-    
-
 
 }
