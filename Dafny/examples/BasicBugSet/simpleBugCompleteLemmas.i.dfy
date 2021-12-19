@@ -33,14 +33,14 @@ module simpleBugCompleteLemmas{
         {
             var input :| validInput(s,input) && OperandContents(s,input).val < 2 && BehaviorEvalsCode(codeVuln(input),preB);
             var preBWitness := unwrapVulnBehaviors(s,input);
-            behaviorThatEvalsSameCodeWithSameInitIsEqual(s,codeVuln(input),preBWitness);
+            behaviorThatEvalsSameCodeWithSameInitHasEqualOut(s,codeVuln(input),preBWitness);
         }
         forall input | validInput(s,input) && OperandContents(s,input).val >= 2 && BehaviorEvalsCode(codeVuln(input),preB)
             ensures (behaviorOutput(preB) == invalidOutput());
         {
             var input :| validInput(s,input) && OperandContents(s,input).val >= 2 && BehaviorEvalsCode(codeVuln(input),preB);
             var preBWitness := unwrapVulnBehaviors(s,input);
-            behaviorThatEvalsSameCodeWithSameInitIsEqual(s,codeVuln(input),preBWitness);
+            behaviorThatEvalsSameCodeWithSameInitHasEqualOut(s,codeVuln(input),preBWitness);
         }
      
     }
@@ -195,6 +195,10 @@ module simpleBugCompleteLemmas{
         assert forall preBModMs :: preBModMs in vulnModMsOut  ==> preBModMs in patchOut;
     }
 
+
+
+
+////
     lemma patchBehaviorsInVulnModMSBehaviors(s:state,vulnModMs:set<behavior>,patchBehaviors:set<behavior>,vulnModMsOut:set<seq<output>>,patchOut:set<seq<output>>)
         requires vulnModMsOut == allBehaviorOutputSet(vulnModMs);
         requires patchOut ==  allBehaviorOutputSet(patchBehaviors);
@@ -205,36 +209,44 @@ module simpleBugCompleteLemmas{
         requires nonTrivialBehaviorPreconditionsVulnModMs(s,vulnModMs);
         requires nonTrivialBehaviorPreconditionsPatch(s,patchBehaviors);
 
-        ensures forall postB :: postB in patchBehaviors ==> equalOutput(behaviorOutput(postB),validOutput());
-        ensures forall postB :: postB in patchBehaviors ==> behaviorOutput(postB) in patchOut;
-        ensures forall postB :: postB in patchBehaviors ==> behaviorOutput(postB) in vulnModMsOut;
+        // ensures forall postB :: postB in patchBehaviors ==> equalOutput(behaviorOutput(postB),validOutput());
+        // ensures forall postB :: postB in patchBehaviors ==> behaviorOutput(postB) in patchOut;
+        // ensures forall postB :: postB in patchBehaviors ==> behaviorOutput(postB) in vulnModMsOut;
+        ensures forall x :: x in patchOut ==> x in vulnModMsOut;
     {
 
-        reveal_BehaviorEvalsCode();
+        // reveal_BehaviorEvalsCode();
         reveal_nonTrivialBehaviorPreconditionsVuln();
         reveal_nonTrivialBehaviorPreconditionsPatch();
         reveal_nonTrivialBehaviorPreconditionsVulnModMs();
+        reveal_behaviorOutput();
 
         vulnModMsOutput(s,vulnModMs,vulnModMsOut);
         assert forall b :: b in vulnModMsOut ==> equalOutput(b,validOutput());
-        assert |vulnModMsOut| > 0;
-        assert |patchBehaviors| > 0;
-        assert |patchOut| > 0;
-        var vulnMsBehaviorOut :| vulnMsBehaviorOut in vulnModMsOut;
-
+        
         forall postB | postB in patchBehaviors
             ensures equalOutput(behaviorOutput(postB),validOutput());
             ensures behaviorOutput(postB) in patchOut;
-            ensures behaviorOutput(postB) in vulnModMsOut;
         {
             var input :| BehaviorEvalsCode(codePatch(input),postB) && |postB| > 0 && validInput(postB[0],input);
             var b' := unwrapPatchBehaviors(s,input);
+            behaviorThatEvalsSameCodeWithSameInitHasEqualOut(s,codePatch(input),b');
             assert equalOutput(behaviorOutput(postB),validOutput());
             assert behaviorOutput(postB) in patchOut;
-            transitiveEquality(vulnMsBehaviorOut, behaviorOutput(postB),validOutput());
-            equalOutputIsTransitiveSet(vulnMsBehaviorOut,behaviorOutput(postB),vulnModMsOut);
-            assert behaviorOutput(postB) in vulnModMsOut;
+           
         }
+
+        assert SurjectiveOver(patchBehaviors,patchOut, x => behaviorOutput(x));
+        forall patchO | patchO in patchOut
+            ensures patchO in vulnModMsOut;
+        {
+            assert exists patchB :: patchB in patchBehaviors && behaviorOutput(patchB) == patchO;
+            var patchB :| patchB in patchBehaviors && behaviorOutput(patchB) == patchO;
+            assert equalOutput(behaviorOutput(patchB),validOutput());
+            assert equalOutput(behaviorOutput(patchB),patchO);
+            assert patchO in vulnModMsOut;
+        }
+
 
     }
 
