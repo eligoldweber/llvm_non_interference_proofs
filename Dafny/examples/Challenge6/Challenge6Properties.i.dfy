@@ -7,7 +7,7 @@ include "../../LLVM/types.dfy"
 include "../../Libraries/Sets.i.dfy"
 include "Challenge6Common.i.dfy"
 
-module challenge6Properties{
+module challenge6Properties{ 
     import opened challenge6Code
     import opened challenge6CodeLemmasPatch
     import opened challenge6CodeLemmasVuln
@@ -42,7 +42,7 @@ module challenge6Properties{
         }else{
             assert |patchBehaviors| > 0;
             patchIsBenignNonTrivial(s,vulnBehaviors,patchBehaviors,vulnOut,patchOut);
-            assert forall postOutput :: postOutput in patchOut ==> postOutput in vulnOut;
+            // assert forall postOutput :: postOutput in patchOut ==> postOutput in vulnOut;
         }
     }
 
@@ -83,11 +83,7 @@ module challenge6Properties{
             assert patchO in vulnOut;
 
         } 
-        // forall postB | postB in patchBehaviors
-        // {
-        //     var b := unwrapPatchBehaviors(s,challenge_prob_6_code_write_encrypted_simple_patch());
-        //     assert behaviorOutput(postB) == validBehaviorsOuts();
-        // }
+
     }
 
 
@@ -110,20 +106,20 @@ module challenge6Properties{
         requires ValidState(s)
     {   
         (forall b :: b in patchBehaviors <==> ( && validStartingState(s)
-                                                                && validInput(s) 
-                                                                && ValidBehaviorNonTrivial(b) 
-                                                                && BehaviorEvalsCode(challenge_prob_6_code_write_encrypted_simple_patch(),b) 
-                                                                && b[0] == s))
+                                                && validInput(s) 
+                                                && ValidBehaviorNonTrivial(b) 
+                                                && BehaviorEvalsCode(challenge_prob_6_code_write_encrypted_simple_patch(),b) 
+                                                && b[0] == s))
     }
     
     predicate {:opaque} nonTrivialBehaviorPreconditionsVuln(s:state,vulnBehaviors:set<behavior>)
         requires ValidState(s)
     {
         (forall b :: b in vulnBehaviors <==> (&& validStartingState(s)
-                                                                && validInput(s) 
-                                                                && ValidBehaviorNonTrivial(b) 
-                                                                && BehaviorEvalsCode(challenge_prob_6_code_write_encrypted_simple_vuln(),b) 
-                                                                && b[0] == s))
+                                              && validInput(s) 
+                                              && ValidBehaviorNonTrivial(b) 
+                                              && BehaviorEvalsCode(challenge_prob_6_code_write_encrypted_simple_vuln(),b) 
+                                              && b[0] == s))
     }
 
 }

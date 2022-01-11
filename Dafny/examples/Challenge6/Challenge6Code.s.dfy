@@ -162,6 +162,12 @@ module challenge6Code{
             Ins(CALL(D(Void),stateOutputDump(KEY,INTEGRITY_SIZE)))])
     }
 
+    function digest_side_effects(digestLength:operand,INTEGRITY_SIZE:operand,mblock:operand):codeSeq
+    {
+
+        [Ins(SUB(INTEGRITY_SIZE,1,INTEGRITY_SIZE,D(Int(1,IntType(1,false)))))] + digest(digestLength,INTEGRITY_SIZE,mblock)
+    }
+    
     function stateOutputDump(op1:operand,op2:operand):codeSeq
     {
         [Ins(RET(op1)),
@@ -182,13 +188,6 @@ module challenge6Code{
     function digest(digest:operand,INTEGRITY_SIZE:operand,mblock:operand):codeSeq //stub
     {
         [CNil]
-    }
-
-
-    function digest_side_effects(digestLength:operand,INTEGRITY_SIZE:operand,mblock:operand):codeSeq
-    {
-
-        [Ins(SUB(INTEGRITY_SIZE,1,INTEGRITY_SIZE,D(Int(1,IntType(1,false)))))] + [CNil]
     }
 
     function encrypt_side_effects(INTEGRITY_SIZE:operand):codeSeq
