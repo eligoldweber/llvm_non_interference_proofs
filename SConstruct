@@ -1,6 +1,7 @@
   
 # -*- python -*-
 import atexit
+from getopt import GetoptError
 import os, os.path
 import re
 import shutil
@@ -47,9 +48,17 @@ AddOption('--no-trace',
   action='store',
   help='Optionally remove /trace from dafny command line parameters :: set --no-trace=1 to remove')
 
+AddOption('--apple-silicon',
+  dest='apple_silicon',
+  type='int',
+  default=0,
+  action='store',
+  help='Temporary flag to distinguish apple silicon vs Intel :: set --apple-silicon=1 to enable')
+
 verify_root = GetOption('verify_root')
 dafny_path = GetOption('dafny_path')
 no_trace = GetOption('no_trace')
+apple_silicon = GetOption('apple_silicon')
 
 if dafny_path is None:
   sys.stderr.write("ERROR:  Missing --dafny-path on command line\n")
@@ -69,6 +78,10 @@ else:
     print("ERROR:  Could not find Dafny executable in " + dafny_path)
     exit(-1)
   dafny_invocation = ["dotnet", dafny_exe]
+
+if(apple_silicon):
+  dafny_invocation = ["/usr/local/share/dotnet/x64/dotnet", dafny_exe]
+
 
 # Useful Dafny command lines
 dafny_basic_args = ['/compile:0', '/timeLimit:' + str(GetOption('time_limit')), '/trace']

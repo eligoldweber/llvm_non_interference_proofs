@@ -61,6 +61,8 @@ This applies to verifying files locally or using docker.
  
  > **Note:** Dafny is installed in `/opt/dafny` in the Docker image
  
+ > **Note:** If running locally on an M1 Mac make sure to use the `--apple_silicon=1` flag. The dotnet directory structure is slightly different. This will specify using the x_86 dotnet
+
  
  The default verification will verify most `.dfy` files in the `src/Dafny/examples` directory and all of their dependencies. (Including the proofs for Challenge Problem 5)
 
