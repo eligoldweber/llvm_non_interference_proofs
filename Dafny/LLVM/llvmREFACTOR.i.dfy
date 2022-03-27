@@ -162,6 +162,156 @@ module LLVM_defRE {
 
 /// EVAL CODE / CONTROL FLOW
 
+// Control flow unwrap witness
+        lemma unwrapBlockWitnessNEW(b:behavior,block:codeSeq,s:state) 
+            returns (step:behavior,remainder:codeSeq,subBehavior:behavior)
+                requires |block| > 0;
+                requires ValidState(s);
+            // requires b == [s] + evalBlockRE(block,s);
+            // requires b,last(b) == evalCodeTest(block,s);
+            // requires forall ins :: (ins in block && ins.Ins?) ==> !ins.ins.CALL? // doesnt work with CALLL rn
+            // requires ValidState(s);
+        {
+            // reveal_evalCodeRE();
+            reveal_ValidBehavior();
+            var r,b' := evalCodeTest(block,s);
+            // assert r == b;
+            // if (|block| == 1 ) {
+            //     assert b' == [s];
+            // //     step := [s];
+            // //     remainder := [];
+
+            // //     subBehavior := b[|step|..];
+            // //     assert b == [s] + step + all_but_first(subBehavior);
+            // //     assert !ValidBehavior(step) ==> !ValidBehavior(b);
+            // //     assert NextStep(s,step[0], Step.stutterStep());
+            // //     assert ValidState(s) ==> ValidBehavior([s] + step);
+            // }
+            // }else{
+            //     assert !(|block| == 0 || first(block).CNil?);
+            //     var metaBehavior := evalCodeRE(first(block),s);
+            //     // assert (first(block).Ins? && ValidInstruction(s,first(block).ins)) ==> ValidBehavior([s] + metaBehavior);
+            //     assert (first(block).Ins? && first(block).ins.CALL?) ==> metaBehavior == [evalInsRe(first(block).ins,s)];
+            //     var theRest := evalBlockRE(all_but_first(block),last(metaBehavior));
+            //     assert evalBlockRE(block,s) == metaBehavior + theRest;
+            //     assert b == [s] + evalBlockRE(block,s);
+            //     assert b == [s] + metaBehavior + theRest;
+            //     step := metaBehavior;
+            //     // assert ValidBehavior(step);
+            //     remainder := all_but_first(block);
+                
+            //     assert b[1..|step|+1] == step;
+            //     subBehavior := b[|step|..];
+            //     // assert subBehavior == [last(step)] + evalBlockRE(remainder,last(step));
+            //     assert evalBlockRE([],last(step)) == [last(step)];
+            //     // assert b == [s] + b[1..|step|] + b[|step|..];
+            //     assert b == [s] + step + all_but_first(subBehavior);
+            // }
+        }
+
+
+
+    lemma evalCodeTest(c:codeSeq, s:state) returns (r:state, b:behavior)
+        // requires |c| > 0;
+        requires ValidState(s);
+
+        ensures |b| > 0;
+        ensures r == last(b);
+        ensures r.ok ==> ValidBehavior(b);
+        ensures first(b) == s;
+        // ensures |b| >= |c|; 
+        // ensures forall i :: (i > 0 && i < |b|) ==> b[i] == evalInsRe(c[i].ins,b[i-1]);
+        // ensures b == evalCodeRE(Block(c),s);
+    {
+        reveal_ValidBehavior();
+        
+        var subB := [s];
+        r := s;
+        var i := 0;
+
+        if (|c| == 0){
+            assert r.ok; 
+            return r,subB;
+        }
+        if(!ValidState(r)){
+            return r,subB;
+        }
+        assert ValidState(r);
+        while (i < |c|)
+            invariant |subB| > 0
+            invariant r == last(subB);
+            invariant r.ok ==> ValidBehavior(subB);
+            invariant first(subB) == s;
+            invariant i <= |c|
+            // invariant |subB| >= i
+            // invariant (i< |c| && !ValidState(r) && c[i].Ins?) ==> last(subB) == evalInsRe(c[i].ins,subB[|subB|-2]);
+
+            // invariant ValidState(r) && c[i].Ins? && validEvalIns(c[i].ins,preR,r)
+            // invariant ((!ValidState(r) || !ValidInstruction(s, ins)) && validEvalIns(ins,s,s')) ==> s'.ok
+        {
+            if(!ValidState(r)){
+                subB := subB + [r];
+                // return r,subB;
+            }
+            else if (c[i].Ins?) 
+            {
+                var preR := r;
+                r := evalInsRe(c[i].ins,preR);
+                assert (!ValidState(preR) || !ValidInstruction(preR, c[i].ins)) ==> !r.ok;
+                assert r.ok ==> NextStep(preR,r,Step.evalInsStep(c[i].ins)) && StateNext(preR,r);
+                assert validEvalIns(c[i].ins,preR,r) ==> r.ok;
+                subB := subB + [r];
+                assert r.ok ==> ValidBehavior(subB);
+                // assert preR == subB[|subB|-2];
+                assert last(subB) == evalInsRe(c[i].ins,subB[|subB|-2]);
+                
+            } 
+            else if (c[i].Block? && |c[i].block| > 0) 
+            {
+                assert ValidState(r);
+                assert r == last(subB);
+                var postr,blockB := evalCodeTest(c[i].block,r);
+                assert postr.ok ==> ValidBehavior(blockB);
+                r := last(blockB);
+                // assert r == postr;
+                // assert |blockB| > 0;
+                // assert last(subB) == first(blockB);
+                assert NextStep(last(subB),first(blockB),Step.stutterStep());
+                // assert StateNext(last(subB),first(blockB));
+                subB := subB + blockB;
+                assert r.ok ==> (forall a  :: a in subB ==> ValidState(a));
+            }
+             else if (c[i].IfElse?) 
+            {
+                if (c[i].ifCond)
+                {
+                    if(|c[i].ifTrue| > 0)
+                    {
+                        var postr,trueB := evalCodeTest(c[i].ifTrue,r);
+                        assert postr.ok ==> ValidBehavior(trueB);
+                        r := last(trueB);
+                        assert NextStep(last(subB),first(trueB),Step.stutterStep());
+                        subB := subB + trueB;
+                    }
+                }else{
+                    assert !c[i].ifCond;
+                    if(|c[i].ifFalse| > 0)
+                    {
+                        var postr,falseB := evalCodeTest(c[i].ifFalse,r);
+                        r := last(falseB);
+                        assert NextStep(last(subB),first(falseB),Step.stutterStep());
+                        subB := subB + falseB;
+                    }
+                }
+            }
+
+            assert |subB| > 0;
+            i := i + 1;
+        }
+        assert |subB| > 0;
+        return r,subB;
+    }
+
     function  evalCodeRE(c:codeRe, s:state) : (b:behavior)
         ensures |b| > 0
         ensures (c.Ins?) ==> |b| == 1
@@ -208,7 +358,7 @@ module LLVM_defRE {
         // ensures ValidState(s) && ValidInstruction(s, ins) ==> StateNext(s,s')
         ensures s'.ok ==> NextStep(s,s',Step.evalInsStep(ins)) && StateNext(s,s');
         ensures (!ValidState(s) || !ValidInstruction(s, ins)) ==> !s'.ok;
-
+        ensures ((!ValidState(s) || !ValidInstruction(s, ins)) && validEvalIns(ins,s,s')) ==> s'.ok
     {
         reveal_ValidBehavior();
         reveal_behaviorOutput();
@@ -347,7 +497,6 @@ module LLVM_defRE {
             case RET(val) => ValidState(s') && s'.m == s.m && s'.o == Out(OperandContents(s,val))   
             case CALL(dst,fnc)  =>  ValidState(s') && ValidOperand(s',dst) && ValidData(s',OperandContents(s',dst))// maybe adjsut //&& evalUpdate(s, dst, OperandContents(s',dst),s')
     }
-
 
 
     function stateUpdateVar(s:state, dst:operand, d:Data): (s':state)

@@ -15,65 +15,58 @@ abstract module GeneralNonInterferenceProperties {
     }
 
 // -- 
-    // benignPatch: "The patch does not add any NEW behaviors"
     predicate benignPatch(pre:set<System_s.behavior>,post:set<System_s.behavior>)
     {
-        var preOutput := allBehaviorOutputSet(pre);
-        var postOutput := allBehaviorOutputSet(post);
-        forall postB :: postB in postOutput ==> postB in preOutput
+
+        forall postB :: postB in post ==> postB in pre
     }
 
-    // successfulPatch: "The patch prunes the BAD (defined by MiniSpec) behaviors" 
     predicate successfulPatch(post:set<System_s.behavior>)
     {
         forall postB :: MiniSpec(postB) ==> !(postB in post)
     }
 
     // // completePatch: "The patch preserves the GOOD behavior" // Name; complete -> preserving ? 
+    // predicate completePatch(pre:set<System_s.behavior>,post:set<System_s.behavior>)
+    // {
+    //     // forall p :: (p in a && !MiniSpec(p)) ==> p in b
+
+    //     var preOutput := allBehaviorOutputSet(pre);
+    //     var postOutput := allBehaviorOutputSet(post);
+    //     forall preB :: (behaviorOutput(preB) in preOutput && !MiniSpec(preB)) ==> behaviorOutput(preB) in postOutput
+    // }
+
     predicate completePatch(pre:set<System_s.behavior>,post:set<System_s.behavior>)
     {
         // forall p :: (p in a && !MiniSpec(p)) ==> p in b
-
-        var preOutput := allBehaviorOutputSet(pre);
-        var postOutput := allBehaviorOutputSet(post);
-        forall preB :: (behaviorOutput(preB) in preOutput && !MiniSpec(preB)) ==> behaviorOutput(preB) in postOutput
-    }
-    // completePatch: "The patch preserves the GOOD behavior" // Name; complete -> preserving ? 
-    predicate completePatchMS(pre:set<System_s.behavior>,post:set<System_s.behavior>)
-    {
-        // forall p :: (p in a && !MiniSpec(p)) ==> p in b
-        var preModMs := MakeSubset(pre, x => !MiniSpec(x));
-        var preModMsOut := allBehaviorOutputSet(preModMs);
-        var postOutput := allBehaviorOutputSet(post);
-        forall preB :: behaviorOutput(preB) in preModMsOut ==> behaviorOutput(preB) in postOutput
+        var preModMS := MakeSubset(pre, x => !MiniSpec(x));
+        forall preBModMS :: preBModMS in preModMS ==> preBModMS in post
     }
 
     
     // // The conjuntion of benign, successful and complete imply that; that after apply the patch, b retains all good behavior from a and 
     // // is pruned of all bad behavior. 
 
-    predicate safePatch(pre:set<System_s.behavior>,post:set<System_s.behavior>)
-    {
-        // forall p :: (p in a && !MiniSpec(p)) <==> p in b
-        var preOutput := allBehaviorOutputSet(pre);
-        var postOutput := allBehaviorOutputSet(post);
-        forall preB :: (behaviorOutput(preB) in preOutput && !MiniSpec(preB)) <==> behaviorOutput(preB) in postOutput
-    }
+    // predicate safePatch(pre:set<System_s.behavior>,post:set<System_s.behavior>)
+    // {
+    //     // forall p :: (p in a && !MiniSpec(p)) <==> p in b
+    //     var preOutput := allBehaviorOutputSet(pre);
+    //     var postOutput := allBehaviorOutputSet(post);
+    //     forall preB :: (behaviorOutput(preB) in preOutput && !MiniSpec(preB)) <==> behaviorOutput(preB) in postOutput
+    // }
 
-    predicate safePatchMS(pre:set<System_s.behavior>,post:set<System_s.behavior>)
+    predicate safePatch(pre:set<System_s.behavior>,post:set<System_s.behavior>)
     {           
     //  forall p :: (p in a && !MiniSpec(p)) <==> p in b
         var preModMs := MakeSubset(pre, x => !MiniSpec(x));
-        var preModMsOut := allBehaviorOutputSet(preModMs);
-        var postOutput := allBehaviorOutputSet(post);
-        forall preB :: behaviorOutput(preB) in preModMsOut <==> behaviorOutput(preB) in postOutput
+        forall preBModMS :: preBModMS in preModMs <==> preBModMS in post
     } 
 
     lemma fullPatch(pre:set<System_s.behavior>,post:set<System_s.behavior>)
         requires benignPatch(pre,post);
         requires successfulPatch(post);
-        requires completePatchMS(pre,post);
-        ensures safePatchMS(pre,post);
+        requires completePatch(pre,post);
+        ensures safePatch(pre,post);
 
 
 
