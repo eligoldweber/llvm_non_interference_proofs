@@ -159,7 +159,6 @@ module simpleBugCode{
                                                         && OperandContents(s,result).Int?
                                                         && OperandContents(s,result).val == 0 ));
         ensures (behaviorOutput(postB) == validOutput());
-        ensures aoi(postB);
 
         {
             reveal_BehaviorEvalsCode();
@@ -243,27 +242,6 @@ module simpleBugCode{
             assert !(OperandContents(last(postB),result).val == 0);
             uniqueOperandInState(last(postB),result);
 
-            var icmpIns := ICMP(result,ugt,4,z,D(Int(0,IntType(4,false))));
-        // assert icmpIns.ICMP?;
-        // assert ValidInstruction(preB[1],icmpIns);
-        // assert OperandContents(preB[1],icmpIns.src1).val > 0;
-        // assert OperandContents(preB[1],icmpIns.src2).val == 0;
-        // assert (icmpIns.cond == sgt || icmpIns.cond == ugt);
-        // assert icmpIns.dst.LV?;
-        assert postB[1] in postB;
-        assert postB[2] in postB;
-        // assert NextStep(preB[1],preB[2],Step.evalInsStep(icmpIns));
-
-        assert exists s:state,s':state, icmpIns:ins :: (&& s in postB 
-                                                    && s' in postB
-                                                    && icmpIns.ICMP?
-                                                    && ValidInstruction(s,icmpIns)
-                                                    && OperandContents(s,icmpIns.src1).val > 0
-                                                    && OperandContents(s,icmpIns.src2).val == 0
-                                                    && (icmpIns.cond == sgt || icmpIns.cond == ugt)
-                                                    && icmpIns.dst.LV?
-                                                    && NextStep(s,s',Step.evalInsStep(icmpIns)));
-
 
         }
 
@@ -302,7 +280,6 @@ module simpleBugCode{
                                                             && ValidOperand(last(preB),result)
                                                             && OperandContents(last(preB),result).Int?
                                                             && OperandContents(last(preB),result).val == 0));
-        ensures aoi(preB);
         {
             reveal_BehaviorEvalsCode();
             var c := codeVuln(input);
@@ -379,66 +356,8 @@ module simpleBugCode{
 
             assert behaviorOutput(preB) == [Nil,Nil,Nil,Out(OperandContents(preB[2],result)),Out(OperandContents(preB[2],result))];
 
-            assert  OperandContents(s,input).val == 2 ==> (exists s:state,s':state, result:operand, val:operand :: (&& s in preB 
-                                                                    && s' in preB 
-                                                                    && result.LV?
-                                                                    && result.l in s.lvs
-                                                                    && val.LV?
-                                                                    && val.l in s.lvs 
-                                                                    && NextStep(s,s',Step.evalInsStep(ICMP(result,sgt,4,val,D(Int(0,IntType(4,false))))))
-                                                                    && ValidOperand(s',result)
-                                                                    && OperandContents(s',result).Int?
-                                                                    && OperandContents(s',result).val == 0));
-        
-        assert ValidInstruction(preB[1],ICMP(result,sgt,4,z,D(Int(0,IntType(4,false)))));
-        assert result.LV?;
-        assert NextStep(preB[1],preB[2],Step.evalInsStep(ICMP(result,sgt,4,z,D(Int(0,IntType(4,false))))));
-        assert result.l in preB[2].lvs;
-        var icmpIns := ICMP(result,sgt,4,z,D(Int(0,IntType(4,false))));
-        // assert icmpIns.ICMP?;
-        // assert ValidInstruction(preB[1],icmpIns);
-        // assert OperandContents(preB[1],icmpIns.src1).val > 0;
-        // assert OperandContents(preB[1],icmpIns.src2).val == 0;
-        // assert (icmpIns.cond == sgt || icmpIns.cond == ugt);
-        // assert icmpIns.dst.LV?;
-        assert preB[1] in preB;
-        assert preB[2] in preB;
-        // assert NextStep(preB[1],preB[2],Step.evalInsStep(icmpIns));
-
-        assert exists s:state,s':state, icmpIns:ins :: (&& s in preB 
-                                                    && s' in preB
-                                                    && icmpIns.ICMP?
-                                                    && ValidInstruction(s,icmpIns)
-                                                    && OperandContents(s,icmpIns.src1).val > 0
-                                                    && OperandContents(s,icmpIns.src2).val == 0
-                                                    && (icmpIns.cond == sgt || icmpIns.cond == ugt)
-                                                    && icmpIns.dst.LV?
-                                                    && NextStep(s,s',Step.evalInsStep(icmpIns)));
 
         }
-
-    predicate aoi(b:behavior)
-    {
-        && ValidBehaviorNonTrivial(b)
-        && exists s:state,s':state, icmpIns:ins :: (&& s in b 
-                                                    && s' in b
-                                                    && icmpIns.ICMP?
-                                                    && ValidInstruction(s,icmpIns)
-                                                    && OperandContents(s,icmpIns.src1).val > 0
-                                                    && OperandContents(s,icmpIns.src2).val == 0
-                                                    && (icmpIns.cond == sgt || icmpIns.cond == ugt)
-                                                    && icmpIns.dst.LV?
-                                                    && NextStep(s,s',Step.evalInsStep(icmpIns)))
-    }
-
-    lemma test()
-    {
-        forall s:state, input:operand | ValidState(s) && validInput(s,input)
-        {
-            var b := unwrapVulnBehaviors(s,input);
-            assert aoi(b);
-        }
-    }
 
     lemma validInputPatchImpliesBehavior(s:state)
         requires ValidState(s);

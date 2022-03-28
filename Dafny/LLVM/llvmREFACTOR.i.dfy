@@ -163,7 +163,7 @@ module LLVM_defRE {
 /// EVAL CODE / CONTROL FLOW
 
 // Control flow unwrap witness
-        lemma unwrapBlockWitnessNEW(b:behavior,block:codeSeq,s:state) 
+        lemma unwrapBlockWitnessNEW(b:behavior,block:codeSeq,s:state)
             returns (step:behavior,remainder:codeSeq,subBehavior:behavior)
                 requires |block| > 0;
                 requires ValidState(s);
@@ -199,7 +199,7 @@ module LLVM_defRE {
             //     step := metaBehavior;
             //     // assert ValidBehavior(step);
             //     remainder := all_but_first(block);
-                
+
             //     assert b[1..|step|+1] == step;
             //     subBehavior := b[|step|..];
             //     // assert subBehavior == [last(step)] + evalBlockRE(remainder,last(step));
@@ -219,18 +219,18 @@ module LLVM_defRE {
         ensures r == last(b);
         ensures r.ok ==> ValidBehavior(b);
         ensures first(b) == s;
-        // ensures |b| >= |c|; 
+        // ensures |b| >= |c|;
         // ensures forall i :: (i > 0 && i < |b|) ==> b[i] == evalInsRe(c[i].ins,b[i-1]);
         // ensures b == evalCodeRE(Block(c),s);
     {
         reveal_ValidBehavior();
-        
+
         var subB := [s];
         r := s;
         var i := 0;
 
         if (|c| == 0){
-            assert r.ok; 
+            assert r.ok;
             return r,subB;
         }
         if(!ValidState(r)){
@@ -253,7 +253,7 @@ module LLVM_defRE {
                 subB := subB + [r];
                 // return r,subB;
             }
-            else if (c[i].Ins?) 
+            else if (c[i].Ins?)
             {
                 var preR := r;
                 r := evalInsRe(c[i].ins,preR);
@@ -264,9 +264,9 @@ module LLVM_defRE {
                 assert r.ok ==> ValidBehavior(subB);
                 // assert preR == subB[|subB|-2];
                 assert last(subB) == evalInsRe(c[i].ins,subB[|subB|-2]);
-                
-            } 
-            else if (c[i].Block? && |c[i].block| > 0) 
+
+            }
+            else if (c[i].Block? && |c[i].block| > 0)
             {
                 assert ValidState(r);
                 assert r == last(subB);
@@ -281,7 +281,7 @@ module LLVM_defRE {
                 subB := subB + blockB;
                 assert r.ok ==> (forall a  :: a in subB ==> ValidState(a));
             }
-             else if (c[i].IfElse?) 
+             else if (c[i].IfElse?)
             {
                 if (c[i].ifCond)
                 {
@@ -497,6 +497,7 @@ module LLVM_defRE {
             case RET(val) => ValidState(s') && s'.m == s.m && s'.o == Out(OperandContents(s,val))   
             case CALL(dst,fnc)  =>  ValidState(s') && ValidOperand(s',dst) && ValidData(s',OperandContents(s',dst))// maybe adjsut //&& evalUpdate(s, dst, OperandContents(s',dst),s')
     }
+
 
 
     function stateUpdateVar(s:state, dst:operand, d:Data): (s':state)

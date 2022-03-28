@@ -23,7 +23,7 @@ abstract module GeneralNonInterferenceProperties {
         forall postB :: postB in postOutput ==> postB in preOutput
     }
 
-    // successfulPatch: "The patch prunes the BAD (defined by MiniSpec) behaviors" 
+    // // successfulPatch: "The patch prunes the BAD (defined by MiniSpec) behaviors"
     predicate successfulPatch(post:set<System_s.behavior>)
     {
         forall postB :: MiniSpec(postB) ==> !(postB in post)

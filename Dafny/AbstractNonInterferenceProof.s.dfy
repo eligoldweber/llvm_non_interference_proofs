@@ -30,6 +30,10 @@ abstract module AbstractNonInterferenceProof {
     predicate validInput(s:state, input:operand)
         requires ValidState(s)
 
+    predicate ValidBehaviorNonTrivial(b:behavior)
+
+    predicate BehaviorEvalsCode(c:codeRe, b:behavior)
+    
     function extractPatchBehavior(c:codeRe,s:state,input:operand) : (b:behavior)
         requires ValidState(s);
         requires c == codePatch(input);

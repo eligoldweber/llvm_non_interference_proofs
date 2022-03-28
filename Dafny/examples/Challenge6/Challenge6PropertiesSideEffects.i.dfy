@@ -44,7 +44,7 @@ module challenge6PropertiesSideEffects{
         }else{
             assert |patchBehaviors| > 0;
             patchIsBenignNonTrivialModified(s,vulnBehaviors,patchBehaviors,vulnOut,patchOut);
-            assert forall postOutput :: postOutput in patchOut ==> postOutput in vulnOut;
+            // assert forall postOutput :: postOutput in patchOut ==> postOutput in vulnOut;
         }
     }
 
@@ -97,11 +97,7 @@ module challenge6PropertiesSideEffects{
             assert !(patchO in vulnOut);
 
         } 
-        // forall postB | postB in patchBehaviors
-        // {
-        //     var b := unwrapPatchBehaviors(s,challenge_prob_6_code_write_encrypted_simple_patch_side_effect());
-        //     assert behaviorOutput(postB) == validBehaviorsOuts();
-        // }
+
     }
 
 
