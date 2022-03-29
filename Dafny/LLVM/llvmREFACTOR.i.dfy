@@ -59,10 +59,13 @@ module LLVM_defRE {
     | ADD(dst:operand, size:nat, src1ADD:operand, src2ADD:operand)
     | SUB(dst:operand, size:nat, src1SUB:operand, src2SUB:operand)
     | ICMP(dst:operand,cond:condition,size:nat,src1:operand,src2:operand)
+    | TRUNC(dst:operand,size:nat,src:operand,dstSize:bitWidth)
+    | LSHR(dst:operand,src:operand,shiftAmt:operand)
     | STORE(valueToStore:operand,ptr:operand)
     | LLVM_MEMCPY(dst:operand,src:operand,len:bitWidth,volatile:bool)
     | CALL(dst:operand,fnc:codeSeq)
     // | BR(if_cond:operand, labelTrue:codeRe,labelFalse:codeRe)
+    | ALLOCA(dst:operand,t:bitWidth)
     | RET(val:operand)
 
 
@@ -392,6 +395,18 @@ module LLVM_defRE {
                     assert MemStateNext(s.m,s'.m,MemStep.stutterStep);
                     assert validEvalIns(ins,s,s');
                     s'
+            case TRUNC(dst,t,src,dstSize) => 
+                var s' := stateUpdateVar(s,dst,evalTRUNC(OperandContents(s,src),dstSize));
+                 assert ValidData(s',evalTRUNC(OperandContents(s,src),dstSize));
+                 assert MemStateNext(s.m,s'.m,MemStep.stutterStep);
+                    assert validEvalIns(ins,s,s');
+                    s'
+            case LSHR(dst,src,shiftAmt) =>
+                var s' := stateUpdateVar(s,dst,evalLSHR(OperandContents(s,src),OperandContents(s,shiftAmt)));
+                assert ValidData(s',evalLSHR(OperandContents(s,src),OperandContents(s,shiftAmt)));
+                 assert MemStateNext(s.m,s'.m,MemStep.stutterStep);
+                    assert validEvalIns(ins,s,s');
+                    s'
             case STORE(valueToStore,ptr) =>
                 var s' := s.(m := evalStore(s.m,OperandContents(s,ptr).bid,OperandContents(s,ptr).offset,OperandContents(s,valueToStore)));
                 if MemValid(s'.m) then
@@ -412,6 +427,8 @@ module LLVM_defRE {
                     var notOk := s'.(ok := false);
                     assert NextStep(s,notOk, Step.errorStateStep());
                     notOk
+            case ALLOCA(dst,t) => var s' := State(s.lvs,s.gvs,AllocaStep(s.m,t),s.o,s.ok);
+                s'
             case CALL(dst,fnc) =>
                 var subB := evalBlockRE(fnc,s);
                 if ValidBehavior(subB) && ValidOperand(last(subB),dst) then
@@ -463,6 +480,15 @@ module LLVM_defRE {
                                             && isInt(OperandContents(s,src1)) && isInt(OperandContents(s,src2))
                                             && t == OperandContents(s,src1).itype.size
                                             && typesMatch(OperandContents(s,src1),OperandContents(s,src2))
+            case TRUNC(dst,t,src,dstSize) => (dst.LV? || dst.GV?) && ValidOperand(s,dst) && ValidOperand(s,src) && isInt(OperandContents(s,src))
+                                            && t == OperandContents(s,src).itype.size
+                                            && t > dstSize
+                                            && isInt(OperandContents(s,dst))
+            case LSHR(dst,src,shiftAmt) =>  (dst.LV? || dst.GV?) && ValidOperand(s,dst) && ValidOperand(s,src) && ValidOperand(s,shiftAmt)
+                                && isInt(OperandContents(s,dst)) && isInt(OperandContents(s,src)) && isInt(OperandContents(s,shiftAmt))
+                                && OperandContents(s,src).itype.size*8 > OperandContents(s,shiftAmt).val
+                                && OperandContents(s,shiftAmt).val > 0
+                                && isInt(OperandContents(s,dst)) && !OperandContents(s,dst).itype.signed 
             case STORE(valueToStore,ptr) => && ValidOperand(s,valueToStore) && ValidOperand(s,ptr)
                                         && OperandContents(s,valueToStore).Int? && (IntType(1, false) == OperandContents(s,valueToStore).itype)
                                         && MemValid(s.m) && OperandContents(s,ptr).Ptr? 
@@ -472,6 +498,7 @@ module LLVM_defRE {
             case LLVM_MEMCPY(dst,src,len,volatile) => && ValidOperand(s,dst) && ValidOperand(s,src) && OperandContents(s,dst).Ptr?
                                                      && OperandContents(s,src).Ptr? && OperandContents(s,dst).size >= OperandContents(s,src).size
                                                      && validBitWidth(len) && !volatile // dont support volatile right now
+            case ALLOCA(dst,t) => (dst.LV? || dst.GV?) && ValidOperand(s,dst) && MemValid(s.m) && OperandContents(s,dst).Ptr? && validBitWidth(t)
             case RET(val) => && ValidOperand(s,val)
             case CALL(dst,fnc) => (dst.LV? || dst.GV? || (dst.D? && dst.d.Void?)) && ValidOperand(s,dst) && |fnc| > 0
 
@@ -491,9 +518,19 @@ module LLVM_defRE {
             case ICMP(dst,cond,t,src1,src2) => ValidState(s') 
                                 && ValidData(s',evalICMP(cond,t,OperandContents(s,src1),OperandContents(s,src2)))
                                 && evalUpdate(s, dst, evalICMP(cond,t,OperandContents(s,src1),OperandContents(s,src2)),s')
+            case TRUNC(dst,t,src,dstSize) => ValidState(s') //o == dst
+                                && ValidData(s',evalTRUNC(OperandContents(s,src),dstSize))    
+                                && evalUpdate(s, dst, evalTRUNC(OperandContents(s,src),dstSize),s')
+            case LSHR(dst,src,shiftAmt) => ValidState(s') // o == dst 
+                                && ValidData(s',evalLSHR(OperandContents(s,src),OperandContents(s,shiftAmt)))
+                                && evalUpdate(s, dst, evalLSHR(OperandContents(s,src),OperandContents(s,shiftAmt)),s')
             case STORE(valueToStore,ptr) => ValidState(s') && Store(s.m,s'.m,OperandContents(s,ptr).bid,OperandContents(s,ptr).offset,OperandContents(s,valueToStore))
                                         && (MemValid(s'.m))
             case LLVM_MEMCPY(dst,src,len,volatile) => ValidState(s') && memCpy(s.m, OperandContents(s,dst),OperandContents(s,src), s'.m)                            
+            case ALLOCA(dst,t) => //Alloc(s.m,s'.m,s.m.nextBlock,t)
+                                        ValidState(s') && ValidData(s',evalALLOCA(s.m,t))
+                                        && s' == State(s.lvs,s.gvs,AllocaStep(s.m,t),s.o,s.ok)
+                                        && evalAlloca(s, dst, evalALLOCA(s.m,t),t,s')
             case RET(val) => ValidState(s') && s'.m == s.m && s'.o == Out(OperandContents(s,val))   
             case CALL(dst,fnc)  =>  ValidState(s') && ValidOperand(s',dst) && ValidData(s',OperandContents(s',dst))// maybe adjsut //&& evalUpdate(s, dst, OperandContents(s',dst),s')
     }
@@ -529,7 +566,55 @@ module LLVM_defRE {
                     s'
          }
 
-    
+ predicate evalAlloca(s:state, o:operand, d:Data, size:nat,s':state)
+        requires ValidState(s)
+        requires ValidOperand(s,o)
+        requires s' == State(s.lvs,s.gvs,AllocaStep(s.m,size),s.o,s.ok);
+        // requires ValidState(s'); 
+            // requires validBitWidth(size);
+        // ensures o.D? ==> ValidData(s',d)
+        ensures  ValidState(s')
+    {
+
+        var newMem := AllocaStep(s.m,size);
+        // assert newMem == newMemTemp;
+        // var d := evalALLOCA(s.m,size);
+        assert MemValid(newMem);
+        assert ValidVarState(s,s.lvs,s.gvs); 
+        // assert ValidVarState(s',s'.lvs,s'.gvs);
+        var newState := State(s.lvs,s.gvs,newMem,s.o,s.ok);
+        assert newState.m == AllocaStep(s.m,size);
+        assert s' == newState;
+        equalStateVarsValid(s,newState,size);
+        assert ValidState(newState);
+        match o
+            case D(data) => data == d && s' == newState
+            case GV(g) => s' == newState
+            case LV(l) => s' == newState
+    }
+
+     lemma equalStateVarsValid(s:state,s':state, size:nat)
+        requires ValidState(s);
+        requires s'.lvs == s.lvs;
+        requires s'.gvs == s.gvs;
+        requires s'.m == AllocaStep(s.m,size)
+        ensures ValidVarState(s',s'.lvs,s'.gvs);
+    {
+        assert ValidState(s) ==> ValidVarState(s,s.lvs,s.gvs);
+        assert ValidVarState(s,s.lvs,s.gvs) ==> (forall g:GlobalVar :: g in s.gvs  ==> ValidData(s,s.gvs[g]));
+        assert forall bid:nat, offset:nat, size:bitWidth :: IsValidPtr(s.m,bid,offset,size) ==> IsValidPtr(s'.m,bid,offset,size);
+        //         assert forall g:GlobalVar :: g in s.gvs  ==> ValidData(s,s.gvs[g]);
+        //         assert forall l:LocalVar :: l in s.lvs ==> ValidData(s,s.lvs[l]);
+
+        assert forall l:LocalVar :: l in s'.lvs  && s'.lvs[l].Void? ==> ValidData(s',s'.lvs[l]);
+        assert forall l:LocalVar :: l in s'.lvs  && s'.lvs[l].Int? ==> ValidData(s',s'.lvs[l]);
+        assert forall l:LocalVar :: l in s'.lvs  && s'.lvs[l].Bytes? ==> ValidData(s',s'.lvs[l]);
+        assert forall l:LocalVar :: l in s'.lvs  && s'.lvs[l].Ptr? ==> ValidData(s',s'.lvs[l]);
+        // assert forall g:GlobalVar :: g in s'.gvs  && s'.gvs[g].Void? ==> ValidData(s',s'.gvs[g]);
+        // assert forall g:GlobalVar :: g in s'.gvs  && s'.gvs[g].Int? ==> ValidData(s',s'.gvs[g]);
+        // assert forall g:GlobalVar :: g in s'.gvs  && s'.gvs[g].Bytes? ==> ValidData(s',s'.gvs[g]);
+        assert forall g:GlobalVar :: g in s'.gvs  && s'.gvs[g].Ptr? ==> ValidData(s',s'.gvs[g]);
+    }
     
 //// Util Predicates
 

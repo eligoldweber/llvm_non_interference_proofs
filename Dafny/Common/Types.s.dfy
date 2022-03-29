@@ -80,7 +80,7 @@ module Types_s
 
     predicate validBitWidth(s:nat)
     {
-        (s == 1 || s == 2 || s == 4 || s == 8)
+    (s == 1 || s == 2 || s == 4 || s == 8) || s == 3
     }
 
     predicate typesMatch(x:Data, y:Data)
