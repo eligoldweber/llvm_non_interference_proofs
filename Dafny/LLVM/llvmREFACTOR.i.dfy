@@ -64,7 +64,8 @@ module LLVM_defRE {
     | STORE(valueToStore:operand,ptr:operand)
     | LLVM_MEMCPY(dst:operand,src:operand,len:bitWidth,volatile:bool)
     | CALL(dst:operand,fnc:codeSeq)
-    // | BR(if_cond:operand, labelTrue:codeRe,labelFalse:codeRe)
+    | UNCONDBR(goToLabel:codeRe)
+    | BR(if_cond:operand, labelTrue:codeRe,labelFalse:codeRe)
     | ALLOCA(dst:operand,t:bitWidth)
     | RET(val:operand)
 
@@ -164,53 +165,6 @@ module LLVM_defRE {
     }
 
 /// EVAL CODE / CONTROL FLOW
-
-// Control flow unwrap witness
-        lemma unwrapBlockWitnessNEW(b:behavior,block:codeSeq,s:state)
-            returns (step:behavior,remainder:codeSeq,subBehavior:behavior)
-                requires |block| > 0;
-                requires ValidState(s);
-            // requires b == [s] + evalBlockRE(block,s);
-            // requires b,last(b) == evalCodeTest(block,s);
-            // requires forall ins :: (ins in block && ins.Ins?) ==> !ins.ins.CALL? // doesnt work with CALLL rn
-            // requires ValidState(s);
-        {
-            // reveal_evalCodeRE();
-            reveal_ValidBehavior();
-            var r,b' := evalCodeTest(block,s);
-            // assert r == b;
-            // if (|block| == 1 ) {
-            //     assert b' == [s];
-            // //     step := [s];
-            // //     remainder := [];
-
-            // //     subBehavior := b[|step|..];
-            // //     assert b == [s] + step + all_but_first(subBehavior);
-            // //     assert !ValidBehavior(step) ==> !ValidBehavior(b);
-            // //     assert NextStep(s,step[0], Step.stutterStep());
-            // //     assert ValidState(s) ==> ValidBehavior([s] + step);
-            // }
-            // }else{
-            //     assert !(|block| == 0 || first(block).CNil?);
-            //     var metaBehavior := evalCodeRE(first(block),s);
-            //     // assert (first(block).Ins? && ValidInstruction(s,first(block).ins)) ==> ValidBehavior([s] + metaBehavior);
-            //     assert (first(block).Ins? && first(block).ins.CALL?) ==> metaBehavior == [evalInsRe(first(block).ins,s)];
-            //     var theRest := evalBlockRE(all_but_first(block),last(metaBehavior));
-            //     assert evalBlockRE(block,s) == metaBehavior + theRest;
-            //     assert b == [s] + evalBlockRE(block,s);
-            //     assert b == [s] + metaBehavior + theRest;
-            //     step := metaBehavior;
-            //     // assert ValidBehavior(step);
-            //     remainder := all_but_first(block);
-
-            //     assert b[1..|step|+1] == step;
-            //     subBehavior := b[|step|..];
-            //     // assert subBehavior == [last(step)] + evalBlockRE(remainder,last(step));
-            //     assert evalBlockRE([],last(step)) == [last(step)];
-            //     // assert b == [s] + b[1..|step|] + b[|step|..];
-            //     assert b == [s] + step + all_but_first(subBehavior);
-            // }
-        }
 
 
 
@@ -429,6 +383,8 @@ module LLVM_defRE {
                     notOk
             case ALLOCA(dst,t) => var s' := State(s.lvs,s.gvs,AllocaStep(s.m,t),s.o,s.ok);
                 s'
+            case BR(if_cond, labelTrue,labelFalse) => s
+            case UNCONDBR(goToLabel) => s
             case CALL(dst,fnc) =>
                 var subB := evalBlockRE(fnc,s);
                 if ValidBehavior(subB) && ValidOperand(last(subB),dst) then
@@ -500,6 +456,10 @@ module LLVM_defRE {
                                                      && validBitWidth(len) && !volatile // dont support volatile right now
             case ALLOCA(dst,t) => (dst.LV? || dst.GV?) && ValidOperand(s,dst) && MemValid(s.m) && OperandContents(s,dst).Ptr? && validBitWidth(t)
             case RET(val) => && ValidOperand(s,val)
+            case BR(if_cond, labelTrue,labelFalse) => && ValidOperand(s,if_cond)
+                                                   && OperandContents(s,if_cond).Int? && !OperandContents(s,if_cond).itype.signed
+                                                   && OperandContents(s,if_cond).itype.size == 1 
+            case UNCONDBR(goToLabel) => true
             case CALL(dst,fnc) => (dst.LV? || dst.GV? || (dst.D? && dst.d.Void?)) && ValidOperand(s,dst) && |fnc| > 0
 
     }
@@ -532,6 +492,8 @@ module LLVM_defRE {
                                         && s' == State(s.lvs,s.gvs,AllocaStep(s.m,t),s.o,s.ok)
                                         && evalAlloca(s, dst, evalALLOCA(s.m,t),t,s')
             case RET(val) => ValidState(s') && s'.m == s.m && s'.o == Out(OperandContents(s,val))   
+            case BR(if_cond, labelTrue,labelFalse) => s == s'
+            case UNCONDBR(goToLabel) =>  s == s'
             case CALL(dst,fnc)  =>  ValidState(s') && ValidOperand(s',dst) && ValidData(s',OperandContents(s',dst))// maybe adjsut //&& evalUpdate(s, dst, OperandContents(s',dst),s')
     }
 
@@ -730,5 +692,55 @@ module LLVM_defRE {
                 assert b == [s] + step + all_but_first(subBehavior);
             }
         }
+
+        // Control flow unwrap witness
+        lemma unwrapBlockWitnessNEW(b:behavior,block:codeSeq,s:state)
+            returns (step:behavior,remainder:codeSeq,subBehavior:behavior)
+                requires |block| > 0;
+                requires ValidState(s);
+            // requires b == [s] + evalBlockRE(block,s);
+            // requires b,last(b) == evalCodeTest(block,s);
+            // requires forall ins :: (ins in block && ins.Ins?) ==> !ins.ins.CALL? // doesnt work with CALLL rn
+            // requires ValidState(s);
+        {
+            // reveal_evalCodeRE();
+            reveal_ValidBehavior();
+            var r,b' := evalCodeTest(block,s);
+            // assert r == b;
+            // if (|block| == 1 ) {
+            //     assert b' == [s];
+            // //     step := [s];
+            // //     remainder := [];
+
+            // //     subBehavior := b[|step|..];
+            // //     assert b == [s] + step + all_but_first(subBehavior);
+            // //     assert !ValidBehavior(step) ==> !ValidBehavior(b);
+            // //     assert NextStep(s,step[0], Step.stutterStep());
+            // //     assert ValidState(s) ==> ValidBehavior([s] + step);
+            // }
+            // }else{
+            //     assert !(|block| == 0 || first(block).CNil?);
+            //     var metaBehavior := evalCodeRE(first(block),s);
+            //     // assert (first(block).Ins? && ValidInstruction(s,first(block).ins)) ==> ValidBehavior([s] + metaBehavior);
+            //     assert (first(block).Ins? && first(block).ins.CALL?) ==> metaBehavior == [evalInsRe(first(block).ins,s)];
+            //     var theRest := evalBlockRE(all_but_first(block),last(metaBehavior));
+            //     assert evalBlockRE(block,s) == metaBehavior + theRest;
+            //     assert b == [s] + evalBlockRE(block,s);
+            //     assert b == [s] + metaBehavior + theRest;
+            //     step := metaBehavior;
+            //     // assert ValidBehavior(step);
+            //     remainder := all_but_first(block);
+
+            //     assert b[1..|step|+1] == step;
+            //     subBehavior := b[|step|..];
+            //     // assert subBehavior == [last(step)] + evalBlockRE(remainder,last(step));
+            //     assert evalBlockRE([],last(step)) == [last(step)];
+            //     // assert b == [s] + b[1..|step|] + b[|step|..];
+            //     assert b == [s] + step + all_but_first(subBehavior);
+            // }
+        }
+
+
+
 
 }
