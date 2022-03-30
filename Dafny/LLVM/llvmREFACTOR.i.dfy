@@ -40,7 +40,7 @@ module LLVM_defRE {
 
 ///
 
-    datatype output = Out(o:Data) | SubOut(os:seq<output>) |Nil
+    datatype output = Out(o:Data) | SubOut(os:seq<output>) | Nil
 
     type codeSeq = seq<codeRe>
 
@@ -66,10 +66,14 @@ module LLVM_defRE {
     | STORE(valueToStore:operand,ptr:operand)
     | LLVM_MEMCPY(dst:operand,src:operand,len:bitWidth,volatile:bool)
     | CALL(dst:operand,fnc:codeSeq)
+    | GETELEMENTPTR(dst:operand,t:bitWidth,op1:operand,op2:operand)
     | UNCONDBR(goToLabel:codeRe)
     | BR(if_cond:operand, labelTrue:codeRe,labelFalse:codeRe)
     | ALLOCA(dst:operand,t:bitWidth)
+    | LOAD(dst:operand,t:bitWidth,src:operand)
+    | BITCAST(dst:operand,src:operand,castType:operand)
     | RET(val:operand)
+    | VISIBLE_OUT(o:output)
 
 
 // STATE TRANSITIONS
@@ -399,6 +403,7 @@ module LLVM_defRE {
                 s'
             case BR(if_cond, labelTrue,labelFalse) => s
             case UNCONDBR(goToLabel) => s
+            case LOAD(dst,size,src) => s // placeholder
             case CALL(dst,fnc) =>
                 var subB := evalBlockRE(fnc,s);
                 if ValidBehavior(subB) && ValidOperand(last(subB),dst) then
@@ -429,6 +434,32 @@ module LLVM_defRE {
                     notOk
             case RET(val) => 
                 var s' := s.(o := Out(OperandContents(s,val)));
+                assert ValidState(s');
+                assert MemStateNext(s.m,s'.m,MemStep.stutterStep);
+                assert validEvalIns(ins,s,s');
+                s'
+            case GETELEMENTPTR(dst,t,op1,op2) => 
+                if(MemValid(s.m) && ValidData(s,evalGETELEMENTPTR(s.m,t,OperandContents(s,op1),OperandContents(s,op2)))) then
+                    var s' := stateUpdateVar(s,dst,evalGETELEMENTPTR(s.m,t,OperandContents(s,op1),OperandContents(s,op2)));   
+                    assert ValidState(s');
+                    assert MemStateNext(s.m,s'.m,MemStep.stutterStep);
+                    assert validEvalIns(ins,s,s');
+                    s'
+                else
+                    var notOk := s.(ok := false);
+                    assert NextStep(s,notOk, Step.errorStateStep());
+                    notOk
+            case BITCAST(dst,src,castType) =>
+                var s' := stateUpdateVar(s,dst,evalBITCAST(OperandContents(s,src),OperandContents(s,castType)));
+                if ValidData(s',evalBITCAST(OperandContents(s,src),OperandContents(s,castType))) then 
+                    assert MemStateNext(s.m,s'.m,MemStep.stutterStep);
+                    assert validEvalIns(ins,s,s');
+                    assert s'.ok;
+                    s'
+                else
+                    var notOk := s'.(ok := false);
+                    notOk
+             case VISIBLE_OUT(o) => var s' := s.(o := o);
                 assert ValidState(s');
                 assert MemStateNext(s.m,s'.m,MemStep.stutterStep);
                 assert validEvalIns(ins,s,s');
@@ -482,7 +513,22 @@ module LLVM_defRE {
                                                    && OperandContents(s,if_cond).itype.size == 1 
             case UNCONDBR(goToLabel) => true
             case CALL(dst,fnc) => (dst.LV? || dst.GV? || (dst.D? && dst.d.Void?)) && ValidOperand(s,dst) && |fnc| > 0
-
+            case GETELEMENTPTR(dst,t,op1,op2) => (dst.LV? || dst.GV?) && MemValid(s.m) && ValidOperand(s,dst) && ValidOperand(s,op1) && ValidOperand(s,op2)
+                                                   && OperandContents(s,op1).Ptr? && OperandContents(s,op2).Int?
+                                                   && !OperandContents(s,op2).itype.signed
+                                                   && validBitWidth(t)
+                                                   && IsValidBid(s.m,OperandContents(s,op1).bid)
+                                                //    && |s.m.mem[OperandContents(s,op1).bid]| == t
+            case LOAD(dst,size,src) => (dst.LV? || dst.GV?) && ValidOperand(s,dst) && ValidOperand(s,src) 
+                                && MemValid(s.m) && OperandContents(s,src).Ptr? 
+                                && IsValidPtr(s.m,OperandContents(s,src).bid,OperandContents(s,src).offset,size)
+            case BITCAST(dst,src,castType) => (dst.LV? || dst.GV?) && ValidOperand(s,dst) && ValidOperand(s,src) && ValidOperand(s,castType)
+                                                        && ValidOperand(s,dst) 
+                                                        && ( (OperandContents(s,src).Int? && OperandContents(s,castType).Int?) || (OperandContents(s,src).Ptr? && OperandContents(s,castType).Ptr?))
+                                                        && ( (OperandContents(s,dst).Int? && OperandContents(s,castType).Int?) || (OperandContents(s,dst).Ptr? && OperandContents(s,castType).Ptr?))
+                                                        && typesMatch(OperandContents(s,dst),OperandContents(s,castType))
+            case VISIBLE_OUT(o) => true         
+    
     }
 
     predicate validEvalIns(ins:ins, s:state, s':state)
@@ -522,6 +568,14 @@ module LLVM_defRE {
             case BR(if_cond, labelTrue,labelFalse) => s == s'
             case UNCONDBR(goToLabel) =>  s == s'
             case CALL(dst,fnc)  =>  ValidState(s') && ValidOperand(s',dst) && ValidData(s',OperandContents(s',dst))// maybe adjsut //&& evalUpdate(s, dst, OperandContents(s',dst),s')
+            case GETELEMENTPTR(dst,t,op1,op2) => ValidState(s') //o == dst 
+                                && ValidData(s',evalGETELEMENTPTR(s.m,t,OperandContents(s,op1),OperandContents(s,op2)))
+                                && evalUpdate(s, dst, evalGETELEMENTPTR(s.m,t,OperandContents(s,op1),OperandContents(s,op2)),s')
+            case LOAD(dst,size,src) => s == s' // placeholder
+            case BITCAST(dst,src,castType) => ValidState(s')
+                                            && ValidData(s',evalBITCAST(OperandContents(s,src),OperandContents(s,castType)))    
+                                            && evalUpdate(s, dst, evalBITCAST(OperandContents(s,src),OperandContents(s,castType)),s')
+            case VISIBLE_OUT(o) => ValidState(s')// && s == s'.(s'.o == o)
     }
 
 
