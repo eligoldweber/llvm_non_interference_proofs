@@ -80,7 +80,7 @@ function  power2(exp: nat) : int
 
 predicate validBitWidth(s:nat)
 {
-    (s == 1 || s == 2 || s == 4 || s == 8) || s == 3
+    (s == 1 || s == 2 || s == 4 || s == 8)
 }
 // Functions to return a Data of the given integer type given the appropriate integer
 // value

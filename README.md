@@ -1,5 +1,20 @@
 # README - Verifying Non-Interference Properties For Software Patches
 
+
+##UofM -Task III AMP Challenge Problem 7
+
+This repo contains the outline for Challenge Problem 7. See `./Dafny/examples/Challenge7`.
+
+`./Dafny/examples/Challenge7/Challenge7Properties.i.dfy` is the dafny file containting the lemmas that need to be filled in to prove the patch properties.
+
+`./Dafny/examples/Challenge7/Challenge7Code.s.dfy` contains an example of the dafny representaion of the LLVM code for this challenge. 
+
+[WIP] use llvm_to_dafny_parser script to generate in `Challenge7Code.s.dfy`
+
+To verify this task run: `scons --dafny-path=[/Path/to/dafny/] --verify-root=./Dafny/examples/Challenge7/Challenge7Properties.i.dfy`
+
+---
+
 ##UofM -Task III AMP Challenge Problem 6
 
 

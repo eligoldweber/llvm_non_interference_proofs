@@ -60,6 +60,8 @@ module LLVM_defRE {
     | SUB(dst:operand, size:nat, src1SUB:operand, src2SUB:operand)
     | ICMP(dst:operand,cond:condition,size:nat,src1:operand,src2:operand)
     | TRUNC(dst:operand,size:nat,src:operand,dstSize:bitWidth)
+    | ZEXT(dst:operand,size:nat,src:operand,dstSize:bitWidth)
+    | AND(dst:operand,src1:operand,src2:operand)
     | LSHR(dst:operand,src:operand,shiftAmt:operand)
     | STORE(valueToStore:operand,ptr:operand)
     | LLVM_MEMCPY(dst:operand,src:operand,len:bitWidth,volatile:bool)
@@ -351,8 +353,20 @@ module LLVM_defRE {
                     s'
             case TRUNC(dst,t,src,dstSize) => 
                 var s' := stateUpdateVar(s,dst,evalTRUNC(OperandContents(s,src),dstSize));
-                 assert ValidData(s',evalTRUNC(OperandContents(s,src),dstSize));
-                 assert MemStateNext(s.m,s'.m,MemStep.stutterStep);
+                    assert ValidData(s',evalTRUNC(OperandContents(s,src),dstSize));
+                    assert MemStateNext(s.m,s'.m,MemStep.stutterStep);
+                    assert validEvalIns(ins,s,s');
+                    s'
+            case ZEXT(dst,t,src,dstSize) =>
+                var s' := stateUpdateVar(s,dst,evalZEXT(OperandContents(s,src),dstSize));
+                assert ValidData(s',evalZEXT(OperandContents(s,src),dstSize));
+                    assert MemStateNext(s.m,s'.m,MemStep.stutterStep);
+                    assert validEvalIns(ins,s,s');
+                    s'
+            case AND(dst,src1,src2)  =>
+                var s' := stateUpdateVar(s,dst,evalAND(OperandContents(s,dst).itype.size,OperandContents(s,src1),OperandContents(s,src2)));   
+                assert ValidData(s',evalAND(OperandContents(s,dst).itype.size,OperandContents(s,src1),OperandContents(s,src2)));   
+                    assert MemStateNext(s.m,s'.m,MemStep.stutterStep);
                     assert validEvalIns(ins,s,s');
                     s'
             case LSHR(dst,src,shiftAmt) =>
@@ -440,6 +454,13 @@ module LLVM_defRE {
                                             && t == OperandContents(s,src).itype.size
                                             && t > dstSize
                                             && isInt(OperandContents(s,dst))
+            case ZEXT(dst,t,src,dstSize) => (dst.LV? || dst.GV?) && ValidOperand(s,dst) && ValidOperand(s,src) && isInt(OperandContents(s,src))
+                                            && OperandContents(s,src).itype.size < dstSize
+            case AND(dst,src1,src2) =>      (dst.LV? || dst.GV?) && ValidOperand(s,dst) && ValidOperand(s,src1) && ValidOperand(s,src2)
+                                            && isInt(OperandContents(s,dst)) && isInt(OperandContents(s,src1)) && isInt(OperandContents(s,src2))
+                                            && typesMatch(OperandContents(s,src1),OperandContents(s,src2))
+                                            && OperandContents(s,dst).itype.size == OperandContents(s,src1).itype.size
+                                            && !OperandContents(s,dst).itype.signed
             case LSHR(dst,src,shiftAmt) =>  (dst.LV? || dst.GV?) && ValidOperand(s,dst) && ValidOperand(s,src) && ValidOperand(s,shiftAmt)
                                 && isInt(OperandContents(s,dst)) && isInt(OperandContents(s,src)) && isInt(OperandContents(s,shiftAmt))
                                 && OperandContents(s,src).itype.size*8 > OperandContents(s,shiftAmt).val
@@ -481,6 +502,12 @@ module LLVM_defRE {
             case TRUNC(dst,t,src,dstSize) => ValidState(s') //o == dst
                                 && ValidData(s',evalTRUNC(OperandContents(s,src),dstSize))    
                                 && evalUpdate(s, dst, evalTRUNC(OperandContents(s,src),dstSize),s')
+            case ZEXT(dst,t,src,dstSize) => ValidState(s') // o == dst 
+                                && ValidData(s',evalZEXT(OperandContents(s,src),dstSize))
+                                && evalUpdate(s, dst, evalZEXT(OperandContents(s,src),dstSize),s')
+            case AND(dst,src1,src2) => ValidState(s')  //o == dst 
+                                && ValidData(s',evalAND(OperandContents(s,dst).itype.size,OperandContents(s,src1),OperandContents(s,src2)))   
+                                && evalUpdate(s, dst, evalAND(OperandContents(s,dst).itype.size,OperandContents(s,src1),OperandContents(s,src2)),s')
             case LSHR(dst,src,shiftAmt) => ValidState(s') // o == dst 
                                 && ValidData(s',evalLSHR(OperandContents(s,src),OperandContents(s,shiftAmt)))
                                 && evalUpdate(s, dst, evalLSHR(OperandContents(s,src),OperandContents(s,shiftAmt)),s')

@@ -219,7 +219,7 @@ function evalALLOCA(s:MemState, size:nat): (out:Data)
     requires MemValid(s)
     // requires Alloc(s,s',s.nextBlock,size);
     requires validBitWidth(size);
-     ensures out.Ptr?;
+    ensures out.Ptr?;
 {
     // && bid == s.nextBlock
     // && s'.nextBlock == s.nextBlock + 1
