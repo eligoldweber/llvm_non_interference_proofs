@@ -42,10 +42,10 @@ module simpleBenignCode{
 
         var return_ := Block([Ins(RET(D(Void)))]);
 
-        var if_end4 := Block([Ins(CALL(D(Void),[printf_code(global_str1())])),
+        var if_end4 := Block([Ins(CALL(D(Void),printf_code(global_str1()).block)),
         Ins(UNCONDBR(return_))]);
 
-        var if_then3 := Block([Ins(CALL(D(Void),[printf_code(global_str())])),
+        var if_then3 := Block([Ins(CALL(D(Void),printf_code(global_str()).block)),
         Ins(UNCONDBR(if_end4))]);
 
         var if_end := Block([Ins(ADD(var_add,4,var_x,D(Int(2147483646,IntType(4,false))))),
@@ -77,10 +77,10 @@ module simpleBenignCode{
 
         var return_ := Block([Ins(RET(D(Void)))]);
 
-        var if_end4 := Block([Ins(CALL(D(Void),[printf_code(global_str1())])),
+        var if_end4 := Block([Ins(CALL(D(Void),printf_code(global_str1()).block)),
         Ins(UNCONDBR(return_))]);
 
-        var if_then3 := Block([Ins(CALL(D(Void),[printf_code(global_str())])),
+        var if_then3 := Block([Ins(CALL(D(Void),printf_code(global_str()).block)),
         Ins(UNCONDBR(if_end4))]);
 
         var if_end := Block([Ins(ADD(var_add,4,var_x,D(Int(2147483646,IntType(4,false))))),
@@ -99,8 +99,7 @@ module simpleBenignCode{
 
         entry
     }
-
-    function benign_patch_SOI(s:state):codeRe
+    function benign_vuln_SOI(s:state):codeRe
         requires SOI_ASSIMPTIONS(s)
     {
 
@@ -109,15 +108,62 @@ module simpleBenignCode{
 
         var return_ := Block([Ins(RET(D(Void)))]);
 
-        var if_end4 := Block([Ins(CALL(D(Void),[printf_code(global_str1())])),
+        var if_end4 := Block([Ins(CALL(D(Void),printf_code(global_str1()).block)),
         Ins(UNCONDBR(return_))]);
 
-        var if_then3 := Block([Ins(CALL(D(Void),[printf_code(global_str())])),
+        var if_then3 := Block([Ins(CALL(D(Void),printf_code(global_str()).block)),
         Ins(UNCONDBR(if_end4))]);
 
         var if_end := Block([
-        Ins(ICMP(var_cmp2,ugt,4,var_0,D(Int(0,IntType(4,false))))),
+        Ins(ICMP(var_cmp2,sgt,4,var_0,D(Int(0,IntType(4,false))))),
         Ins(BR(var_cmp2,if_then3,if_end4))]);
+
+        if_end
+
+        // ASSUMPTIONS (ENGLISH)
+        // var_0 has the value of x :: MAX_INT-1 >= x && x < MAX_INT+1
+    }
+
+    function return_():codeRe
+    {
+        var return_ := Block([Ins(RET(D(Void)))]);
+
+        return_
+    }
+
+    function if_end4():codeRe
+    {
+        // var if_end4 := Block([Ins(CALL(D(Void),printf_code(global_str1()).block)),
+        //                       Ins(UNCONDBR(return_()))]);
+         var if_end4 := Block([Ins(CALL(D(Void),printf_code(global_str1()).block)),
+                              return_()]);
+
+            if_end4
+    }
+
+    function if_then3():codeRe
+    {
+        // var if_then3 := Block([Ins(CALL(D(Void),printf_code(global_str()).block)),
+        //                        Ins(UNCONDBR(if_end4()))]);
+        var if_then3 := Block([Ins(CALL(D(Void),printf_code(global_str()).block)),
+                               if_end4()]);
+
+            if_then3
+    }
+
+    function benign_patch_SOI(s:state):codeRe
+        requires SOI_ASSIMPTIONS(s)
+    {   
+
+        var var_cmp2 := LV(" var_cmp2 ");
+        var var_0:operand :| var_0.LV? && var_0.l in s.lvs && var_0.l == "var_0";
+
+        //var if_end := Block([
+        //Ins(ICMP(var_cmp2,ugt,4,var_0,D(Int(0,IntType(4,false))))),
+        //Ins(BR(var_cmp2,if_then3(),if_end4()))]);
+        var if_end := Block([
+        Ins(ICMP(var_cmp2,ugt,4,var_0,D(Int(0,IntType(4,false))))),
+        IfElse(true,if_then3().block,if_end4().block)]); // fix
 
         if_end
 
@@ -134,6 +180,7 @@ module simpleBenignCode{
         && s.lvs["var_0"].val >= 2147483646
         && s.lvs["var_0"].val < 2147483648
         && s.lvs["var_0"].itype.size == 4
+        && !s.lvs["var_0"].itype.signed
     }
 
 
