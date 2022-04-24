@@ -156,9 +156,14 @@ function boolToData(b:bool) : (out:Data)
     Int(val, IntType(size, false))
 }
 
+predicate isBoolData(b:Data)
+{
+    b.Int? && !b.itype.signed && b.Int? && !b.itype.signed 
+}
+
 function dataToBool(b:Data) : (out:bool)
     requires b.Int? && !b.itype.signed 
-    requires b.itype.size == 1
+    requires b.Int? && !b.itype.signed 
 {
     
     var val:int := b.val;

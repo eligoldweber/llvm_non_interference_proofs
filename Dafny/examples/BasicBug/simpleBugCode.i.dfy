@@ -2,6 +2,7 @@ include "../../LLVM/llvmREFACTOR.i.dfy"
 include "../../LLVM/types.dfy"
 include "../../Libraries/Seqs.s.dfy"
 include "../../LLVM/Operations/binaryOperations.i.dfy"
+include "../../LLVM/behaviorLemmas.i.dfy"
 
 module simpleBugCode{
 
@@ -9,6 +10,7 @@ module simpleBugCode{
     import opened LLVM_defRE
     import opened binary_operations_i
     import opened Collections__Seqs_s
+    import opened behavior_lemmas
 
 // c function //
 // int testOverflow(int x)

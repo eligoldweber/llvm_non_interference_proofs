@@ -1,11 +1,11 @@
 include "BenignCode.s.dfy"
-include "../../LLVM/llvmREFACTOR.i.dfy"
+include "../../LLVM/llvmREFACTOR_Multi.i.dfy"
 include "../../LLVM/types.dfy"
 include "../../Libraries/Seqs.s.dfy"
 
 module simpleBenignCommon{
     import opened simpleBenignCode
-    import opened LLVM_defRE
+    import opened LLVM_defRE_Multi
     import opened types
     import opened Collections__Seqs_s
 

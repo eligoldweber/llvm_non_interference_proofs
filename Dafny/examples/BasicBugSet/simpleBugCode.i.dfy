@@ -173,7 +173,7 @@ module simpleBugCode{
             step,remainder,subBehavior := unwrapBlockWitness(subBehavior,remainder,last(step));
             step,remainder,subBehavior := unwrapBlockWitness(subBehavior,remainder,last(step));
   
-            var z := LV("z");
+            var z := LV("z");   
             var result := LV("result");
             
             var y := D(Int(2147483646,IntType(4,false)));

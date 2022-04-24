@@ -9,7 +9,7 @@ include "../Libraries/SeqIsUniqueDef.i.dfy"
 include "../Libraries/Seqs.s.dfy"
 include "../Libraries/Sets.i.dfy"
 
-module LLVM_defRE {
+module LLVM_defRE_Multi {
 
     import opened types
     import opened ops
@@ -39,6 +39,7 @@ module LLVM_defRE {
 
 
 ///
+    datatype version = Version(pre:bool,post:bool)
 
     datatype output = Out(o:Data) | SubOut(os:seq<output>) | Nil
 
@@ -48,6 +49,7 @@ module LLVM_defRE {
     | Ins(ins:ins)
     | Block(block:codeSeq)
     | IfElse(ifCond:operand, ifTrue:codeSeq, ifFalse:codeSeq)
+    | Divergence(pre:codeSeq,post:codeSeq,patched:bool)
     | CNil
             
     type behavior = seq<state>
@@ -297,6 +299,7 @@ module LLVM_defRE {
                         if dataToBool(OperandContents(s,ifCond)) then evalBlockRE(ifT, s) else evalBlockRE(ifF,s)
                     else
                         [s]
+                case Divergence(pre,post,patched) => if patched then evalBlockRE(post,s) else evalBlockRE(pre,s)
                 case CNil => [s]
     }
 

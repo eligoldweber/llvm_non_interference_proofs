@@ -1,4 +1,4 @@
-include "../../LLVM/llvmREFACTOR.i.dfy"
+include "../../LLVM/llvmREFACTOR_Multi.i.dfy"
 include "../../LLVM/types.dfy"
 include "../../LLVM/control_flow.i.dfy"
 include "../../LLVM/behaviorLemmas.i.dfy"
@@ -7,7 +7,7 @@ include "../../LLVM/memory.i.dfy"
 
 module simpleBenignCode{
     import opened control_flow
-    import opened LLVM_defRE
+    import opened LLVM_defRE_Multi
     import opened types
     import opened Collections__Seqs_s
     import opened behavior_lemmas
@@ -99,30 +99,9 @@ module simpleBenignCode{
 
         entry
     }
-    function benign_vuln_SOI(s:state):codeRe
-        requires SOI_ASSIMPTIONS(s)
-    {
 
-        var var_cmp2 := LV(" var_cmp2 ");
-        var var_0:operand :| var_0.LV? && var_0.l in s.lvs && var_0.l == "var_0";
+    /////////////////////////////////////////////////////////////////////////
 
-        var return_ := Block([Ins(RET(D(Void)))]);
-
-        var if_end4 := Block([Ins(CALL(D(Void),printf_code(global_str1()).block)),
-        Ins(UNCONDBR(return_))]);
-
-        var if_then3 := Block([Ins(CALL(D(Void),printf_code(global_str()).block)),
-        Ins(UNCONDBR(if_end4))]);
-
-        var if_end := Block([
-        Ins(ICMP(var_cmp2,sgt,4,var_0,D(Int(0,IntType(4,false))))),
-        Ins(BR(var_cmp2,if_then3,if_end4))]);
-
-        if_end
-
-        // ASSUMPTIONS (ENGLISH)
-        // var_0 has the value of x :: MAX_INT-1 >= x && x < MAX_INT+1
-    }
 
     function return_():codeRe
     {
@@ -163,7 +142,7 @@ module simpleBenignCode{
         //Ins(BR(var_cmp2,if_then3(),if_end4()))]);
         var if_end := Block([
         Ins(ICMP(var_cmp2,ugt,4,var_0,D(Int(0,IntType(4,false))))),
-        IfElse(true,if_then3().block,if_end4().block)]); // fix
+        IfElse(var_cmp2,if_then3().block,if_end4().block)]); // fix
 
         if_end
 
@@ -171,14 +150,56 @@ module simpleBenignCode{
         // var_0 has the value of x :: MAX_INT-1 >= x && x < MAX_INT+1
     }
 
+    function benign_vuln_SOI(s:state):codeRe
+        requires SOI_ASSIMPTIONS(s)
+    {
+
+         var var_cmp2 := LV(" var_cmp2 ");
+        var var_0:operand :| var_0.LV? && var_0.l in s.lvs && var_0.l == "var_0";
+
+        var if_end := Block([
+        Ins(ICMP(var_cmp2,sgt,4,var_0,D(Int(0,IntType(4,false))))),
+        IfElse(var_cmp2,if_then3().block,if_end4().block)]); // fix
+
+        if_end
+
+        // ASSUMPTIONS (ENGLISH)
+        // var_0 has the value of x :: MAX_INT-1 >= x && x < MAX_INT+1
+    }
+
+
+    function MergedTest(var_x:operand,s:state,patched:bool):codeRe
+        requires SOI_ASSIMPTIONS(s)
+    {
+
+        var var_cmp2 := LV(" var_cmp2 ");
+        var var_add := LV(" var_add ");
+        var var_z := LV(" var_z ");
+        var var_0:operand :| var_0.LV? && var_0.l in s.lvs && var_0.l == "var_0";
+
+        
+        var if_end := Block([Ins(ADD(var_add,4,var_x,D(Int(2147483646,IntType(4,false))))),
+        Divergence([Ins(ICMP(var_cmp2,sgt,4,var_add,D(Int(0,IntType(4,false)))))], [Ins(ICMP(var_cmp2,ugt,4,var_add,D(Int(0,IntType(4,false)))))],patched),
+        Ins(ICMP(var_cmp2,sgt,4,var_add,D(Int(0,IntType(4,false))))),
+        IfElse(var_cmp2,if_then3().block,if_end4().block)]);
+
+        if_end
+
+        // ASSUMPTIONS (ENGLISH)
+        // var_0 has the value of x :: MAX_INT-1 >= x && x < MAX_INT+1
+    }
+
+
+
     predicate SOI_ASSIMPTIONS(s:state)
     {
-        var var_0 := LV("var_0");
+        var var_0 := LV("var_0"); // z
         ValidState(s)
         && ValidOperand(s,var_0)
+        && s.o.Nil?
         && s.lvs["var_0"].Int?
         && s.lvs["var_0"].val >= 2147483646
-        && s.lvs["var_0"].val < 2147483648
+        && s.lvs["var_0"].val <= 2147483648
         && s.lvs["var_0"].itype.size == 4
         && !s.lvs["var_0"].itype.signed
     }
@@ -208,3 +229,29 @@ module simpleBenignCode{
     }
 
 }
+
+
+// function benign_vuln_SOI(s:state):codeRe
+//         requires SOI_ASSIMPTIONS(s)
+//     {
+
+//         var var_cmp2 := LV(" var_cmp2 ");
+//         var var_0:operand :| var_0.LV? && var_0.l in s.lvs && var_0.l == "var_0";
+
+//         var return_ := Block([Ins(RET(D(Void)))]);
+
+//         var if_end4 := Block([Ins(CALL(D(Void),printf_code(global_str1()).block)),
+//         Ins(UNCONDBR(return_))]);
+
+//         var if_then3 := Block([Ins(CALL(D(Void),printf_code(global_str()).block)),
+//         Ins(UNCONDBR(if_end4))]);
+
+//         var if_end := Block([
+//         Ins(ICMP(var_cmp2,sgt,4,var_0,D(Int(0,IntType(4,false))))),
+//         Ins(BR(var_cmp2,if_then3,if_end4))]);
+
+//         if_end
+
+//         // ASSUMPTIONS (ENGLISH)
+//         // var_0 has the value of x :: MAX_INT-1 >= x && x < MAX_INT+1
+//     }
