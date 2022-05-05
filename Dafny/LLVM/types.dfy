@@ -279,6 +279,16 @@ function TruncateBytes(b:Bytes,s:nat) : (bytes:seq<Byte>)
         var start:Bytes := [b[0]]; 
         start + TruncateBytes(b,s-1)
 }
+function concatBytes(a:Bytes,b:Bytes) : (bytes:Bytes)
+    ensures bytes == a + b
+    ensures |bytes| == |a| + |b|
+{
+    if |a| == 0 then b
+    else 
+        if |b| == 0 then a
+        else
+            a + b
+}
 
 // Transforms data that is in some arbitrary int form into a sequence of bytes
 function IntToBytes(data:Data) : (bytes:Bytes)

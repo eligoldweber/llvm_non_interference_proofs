@@ -115,6 +115,13 @@ lemma lemma_SeqCat_equivalent<T>(seqs:seq<seq<T>>)
   }
 }
 
+predicate isSubSeq<T>(s:seq<T>,sub:seq<T>)
+{
+  |s| >= |sub|
+  && forall v :: v in sub ==> v in s
+  // finish def
+}
+
 // lemma lemma_Seq_Cardinality_transitive<T>(a:seq<T>,b:seq<T>)
 //   requires |a| >= |b|
 // {
