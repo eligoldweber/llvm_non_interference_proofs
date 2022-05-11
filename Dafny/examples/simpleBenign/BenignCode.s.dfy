@@ -169,7 +169,14 @@ module simpleBenignCode{
 
 
     function MergedTest(var_x:operand,s:state,patched:bool):codeRe
-        requires SOI_ASSIMPTIONS(s)
+        // requires SOI_ASSIMPTIONS(s)
+        requires ValidOperand(s,var_x);
+        requires isInt(OperandContents(s,var_x))
+        requires OperandContents(s,var_x).itype.size == 4;
+        requires !OperandContents(s,var_x).itype.signed
+
+        requires OperandContents(s,var_x).val == 2 ==> patched
+        
     {
 
         var var_cmp2 := LV(" var_cmp2 ");
@@ -180,8 +187,10 @@ module simpleBenignCode{
         
         var if_end := Block([Ins(ADD(var_add,4,var_x,D(Int(2147483646,IntType(4,false))))),
         Divergence([Ins(ICMP(var_cmp2,sgt,4,var_add,D(Int(0,IntType(4,false)))))], [Ins(ICMP(var_cmp2,ugt,4,var_add,D(Int(0,IntType(4,false)))))],patched),
-        Ins(ICMP(var_cmp2,sgt,4,var_add,D(Int(0,IntType(4,false))))),
         IfElse(var_cmp2,if_then3().block,if_end4().block)]);
+        //    var if_end := Block([Ins(ADD(var_add,4,var_x,D(Int(2147483646,IntType(4,false))))),
+        // Divergence(Block([Ins(ICMP(var_cmp2,sgt,4,var_add,D(Int(0,IntType(4,false)))))]).block, Block([Ins(ICMP(var_cmp2,ugt,4,var_add,D(Int(0,IntType(4,false)))))]).block,patched),
+        // IfElse(var_cmp2,if_then3().block,if_end4().block)]);
 
         if_end
 
