@@ -79,7 +79,7 @@ module AbstractSameDifference {
     {
         match step  
             case updateStep(sv) => sv.Val? && s' == updateVal(s,sv) && s'.pc == s.pc+1
-            case updateStepNonImpact(sv) => sv.Val? &&  s' == updateVal(s,sv) && s'.pc == s.pc+1 // validNonImpactStep(sv) &&
+            case updateStepNonImpact(sv) => sv.Val? &&  s' == updateVal(s,sv) && s'.pc == s.pc+1 && validNonImpactStep(sv)
             case stutterStep() => stutter(s,s')
     }
 
@@ -189,11 +189,26 @@ module AbstractSameDifference {
         && ExecuteOneInst(s, s') == ExecuteOneInst(p, p')
     }
 
-        s(x = 5, a = 1)  ,, p(x = 7, a = 900)
-        impactedSet = {x}
-        NonImpactStateTrans(add (a,5))
-        1 -> 6 ::  900 -> 905
-        s / s' == p / p'    
+        // s(x = 5, a = 1)  ,, p(x = 7, a = 900)
+        // impactedSet = {x}
+        // NonImpactStateTrans(add (a,5))
+        // 1 -> 6 ::  900 -> 905
+        // s / s' == p / p'    
+
+    lemma nonImpactInsDoesntChangeImpactedState(s:state, s':state, step:Step)
+        requires NextStep(s,s',step);
+        requires step.updateStepNonImpact?;
+        ensures forall n :: (n in s.vals && (n in impactedState())) ==> s.vals[n] == s'.vals[n];
+    {
+        forall n | && n in s.vals 
+                   && (n in impactedState())
+                ensures s.vals[n] == s'.vals[n];
+        {
+            assert n in s'.vals;
+            assert s.vals[n] == s'.vals[n];
+        }
+    }
+
 
     lemma updateStepNonImpactImpliesNextSameDiff(s:state,p:state, nonDepenStep:Step)
         requires s.pc == p.pc  
@@ -201,6 +216,10 @@ module AbstractSameDifference {
         requires ValidState(p);
         requires nonDepenStep.updateStepNonImpact?
         requires nonDepenStep.sv.Val?
+        requires validNonImpactStep(nonDepenStep.sv)
+
+        //Not sure if I can make this assumption
+        requires forall n :: n in s.vals <==> n in p.vals
         
         // ensures forall s',p' :: (NextStep(s,s',nonDepenStep) &&  NextStep(p,p',nonDepenStep)) ==> NextSameDiff(s,s',p,p');
     {
@@ -212,9 +231,28 @@ module AbstractSameDifference {
         // ensures ExecuteOneInst(s, s') == ExecuteOneInst(p, p');
         // ensures NextSameDiff(s,s',p,p');
         {
-            
-            //  assert nonDepenStep.updateStepNonImpact?;
-            //  assert ExecuteOneInst(s,s').Val?;
+             assert NextStep(s,s',nonDepenStep);
+             assert StateNext(s,s');
+             assert NextStep(p,p',nonDepenStep);
+             assert StateNext(p,p');
+             assert forall impact :: (impact in impactedState() && impact in s.vals) ==> s.vals[impact] == s'.vals[impact];
+             updateStepNonImpactImpliesSameImpactedState(s,s',nonDepenStep);
+
+             assert nonDepenStep.updateStepNonImpact?;
+             assert ExecuteOneInst(s,s').Val? || ExecuteOneInst(s,s').Nil?;
+             if ExecuteOneInst(s,s').Nil?
+             {
+                 assert nonDepenStep.sv.n in p.vals;
+                                  assert nonDepenStep.sv.n in s.vals;
+
+                 
+                //  assert ExecuteOneInst(p,p').Nil?;
+                assert !nonDepenStep.stutterStep?;
+                assert s.vals == s'.vals;
+                assert p.vals == p'.vals ==> ExecuteOneInst(s, s') == ExecuteOneInst(p, p');
+
+                //  assert ExecuteOneInst(s, s') == ExecuteOneInst(p, p');
+             }
             //  assert ExecuteOneInst(s, s') == ExecuteOneInst(p, p');
             //  assert NextSameDiff(s,s',p,p');
         }
