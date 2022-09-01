@@ -16,14 +16,20 @@ function method domain<U(!new), V>(m: map<U,V>): set<U>
    set s | s in m
 }
 
-function union<U(!new), V>(m: map<U,V>, m': map<U,V>): map<U,V>
-   requires m !! m';
-   ensures forall i :: i in union(m, m') <==> i in m || i in m';
-   ensures forall i :: i in m ==> union(m, m')[i] == m[i];
-   ensures forall i :: i in m' ==> union(m, m')[i] == m'[i];
-{
-   map i{:auto_trigger} | i in (domain(m) + domain(m')) :: if i in m then m[i] else m'[i]
-}
+//  method range<U(!new), V(==)>(m: map<U,V>) returns (out:set<V>)
+// {
+//     var domain := domain(m);
+//     out := {};
+//     while (|domain| > 0)
+//     {
+//         var d :| d in domain;
+//         assert d in domain(m);
+//         out := out + {m[d]};
+//         domain := domain - {d};
+//     }
+//     return out;
+//     // set m[s] | s in m
+// }
 
 function method RemoveElt<U(!new),V>(m:map<U,V>, elt:U) : map<U,V>
     requires elt in m;
@@ -37,17 +43,18 @@ function method RemoveElt<U(!new),V>(m:map<U,V>, elt:U) : map<U,V>
     m'
 }
 
-lemma lemma_non_empty_map_has_elements<S,T>(m:map<S,T>)
+lemma lemma_non_empty_map_has_elements<U(!new), V>(m:map<U,V>)
     requires |m| > 0;
     ensures exists x :: x in m;
 {
     var dom := domain(m);
-    assert m !! map [];
+    // assert m * map [] == {}
+    // assert m !! map [];
     assert m != map [];
     assert |dom| > 0;
 }
 
-lemma lemma_MapSizeIsDomainSize<S,T>(dom:set<S>, m:map<S,T>)
+lemma lemma_MapSizeIsDomainSize<U(!new), V>(dom:set<U>, m:map<U,V>)
     requires dom == domain(m);
     ensures |m| == |dom|;
 {
@@ -68,7 +75,7 @@ lemma lemma_MapSizeIsDomainSize<S,T>(dom:set<S>, m:map<S,T>)
     }
 }
 
-lemma lemma_maps_decrease<S,T>(before:map<S,T>, after:map<S,T>, item_removed:S)
+lemma lemma_maps_decrease<U(!new), V>(before:map<U,V>, after:map<U,V>, item_removed:U)
     requires item_removed in before;
     requires after == map s | s in before && s != item_removed :: before[s];
     ensures  |after| < |before|;
@@ -122,7 +129,7 @@ lemma lemma_maps_decrease<S,T>(before:map<S,T>, after:map<S,T>, item_removed:S)
 }
 
 
-lemma lemma_map_remove_one<S,T>(before:map<S,T>, after:map<S,T>, item_removed:S)
+lemma lemma_map_remove_one<U(!new), V>(before:map<U,V>, after:map<U,V>, item_removed:U)
     requires item_removed in before;
     requires after == map s | s in before && s != item_removed :: before[s];
     ensures  |after| + 1 == |before|;
