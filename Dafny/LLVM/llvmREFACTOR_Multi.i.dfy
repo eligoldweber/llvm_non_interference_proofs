@@ -61,6 +61,7 @@ module LLVM_defRE_Multi {
  datatype ins =
     | ADD(dst:operand, size:nat, src1ADD:operand, src2ADD:operand)
     | SUB(dst:operand, size:nat, src1SUB:operand, src2SUB:operand)
+    | SDIV(dst:operand, src1:operand, src2:operand)
     | ICMP(dst:operand,cond:condition,size:nat,src1:operand,src2:operand)
     | TRUNC(dst:operand,size:nat,src:operand,dstSize:bitWidth)
     | ZEXT(dst:operand,size:nat,src:operand,dstSize:bitWidth)
@@ -262,6 +263,16 @@ module LLVM_defRE_Multi {
                 else
                     var notOk := s'.(ok := false);
                     notOk
+            case SDIV(dst,src1,src2) => 
+                var s' := stateUpdateVar(s,dst,evalSDIV(OperandContents(s,src1),OperandContents(s,src2)));
+                if ValidData(s',evalSDIV(OperandContents(s,src1),OperandContents(s,src2))) then 
+                    assert dst.LV? ==> forall lv :: (lv in s.lvs && lv != dst.l) ==> s'.lvs[lv] == s.lvs[lv];
+                    assert MemStateNext(s.m,s'.m,MemStep.stutterStep);
+                    assert validEvalIns(ins,s,s');
+                    s'
+                else
+                    var notOk := s'.(ok := false);
+                    notOk
             case ICMP(dst,cond,t,src1,src2) => 
                 var s' := stateUpdateVar(s,dst,evalICMP(cond,t,OperandContents(s,src1),OperandContents(s,src2)));
                 assert ValidData(s',evalICMP(cond,t,OperandContents(s,src1),OperandContents(s,src2)));
@@ -392,6 +403,12 @@ module LLVM_defRE_Multi {
                                          && isInt(OperandContents(s,src1)) && isInt(OperandContents(s,src2))
                                          && typesMatch(OperandContents(s,src1),OperandContents(s,src2))
                                          && t == OperandContents(s,src1).itype.size
+            case SDIV(dst,src1,src2) => (dst.LV? || dst.GV?)  && ValidOperand(s,dst) && ValidOperand(s,src1) && ValidOperand(s,src2) 
+                                         && isInt(OperandContents(s,src1)) && isInt(OperandContents(s,src2))
+                                         && typesMatch(OperandContents(s,src1),OperandContents(s,src2))
+                                         && OperandContents(s,src1).itype.size == 4
+                                         && OperandContents(s,src2).itype.size == 4
+                                         && OperandContents(s,src2).val != 0
             case ICMP(dst,cond,t,src1,src2) => (dst.LV? || dst.GV?) && ValidOperand(s,src1) && ValidOperand(s,src2)
                                             && isInt(OperandContents(s,src1)) && isInt(OperandContents(s,src2))
                                             && t == OperandContents(s,src1).itype.size
@@ -457,6 +474,9 @@ module LLVM_defRE_Multi {
             case SUB(dst,t,src1,src2) => ValidState(s') 
                                 && ValidData(s',evalSUB(t,OperandContents(s,src1),OperandContents(s,src2))) 
                                 && evalUpdate(s, dst, evalSUB(t,OperandContents(s,src1),OperandContents(s,src2)),s')
+            case SDIV(dst,src1,src2)=> ValidState(s') 
+                                && ValidData(s',evalSDIV(OperandContents(s,src1),OperandContents(s,src2))) 
+                                && evalUpdate(s, dst, evalSDIV(OperandContents(s,src1),OperandContents(s,src2)),s')
             case ICMP(dst,cond,t,src1,src2) => ValidState(s') 
                                 && ValidData(s',evalICMP(cond,t,OperandContents(s,src1),OperandContents(s,src2)))
                                 && evalUpdate(s, dst, evalICMP(cond,t,OperandContents(s,src1),OperandContents(s,src2)),s')

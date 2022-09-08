@@ -52,6 +52,24 @@ module binary_operations_i {
 
     }
 
+// DIV //
+    //signed div (only BV32)
+    function evalSDIV(v0:Data,v1:Data) : (out:Data)
+        requires isInt(v0)
+        requires isInt(v1)
+        requires typesMatch(v0,v1)
+        requires validBitWidth(v0.itype.size)
+        requires v0.itype.size == 4
+        requires v1.itype.size == 4
+        requires v1.val != 0
+        ensures out.Int?
+        ensures out.itype.signed
+        ensures out.itype.size == 4
+        ensures validBitWidth(out.itype.size)
+    {
+        FromTwosComp(UInt32(BitwiseDiv32(DataToUInt32(ToTwosComp(v0)),DataToUInt32(ToTwosComp(v1))))) 
+    }
+
     
 
 
