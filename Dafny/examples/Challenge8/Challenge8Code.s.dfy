@@ -1,4 +1,4 @@
-include "../../LLVM/llvmREFACTOR.i.dfy"
+include "../../LLVM/llvmREFACTOR_Multi.i.dfy"
 include "../../LLVM/types.dfy"
 include "../../LLVM/control_flow.i.dfy"
 include "../../LLVM/behaviorLemmas.i.dfy"
@@ -7,18 +7,31 @@ include "../../LLVM/memory.i.dfy"
 
 module challenge8Code{
     import opened control_flow
-    import opened LLVM_defRE
+    import opened LLVM_defRE_Multi
     import opened types
     import opened Collections__Seqs_s
     import opened behavior_lemmas
     import opened memory
 
 
+function challenge_8_transport_handler_create_conn_vuln():codeRe {
+    Block([prefixCode(),CNil,postfixCode()])
+}
+//  Block([prefixCode(),patch_block,postfix])
 
-function challenge_8_transport_handler_create_conn():codeRe {
+function prefixCode():codeRe{
+    Block([CNil])
+}
 
-    var num_packets := LV(" num_packets ");
-    var size := LV(" size ");
+function postfixCode():codeRe{
+    Block([CNil])
+}
+
+
+function challenge_8_transport_handler_create_conn_patch():codeRe {
+
+    // var num_packets := LV(" num_packets ");
+    // var size := LV(" size ");
         //     ; Function Attrs: noinline nounwind optnone uwtable
         // define internal zeroext i8 @create_conn(i16 zeroext %size) #0 {
         // entry:
@@ -72,7 +85,7 @@ function challenge_8_transport_handler_create_conn():codeRe {
         //   store i16 %conv13, i16* %size.addr, align 2
         //   br label %if.end14
 
-    var prefix := Block([]);
+    // var prefix := Block([]);
 
         //     if.end14:                                         ; preds = %if.then9, %if.end
         //   %11 = load i8, i8* @num_packets, align 1
@@ -88,7 +101,40 @@ function challenge_8_transport_handler_create_conn():codeRe {
         //   call void @delete_connection()
         //   store i8 0, i8* %retval, align 1
         //   br label %return
-    var patch_block := Block([]);
+
+    var postfix := postfixCode();
+
+    var var_11 := LV(" var_11 ");
+    var var_num_packets := LV(" var_num_packets ");
+    var var_conv15 := LV(" var_conv15 ");
+    var var_12 := LV(" var_12 ");
+    var var_size_addr := LV(" var_size_addr ");
+    var var_conv16 := LV(" var_conv16 ");
+    var var_div := LV(" var_div ");
+    var var_cmp17 := LV(" var_cmp17 ");
+    var var_call20 := LV(" var_call20 ");
+    var var_retval := LV(" var_retval ");
+    var var_26 := LV(" var_26 ");
+
+
+
+    var return_ := Block([Ins(LOAD(var_26,1,var_retval)),
+    Ins(RET(var_26))]);
+
+    // 
+    var if_then19 := Block([Ins(CALL(D(Void),delete_connection())),
+    Ins(STORE(D(Int(0,IntType(1,false))),var_retval)),
+    Ins(UNCONDBR(return_))]);
+
+    var patch_block := Block([Ins(LOAD(var_11,1,var_num_packets)),
+    Ins(ZEXT(var_conv15,1,var_11,4)),
+    Ins(LOAD(var_12,2,var_size_addr)),
+    Ins(ZEXT(var_conv16,2,var_12,4)),
+    Ins(SDIV(var_div,var_conv16,D(Int(7,IntType(2,false))))),
+    Ins(ICMP(var_cmp17,sgt,4,var_conv15,var_div)),
+    Ins(BR(var_conv15,if_then19,postfix))]);
+
+
         //         if.end21:                                         ; preds = %if.end14
         //   %13 = load i8, i8* @src, align 1
         //   %idxprom22 = zext i8 %13 to i64
@@ -140,10 +186,86 @@ function challenge_8_transport_handler_create_conn():codeRe {
         //   %26 = load i8, i8* %retval, align 1
         //   ret i8 %26
 
-    var postfix := Block([]);
 
-    Block([prefix,patch_block,postfix])
+
+    Block([prefixCode(),patch_block,postfix])
 }
 
+lemma prefixAndPostfixAreEqual()
+    ensures challenge_8_transport_handler_create_conn_vuln().block[2] 
+    == challenge_8_transport_handler_create_conn_patch().block[2];
+    ensures challenge_8_transport_handler_create_conn_vuln().block[0] 
+    == challenge_8_transport_handler_create_conn_patch().block[0];
+{
+    // var vuln := challenge_8_transport_handler_create_conn_vuln();
+    // var patch := challenge_8_transport_handler_create_conn_patch();
+    // assert vuln.Block?;
+    // assert patch.Block?;
+    // assert |vuln.block| == 3;
+    // assert |patch.block| == 3;
+    // assert vuln.block[0] == prefixCode();
+    // assert patch.block[0] == prefixCode();
+    // assert vuln.block[0] == patch.block[0];
+
+    // assert vuln.block[2] == postfixCode();
+    // assert patch.block[2] == postfixCode();
+    // assert vuln.block[2] == patch.block[2];
+}
+
+    function delete_connection():codeSeq
+    {
+        [CNil]
+    }
+
+    predicate validStartingState(s:state)
+        // requires ValidState(s)
+    {
+        var var_11 := LV("var_11");
+        var var_num_packets := LV("var_num_packets");
+        var var_conv15 := LV("var_conv15");
+        var var_12 := LV("var_12");
+        var var_size_addr := LV("var_size_addr");
+        var var_conv16 := LV("var_conv16");
+        var var_div := LV("var_div");
+        var var_cmp17 := LV("var_cmp17");
+        var var_call20 := LV("var_call20");
+        var var_retval := LV("var_retval");
+        var var_26 := LV("var_26");
+        && ValidOperand(s,var_11)
+        && ValidOperand(s,var_num_packets)
+        && ValidOperand(s,var_conv15)
+        && ValidOperand(s,var_12)
+        && ValidOperand(s,var_size_addr)
+        && ValidOperand(s,var_conv16)
+        && ValidOperand(s,var_div)
+        && ValidOperand(s,var_cmp17)
+        && ValidOperand(s,var_call20)
+        && ValidOperand(s,var_retval)
+        && ValidOperand(s,var_26)
+        && s.lvs["var_11"].Ptr?
+        && s.lvs["var_num_packets"].Int?
+        && s.lvs["var_conv15"].Int?
+        && s.lvs["var_12"].Ptr?
+        && s.lvs["var_size_addr"].Int?
+        && s.lvs["var_conv16"].Int?
+        && s.lvs["var_div"].Int?
+        && s.lvs["var_cmp17"].Int?
+        && s.lvs["var_call20"].Int?
+        && s.lvs["var_retval"].Ptr?
+        && s.lvs["var_26"].Int?
+        && s.lvs["var_11"] == (Ptr(0,0,0,1))
+        && s.lvs["var_num_packets"] == (Int(0,IntType(1,false)))
+        && s.lvs["var_conv15"] == (Int(0,IntType(1,false)))
+        && s.lvs["var_12"] == (Ptr(0,0,0,1))
+        && s.lvs["var_size_addr"] == (Int(0,IntType(1,false)))
+        && s.lvs["var_conv16"] == (Int(0,IntType(1,false)))
+        && s.lvs["var_div"] == (Int(0,IntType(1,false)))
+        && s.lvs["var_cmp17"] == (Int(0,IntType(1,false)))
+        && s.lvs["var_call20"] == (Int(0,IntType(1,false)))
+        && s.lvs["var_retval"] == (Ptr(0,0,0,1))
+        && s.lvs["var_26"] == (Int(0,IntType(1,false)))
+        && s.m.mem[0][0].mb? 
+        && s.m.mem[0][0].size == 1
+    }
 
 }
