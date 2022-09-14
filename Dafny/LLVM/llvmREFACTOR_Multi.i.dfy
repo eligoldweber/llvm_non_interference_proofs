@@ -506,6 +506,10 @@ module LLVM_defRE_Multi {
             case GETELEMENTPTR(dst,t,op1,op2) => ValidState(s') //o == dst 
                                 && ValidData(s',evalGETELEMENTPTR(s.m,t,OperandContents(s,op1),OperandContents(s,op2)))
                                 && evalUpdate(s, dst, evalGETELEMENTPTR(s.m,t,OperandContents(s,op1),OperandContents(s,op2)),s')
+            // case LOAD(dst,size,src) => ValidState(s') 
+            //                            && s'.m == s.m 
+            //                            && ValidData(s',evalLOAD(s.m,s'.m,size,OperandContents(s,src)))
+            //                            && evalUpdate(s, dst, evalLOAD(s.m,s'.m,size,OperandContents(s,src)),s')
             case LOAD(dst,size,src) => s == s' // placeholder
             case BITCAST(dst,src,castType) => ValidState(s')
                                             && ValidData(s',evalBITCAST(OperandContents(s,src),OperandContents(s,castType)))    
@@ -692,6 +696,9 @@ module LLVM_defRE_Multi {
                      ==> remainder == first(block).post + all_but_first(block);
             ensures (|block| > 0 && first(block).Divergence? && !first(block).patched)
                      ==> remainder == first(block).pre + all_but_first(block);
+            ensures |block| > 0 && first(block).CNil? ==> remainder == all_but_first(block);
+            ensures |block| > 0 && first(block).CNil? ==> subBehavior == [s] + evalBlockRE(remainder,s);
+            ensures |block| > 0 && first(block).CNil? ==> step == [s];
 
             // ensures (|block| > 0 && first(block).IfElse? && first(block).ifCond ) ==> subBehavior == [s] +  evalBlockRE(first(block).ifTrue,s);
             // ensures (|block| > 0 && first(block).IfElse? && !first(block).ifCond ) ==> subBehavior == [s] +  evalBlockRE(first(block).ifFalse,s);
@@ -703,7 +710,7 @@ module LLVM_defRE_Multi {
         {
             // reveal_evalCodeRE();
             reveal_ValidBehavior();
-            if (|block| == 0 || first(block).CNil?) {
+            if (|block| == 0 ) {
                 assert b == [s,s];
                 step := [s];
                 remainder := [];
@@ -714,6 +721,18 @@ module LLVM_defRE_Multi {
                 assert NextStep(s,step[0], Step.stutterStep());
                 assert ValidState(s) ==> ValidBehavior([s] + step);
 
+            }else if(first(block).CNil?){ // added 
+                assert b == [s] + evalBlockRE(block,s);
+                step := [s];
+                remainder := all_but_first(block);
+
+                subBehavior := [s] + evalBlockRE(remainder,s);
+                assert b == [s] + evalBlockRE(block,s);
+                assert !ValidBehavior(step) ==> !ValidBehavior(b);
+                assert NextStep(s,step[0], Step.stutterStep());
+                assert ValidState(s) ==> ValidBehavior([s] + step);
+                assert subBehavior == [s] + evalBlockRE(remainder,s);
+            
             }else{
                 assert !(|block| == 0 || first(block).CNil?);
                 if(first(block).Block?){

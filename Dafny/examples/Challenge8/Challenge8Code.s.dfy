@@ -15,7 +15,7 @@ module challenge8Code{
 
 
 function challenge_8_transport_handler_create_conn_vuln():codeRe {
-    Block([prefixCode(),CNil,postfixCode()])
+    Block([prefixCode(), Block([CNil]),postfixCode()])
 }
 //  Block([prefixCode(),patch_block,postfix])
 
@@ -27,7 +27,45 @@ function postfixCode():codeRe{
     Block([CNil])
 }
 
+function patchBlock():codeRe{
+     var var_11 := LV(" var_11 ");
+    var var_num_packets := LV(" var_num_packets ");
+    var var_conv15 := LV(" var_conv15 ");
+    var var_12 := LV(" var_12 ");
+    var var_size_addr := LV(" var_size_addr ");
+    var var_conv16 := LV(" var_conv16 ");
+    var var_div := LV(" var_div ");
+    var var_cmp17 := LV(" var_cmp17 ");
+    var var_call20 := LV(" var_call20 ");
+    var var_retval := LV(" var_retval ");
+    var var_26 := LV(" var_26 ");
+    var var_size := LV("var_size");
 
+
+
+    var return_ := Block([Ins(LOAD(var_26,1,var_retval)),
+    Ins(RET(var_26))]);
+
+    // 
+    var if_then19 := Block([Ins(CALL(D(Void),delete_connection())),
+    Ins(STORE(D(Int(0,IntType(1,false))),var_retval)),
+    Ins(UNCONDBR(return_))]);
+
+    // var patch_block := Block([Ins(LOAD(var_11,1,var_num_packets)),
+    // Ins(ZEXT(var_conv15,1,var_11,4)),
+    // Ins(LOAD(var_12,2,var_size_addr)),
+    // Ins(ZEXT(var_conv16,2,var_12,4)),
+    // Ins(SDIV(var_div,var_conv16,D(Int(7,IntType(4,false))))),
+    // Ins(ICMP(var_cmp17,sgt,4,var_conv15,var_div)),
+    // Ins(BR(var_cmp17,if_then19,postfix))]);
+
+    
+    var patch_block := Block([Ins(SDIV(var_div,var_size,D(Int(7,IntType(4,false))))),
+    Ins(ICMP(var_cmp17,sgt,4,var_num_packets,var_div)),
+    Ins(BR(var_cmp17,if_then19,postfixCode()))]);
+
+    patch_block
+}
 function challenge_8_transport_handler_create_conn_patch():codeRe {
 
     // var num_packets := LV(" num_packets ");
@@ -115,6 +153,7 @@ function challenge_8_transport_handler_create_conn_patch():codeRe {
     var var_call20 := LV(" var_call20 ");
     var var_retval := LV(" var_retval ");
     var var_26 := LV(" var_26 ");
+    var var_size := LV("var_size");
 
 
 
@@ -126,14 +165,18 @@ function challenge_8_transport_handler_create_conn_patch():codeRe {
     Ins(STORE(D(Int(0,IntType(1,false))),var_retval)),
     Ins(UNCONDBR(return_))]);
 
-    var patch_block := Block([Ins(LOAD(var_11,1,var_num_packets)),
-    Ins(ZEXT(var_conv15,1,var_11,4)),
-    Ins(LOAD(var_12,2,var_size_addr)),
-    Ins(ZEXT(var_conv16,2,var_12,4)),
-    Ins(SDIV(var_div,var_conv16,D(Int(7,IntType(2,false))))),
-    Ins(ICMP(var_cmp17,sgt,4,var_conv15,var_div)),
-    Ins(BR(var_conv15,if_then19,postfix))]);
+    // var patch_block := Block([Ins(LOAD(var_11,1,var_num_packets)),
+    // Ins(ZEXT(var_conv15,1,var_11,4)),
+    // Ins(LOAD(var_12,2,var_size_addr)),
+    // Ins(ZEXT(var_conv16,2,var_12,4)),
+    // Ins(SDIV(var_div,var_conv16,D(Int(7,IntType(4,false))))),
+    // Ins(ICMP(var_cmp17,sgt,4,var_conv15,var_div)),
+    // Ins(BR(var_cmp17,if_then19,postfix))]);
 
+    
+    var patch_block := Block([Ins(SDIV(var_div,var_size,D(Int(7,IntType(4,false))))),
+    Ins(ICMP(var_cmp17,sgt,4,var_num_packets,var_div)),
+    Ins(BR(var_cmp17,if_then19,postfix))]);
 
         //         if.end21:                                         ; preds = %if.end14
         //   %13 = load i8, i8* @src, align 1
@@ -186,10 +229,56 @@ function challenge_8_transport_handler_create_conn_patch():codeRe {
         //   %26 = load i8, i8* %retval, align 1
         //   ret i8 %26
 
-
-
-    Block([prefixCode(),patch_block,postfix])
+    Block([prefixCode(),patch_block,postfixCode()])
 }
+
+function challenge_8_transport_handler_create_conn_mergerd_simple(patched:bool):codeRe {
+    
+    var postfix := postfixCode();
+
+    var var_11 := LV("var_11");
+    var var_num_packets := LV("var_num_packets");
+    var var_conv15 := LV("var_conv15");
+    var var_12 := LV("var_12");
+    var var_size := LV("var_size");
+
+    var var_size_addr := LV(" var_size_addr ");
+    var var_conv16 := LV(" var_conv16 ");
+    var var_div := LV(" var_div ");
+    var var_cmp17 := LV(" var_cmp17 ");
+    var var_call20 := LV(" var_call20 ");
+    var var_retval := LV(" var_retval ");
+    var var_26 := LV(" var_26 ");
+
+
+
+    var return_ := Block([Ins(LOAD(var_26,1,var_retval)),
+    Ins(RET(var_26))]);
+
+    // 
+    var if_then19 := Block([Ins(CALL(D(Void),delete_connection())),
+    Ins(STORE(D(Int(0,IntType(1,false))),var_retval)),
+    Ins(UNCONDBR(return_))]);
+
+    var splitBlock := Divergence([if_then19],[CNil],patched);
+
+    // var patch_block := Block([Ins(LOAD(var_11,1,var_num_packets)),
+    // Ins(ZEXT(var_conv15,1,var_11,4)),
+    // Ins(LOAD(var_12,2,var_size_addr)),
+    // Ins(ZEXT(var_conv16,2,var_12,4)),
+    // Ins(SDIV(var_div,var_conv16,D(Int(7,IntType(4,false))))),
+    // Ins(ICMP(var_cmp17,sgt,4,var_conv15,var_div)),
+    // Ins(BR(var_conv15,splitBlock,postfix))]);
+
+    var patch_block := Block([Ins(SDIV(var_div,var_size,D(Int(7,IntType(4,false))))),
+    Ins(ICMP(var_cmp17,sgt,4,var_num_packets,var_div)),
+    Ins(BR(var_cmp17,splitBlock,postfix))]);
+    
+
+
+    Block([prefixCode(),patch_block,postfixCode()])
+}
+
 
 lemma prefixAndPostfixAreEqual()
     ensures challenge_8_transport_handler_create_conn_vuln().block[2] 
@@ -225,6 +314,7 @@ lemma prefixAndPostfixAreEqual()
         var var_conv15 := LV("var_conv15");
         var var_12 := LV("var_12");
         var var_size_addr := LV("var_size_addr");
+        var var_size := LV("var_size");
         var var_conv16 := LV("var_conv16");
         var var_div := LV("var_div");
         var var_cmp17 := LV("var_cmp17");
@@ -236,6 +326,7 @@ lemma prefixAndPostfixAreEqual()
         && ValidOperand(s,var_conv15)
         && ValidOperand(s,var_12)
         && ValidOperand(s,var_size_addr)
+        && ValidOperand(s,var_size)
         && ValidOperand(s,var_conv16)
         && ValidOperand(s,var_div)
         && ValidOperand(s,var_cmp17)
@@ -244,6 +335,7 @@ lemma prefixAndPostfixAreEqual()
         && ValidOperand(s,var_26)
         && s.lvs["var_11"].Ptr?
         && s.lvs["var_num_packets"].Int?
+        && s.lvs["var_size"].Int?
         && s.lvs["var_conv15"].Int?
         && s.lvs["var_12"].Ptr?
         && s.lvs["var_size_addr"].Int?
@@ -254,7 +346,7 @@ lemma prefixAndPostfixAreEqual()
         && s.lvs["var_retval"].Ptr?
         && s.lvs["var_26"].Int?
         && s.lvs["var_11"] == (Ptr(0,0,0,1))
-        && s.lvs["var_num_packets"] == (Int(0,IntType(1,false)))
+        // && s.lvs["var_num_packets"] == (Int(0,IntType(1,false)))
         && s.lvs["var_conv15"] == (Int(0,IntType(1,false)))
         && s.lvs["var_12"] == (Ptr(0,0,0,1))
         && s.lvs["var_size_addr"] == (Int(0,IntType(1,false)))
@@ -266,6 +358,14 @@ lemma prefixAndPostfixAreEqual()
         && s.lvs["var_26"] == (Int(0,IntType(1,false)))
         && s.m.mem[0][0].mb? 
         && s.m.mem[0][0].size == 1
+        && !s.lvs["var_num_packets"].itype.signed
+        && s.lvs["var_num_packets"].itype.size == 4
+        && s.lvs["var_num_packets"].val >= 0 
+        && s.lvs["var_num_packets"].val < 0x10000
+        && !s.lvs["var_size"].itype.signed
+        && s.lvs["var_size"].itype.size == 4
+        && s.lvs["var_size"].val >= 0 
+        && s.lvs["var_size"].val < 0x10000
     }
 
 }

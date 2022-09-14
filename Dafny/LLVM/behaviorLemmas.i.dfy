@@ -1,11 +1,11 @@
-include "./llvmREFACTOR.i.dfy"
+include "./llvmREFACTOR_Multi.i.dfy"
 include "../Libraries/Seqs.s.dfy"
 include "../Libraries/Sets.i.dfy"
 
 
 module behavior_lemmas 
 {
-    import opened LLVM_defRE
+    import opened LLVM_defRE_Multi
     import opened Collections__Sets_i
     import opened Collections__Seqs_s
 

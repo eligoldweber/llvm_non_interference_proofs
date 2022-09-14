@@ -90,6 +90,7 @@ datatype MemStep =
     | freeStep(bid:nat)
     | storeStep(bid:nat, offset:nat, data:Data, n:bitWidth)
     | memCpyStep(bid:nat,bid':nat)
+    | loadStep(t:bitWidth,op1:Data,d:Data)
     | stutterStep()
 
 predicate NextMemStep(s:MemState, s':MemState, step:MemStep)
@@ -102,6 +103,7 @@ predicate NextMemStep(s:MemState, s':MemState, step:MemStep)
                                             && MemValid(s)
                                             && (Store(s,s',bid,offset,data)))
         case memCpyStep(bid,bid') => bid' in s'.mem && bid in s.mem && s'.mem[bid'] == s.mem[bid]
+        case loadStep(t,op1,d) => op1.Ptr? && IsValidPtr(s, op1.bid, op1.offset,1) && Load(s,s',op1.bid,op1.offset,d)
         case stutterStep() => s == s'
 }
 
