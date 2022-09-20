@@ -12,13 +12,42 @@ module challenge8Benign{
     import opened Collections__Seqs_s
 
 
+    lemma vulnBehavorsTest(s:state,c:codeSeq) returns (preB:behavior)
+        requires ValidState(s);
+        requires validStartingState(s);
+        requires c == challenge_8_transport_handler_create_conn_vuln_test();
+        // decreases *;
+    {
+        var b:behavior := [s];
+        var cs := c;
+        var s',remainder := evalCodeRE_OneStep(c,s);
+        b := b + [s'];
+        // while (|remainder| > 0)
+        //     decreases codeSeqLengthV2(remainder)
+        // {
+        //     s',remainder := evalCodeRE_OneStep(c,s);
+        //     b := b + [s'];
+        // }
+        preB := [];
+    }
+    // function vulnBehavorsTest(s:state,c:codeSeq) : (preB:behavior)
+    // {
+    //         var b:behavior := [s];
+    //         if |c| == 0 then
+    //             b
+    //         else 
+    //         var s',remainder := evalCodeRE_OneStep(c,s);
+    //         if |remainder| >= 0 then
+    //         b + [s'] + evalCodeRE_OneStep(remainder,s')
+    // }
+
     lemma vulnBehaviors(s:state,c:codeRe) returns (preB:behavior)
         requires ValidState(s);
         requires validStartingState(s);
         requires c == challenge_8_transport_handler_create_conn_vuln();
         
         ensures BehaviorEvalsCode(challenge_8_transport_handler_create_conn_vuln(),preB);
-        ensures ValidBehaviorNonTrivial(preB);
+        // ensures ValidBehaviorNonTrivial(preB);
     {
         reveal_BehaviorEvalsCode();
         assert |c.block| == 3;
@@ -35,7 +64,7 @@ module challenge8Benign{
         assert NextStep(preB[1],preB[2],Step.stutterStep());
         assert StateNext(preB[1],preB[2]);
         // assert |preB| == 5;
-        assert ValidBehaviorNonTrivial(preB);
+        // assert ValidBehaviorNonTrivial(preB);
         // assert behaviorOutput(preB) == [Nil,Nil,Nil];
     }
 
@@ -49,18 +78,51 @@ module challenge8Benign{
     {
         reveal_BehaviorEvalsCode();
         assert |c.block| == 3;
-        postB := [s] + evalCodeRE(c,s);
+        postB := [s] + evalBlockRE(c.block,s);
 
+        assert first(c.block).Block?;
+        assert c.Block?;
+        var metaBehavior := evalCodeRE(first(c.block),s);
+        // assert postB == [s] + metaBehavior + evalBlockRE(all_but_first(c.block),last(metaBehavior));
+       ///
+        assert first(c.block) == Block([CNil]);
+        assert first(c.block).Block?;
+        assert metaBehavior == [s] + evalBlockRE(first(c.block).block, s); 
+        var tempMeta := evalCodeRE(CNil,s);
+        assert tempMeta == [s];
+        assert metaBehavior == [s] + [s] + evalBlockRE([],s);
+        assert metaBehavior == [s,s,s];
+        // assert postB == [s] + [s] + [s] + evalBlockRE([patchBlock(),postfixCode()],s);
+        // assert metaBehavior == evalCodeRE(CNil,s) + evalBlockRE([],s);
+    ////
         var step,remainder,subBehavior := unwrapBlockWitness(postB,c.block,s);
+        // assert subBehavior == metaBehavior;
         assert postB[0] == s; 
         assert first(remainder).CNil?;
-
-         step,remainder,subBehavior := unwrapBlockWitness(subBehavior,remainder,last(step));
-        step,remainder,subBehavior := unwrapBlockWitness(subBehavior,remainder,last(step));
-        // assert remainder == [patchBlock(),postfixCode()];
-        step,remainder,subBehavior := unwrapBlockWitness(subBehavior,remainder,last(step));
         assert NextStep(postB[0],postB[1],Step.stutterStep());
         assert StateNext(postB[0],postB[1]);
+        assert postB[1] == last(step);
+        assert step == [s];
+        assert remainder == [CNil] + all_but_first(c.block);
+        assert all_but_first(c.block) == [patchBlock(),postfixCode()];
+        // assert subBehavior == [s] + evalBlockRE(remainder,s);
+        assert evalBlockRE(remainder,s) == [s] + evalBlockRE([patchBlock(),postfixCode()],s);
+        // assert postB == [s] + [postB[1]] + evalCodeRE(Block(remainder) ,last(step));
+        step,remainder,subBehavior := unwrapBlockWitness(subBehavior,remainder,last(step));
+        assert remainder == all_but_first(c.block);
+        assert |remainder| == 2;
+        assert remainder == [patchBlock(),postfixCode()];
+        assert step == [s];
+                // assert postB[2] == last(step);
+
+        assert NextStep(postB[1],last(step),Step.stutterStep());
+        assert last(step) == postB[1];
+        // assert StateNext(postB[1],postB[2]);
+        
+        step,remainder,subBehavior := unwrapBlockWitness(subBehavior,remainder,last(step));
+        // assert remainder == [patchBlock(),postfixCode()];
+
+
         // assert postB[2] == evalInsRe(CALL(D(Void),delete_connection()),postB[1]);
         // assert NextStep(postB[1],postB[2],Step.stutterStep());
         // assert StateNext(postB[1],postB[2]); 

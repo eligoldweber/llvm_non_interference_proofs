@@ -1,10 +1,12 @@
 include "System.s.dfy"
 include "../Libraries/Sets.i.dfy"
+include "../Libraries/Seqs.i.dfy"
+
 
 abstract module GeneralNonInterferenceProperties {
         import opened System_s
         import opened Collections__Sets_i
-
+        import opened Collections__Seqs_i
 
     predicate RemovedBehaviors(b:System_s.behavior)
     
@@ -14,6 +16,33 @@ abstract module GeneralNonInterferenceProperties {
         RemovedBehaviors(b)
     }
 
+    predicate BenignAddition(b:System_s.behavior) //unclear as to what this will be, or how its enforced
+
+    predicate BenignAdditionEarlyTermination(pre:set<System_s.behavior>,post:set<System_s.behavior>,outputCutoff:output) //this may need to be a function F(var) --> s
+    {
+        //early termination
+        var preOutput := allBehaviorOutputSet(pre);
+        var postOutput := allBehaviorOutputSet(post);
+        forall postB :: postB in postOutput ==> (|| postB in preOutput 
+                                                 || exists preB :: && preB in preOutput 
+                                                                   && couldBeSubSeq(preB,postB) 
+                                                                   && isSubSeq2(preB,postB) 
+                                                                   && |postB| > 0
+                                                                   && isPrefixSubSeq(preB,postB)
+                                                                   && outputCutoff == postB[|postB|-1]
+                                                                   && outputCutoff in preB) 
+    
+
+    }
+    predicate BenignAdditionSpecifiedConstant(pre:set<System_s.behavior>,post:set<System_s.behavior>,out:output,f:state-->output) 
+        requires forall x :: f.requires(x)
+    {
+        var preOutput := allBehaviorOutputSet(pre);
+        var postOutput := allBehaviorOutputSet(post);
+        forall postB :: postB in postOutput ==> (|| postB in preOutput 
+                                                 || exists s,b:: b in post && s in b && f(s) == out)
+    }
+    
 // -- 
     // benignPatch: "The patch does not add any NEW behaviors"
     predicate benignPatch(pre:set<System_s.behavior>,post:set<System_s.behavior>)
@@ -74,6 +103,9 @@ abstract module GeneralNonInterferenceProperties {
         requires successfulPatch(post);
         requires completePatchMS(pre,post);
         ensures safePatchMS(pre,post);
+        // {
+        //     assert safePatchMS(pre,post);
+        // }
 
 
 
@@ -112,26 +144,57 @@ abstract module GeneralNonInterferenceProperties {
 // -- 
 
 
-    // predicate benignPatch(a:set<abstractBehavior>,b:set<abstractBehavior>)
-    // {
-    //     forall p :: p in b ==> p in a
-    // }
+    predicate benignPatchS(a:set<System_s.behavior>,b:set<System_s.behavior>)
+    {
+        forall p :: p in b ==> p in a
+    }
 
-    // predicate successfulPatch(MiniSpec:set<abstractBehavior>,b:set<abstractBehavior>)
+    predicate benignPatchWithBenignAdditon(a:set<System_s.behavior>,b:set<System_s.behavior>)
+    {
+        forall p :: p in b ==> (p in a || BenignAddition(p))
+    }
+
+    // predicate successfulPatchS(MiniSpec:set<System_s.behavior>,b:set<System_s.behavior>)
     // {
     //     forall p :: p in MiniSpec ==> !(p in b)
     // }
 
-    // predicate completePatch(a:set<abstractBehavior>,b:set<abstractBehavior>,MiniSpec:set<abstractBehavior>)
-    // {
-    //     forall p :: (p in a && !(p in MiniSpec)) ==> p in b
-    // }
+    predicate successfulPatchS(b:set<System_s.behavior>)
+    {
+        forall postB :: MiniSpec(postB) ==> !(postB in b)
+    }
+    
+    predicate completePatchS(a:set<System_s.behavior>,b:set<System_s.behavior>)
+    {
+        forall p :: (p in a && !(MiniSpec(p))) ==> p in b
 
-    // lemma safePatch(a:set<abstractBehavior>,b:set<abstractBehavior>,MiniSpec:set<abstractBehavior>)
-    // {
-    //     assert benignPatch(a,b) && successfulPatch(MiniSpec,b) ==> (forall p :: p in b ==> (p in a && !(p in MiniSpec)));
-    //     assert benignPatch(a,b) && successfulPatch(MiniSpec,b) && completePatch(a,b,MiniSpec) ==> (forall p :: (p in a && !(p in MiniSpec)) <==> p in b);
-    // }
+    }
+
+    predicate completePatchWithBenignAddition(a:set<System_s.behavior>,b:set<System_s.behavior>)
+    {
+        forall p :: !(MiniSpec(p) && (p in a || BenignAddition(p) )) ==> p in b
+
+    }
+
+    lemma safePatchS(a:set<System_s.behavior>,b:set<System_s.behavior>)
+    {
+        // assert benignPatchS(a,b) && successfulPatchS(MiniSpec,b) ==> (forall p :: p in b ==> (p in a && !(p in MiniSpec)));
+        // assert (benignPatchS(a,b) && successfulPatchS(MiniSpec,b) && completePatchS(a,b,MiniSpec)) ==> (forall p :: (p in a && !(p in MiniSpec)) <==> p in b);
+        
+        // assert successfulPatchS(MiniSpec,b) && completePatchS(a,b,MiniSpec) ==> (forall p :: (p in a && !(p in MiniSpec)) ==> p in b);
+        
+        
+        
+        assert successfulPatchS(b) ==> (forall p :: p in b ==> !MiniSpec(p));
+
+        assert && successfulPatchS(b) 
+               && completePatchWithBenignAddition(a,b) 
+               && benignPatchWithBenignAdditon(a,b) ==> (forall p :: p in b <==> !MiniSpec(p) && (p in a || BenignAddition(p) ));
+        // assert successfulPatchS(b) && completePatchS(a,b) ==> (forall p :: p in b ==> (p in a && !MiniSpec(p)));
+        // assert completePatchS(a,b) ==> (forall p :: p in b ==> p in a); // this is too strong. (unrealistic)
+        // assert completePatchS(a,b) ==> (forall p :: p in b ==> exists q :: q in a && !MiniSpec(q)); // this is too strong. (unrealistic)
+
+    }
 
 // -- 
 

@@ -115,11 +115,91 @@ lemma lemma_SeqCat_equivalent<T>(seqs:seq<seq<T>>)
   }
 }
 
+
 predicate isSubSeq<T>(s:seq<T>,sub:seq<T>)
 {
   |s| >= |sub|
   && forall v :: v in sub ==> v in s
+  && exists idx :: (&& idx >= 0 
+                    && idx < |s| 
+                    && idx + |sub| <= |s|
+                    && s[idx] == sub[0]
+                    && forall subIdx :: (subIdx >= 0 && subIdx < |sub|) ==> s[idx+subIdx] == sub[subIdx])
   // finish def
+}
+
+predicate couldBeSubSeq<T>(s:seq<T>,sub:seq<T>)
+{
+  |s| >= |sub|
+  && forall v :: v in sub ==> v in s
+}
+
+predicate isSubSeq2<T>(s:seq<T>,sub:seq<T>)
+  requires couldBeSubSeq(s,sub);
+{
+  if |sub| == 0 then
+    true
+  else
+  var index := FindIndexInSeq(s,sub[0]);
+  |s| >= |sub|
+  && |sub| > 0
+  && forall v :: v in sub ==> v in s
+  && index + |sub| <= |s|
+  && forall i :: (i >= index  && i < |sub|+index) ==> s[i] == sub[i-index]
+}
+
+predicate isPrefixSubSeq<T>(s:seq<T>,sub:seq<T>)
+  requires couldBeSubSeq(s,sub) && isSubSeq2(s,sub)
+  requires |sub| > 0
+{
+  var index := FindIndexInSeq(s,sub[0]);
+  && index == 0
+}
+
+lemma Lemma_Seq_isSeq_Subset<T>(s:seq<T>,sub:seq<T>)
+  requires |s| >= |sub|
+  requires |sub| > 0
+  requires forall v :: v in sub ==> v in s
+{
+  assert |s| > 0;
+  assert forall v :: v in sub ==> v in s;
+  assert sub[0] in sub;
+  assert exists v :: v in sub && v in s;
+  // var v :| v in sub;
+  // assert v 
+  var v :|  v in sub && v in s;
+  var idx := FindIndexInSeq(sub,v);
+  assert idx >= 0 && idx < |sub|;
+  var idx_s := FindIndexInSeq(s,v);
+  assert idx_s >= 0 && idx_s < |s|;
+
+
+  assert |sub| <= |s|; 
+
+  var x := 0; 
+  assert x + |sub| <= |s|;
+  assert forall n :: (n >= 0 && n < (|s| - |sub|)) ==> n + |sub| <= |s|; 
+  assert (|s| - |sub|) >= 0;
+  var n := (|s| - |sub|);
+  assert x >= 0 && (x < n || n == 0);
+  var t :| t >= 0 && (t<n || t == 0);
+  // var i :| i >= 0 && i < |sub| && s[i] == sub[i];
+  var idxNum:int :| (&& idx >= 0 
+                 && idx < |s|);
+                //  && idx + |sub| < |s|;
+
+  //             && idx + |sub| < |s|
+  //             && s[idx] == sub[0]);
+}
+
+lemma dummyTestIsSubSeq()
+{
+  var a := [1,2,3,4];
+  var b := [2,3];
+  assert |a| >= |b|;
+  assert forall v :: v in b ==> v in a;
+  assert couldBeSubSeq(a,b);
+  assert isSubSeq2(a,b);
 }
 
 // lemma lemma_Seq_Cardinality_transitive<T>(a:seq<T>,b:seq<T>)

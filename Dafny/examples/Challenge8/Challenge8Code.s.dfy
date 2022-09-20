@@ -17,6 +17,10 @@ module challenge8Code{
 function challenge_8_transport_handler_create_conn_vuln():codeRe {
     Block([prefixCode(), Block([CNil]),postfixCode()])
 }
+
+function challenge_8_transport_handler_create_conn_vuln_test():codeSeq {
+    [prefixCode(), Block([CNil]),postfixCode()]
+}
 //  Block([prefixCode(),patch_block,postfix])
 
 function prefixCode():codeRe{

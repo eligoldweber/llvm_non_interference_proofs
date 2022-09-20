@@ -117,6 +117,7 @@ module LLVM_defRE_Multi {
     datatype Step = 
     | evalInsStep(ins:ins)
     | stutterStep()
+    | validToErrorStep()
     | errorStateStep()
 
     predicate NextStep(s:state, s':state, step:Step)
@@ -124,13 +125,14 @@ module LLVM_defRE_Multi {
         match step  
             case evalInsStep(ins) => validEvalIns(ins,s,s') && s'.ok
             case stutterStep() => stutter(s,s')
+            case validToErrorStep() => validToError(s,s')
             case errorStateStep() => errorStep(s,s')
     }
 
     predicate StateNext(s:state,s':state)
     {
         && exists step :: NextStep(s,s',step)
-        && ValidState(s)
+        // && ValidState(s)
     
     }
 
@@ -140,9 +142,14 @@ module LLVM_defRE_Multi {
         s == s'
     }
     
+    predicate validToError(s:state,s':state)
+    {
+        s.ok && !s'.ok
+    }
+
     predicate errorStep(s:state,s':state)
     {
-        ValidState(s) && !s'.ok
+        !s.ok && !s'.ok
     }
 
 
@@ -185,7 +192,8 @@ module LLVM_defRE_Multi {
     function evalCodeRE(c:codeRe, s:state) : (b:behavior)
         ensures |b| > 0
         ensures (c.Ins?) ==> |b| == 1
-        ensures c.Block? ==> |b| == |evalBlockRE(c.block, s)|
+        ensures (c.Ins? && b[0].ok) ==> StateNext(s,b[0])
+        ensures c.Block? ==> |b| == |evalBlockRE(c.block, s)| +1
         // ensures c.IfElse? ==> if c.ifCond then |b| == |evalBlockRE(c.ifTrue,s)| else |b| == |evalBlockRE(c.ifFalse,s)|
         ensures (c.Ins? && validEvalIns(c.ins,s,b[0]) && b[0].ok) ==> ValidBehavior([s] + b)
         
@@ -194,7 +202,7 @@ module LLVM_defRE_Multi {
         reveal_ValidBehavior();
             match c
                 case Ins(ins) => [evalInsRe(ins,s)]
-                case Block(block) => evalBlockRE(block, s) 
+                case Block(block) => [s] + evalBlockRE(block, s) 
                 case IfElse(ifCond, ifT, ifF) => 
                     if (validIfCond(s,ifCond)) then
                         if dataToBool(OperandContents(s,ifCond)) then evalBlockRE(ifT, s) else evalBlockRE(ifF,s)
@@ -205,19 +213,23 @@ module LLVM_defRE_Multi {
                 case CNil => [s]
     }
 
+//   function evalBlockREV2()
+
   function evalBlockRE(block:codeSeq, s:state): (b:behavior)
         ensures |b| > 0
         // ensures (first(block).CNil?) ==> |b| == 1
         // ensures forall c :: c in block && c.Ins? ==> |b| == |block|
+        // ensures (|block| > 0 && !first(block).CNil?) ==>
+        //     b == evalCodeRE(first(block),s) + evalBlockRE(all_but_first(block),last(evalCodeRE(first(block),s)));
 
     {
         if |block| == 0 then
             [s]
         else
             assert |block| > 0;
-            if first(block).CNil? then
-                [s]
-            else
+            // if first(block).CNil? then
+            //     [s]
+            // else
                 assert |block| > 0;
                 var metaBehavior := evalCodeRE(first(block),s);
                 assert |block| > 0;
@@ -230,18 +242,236 @@ module LLVM_defRE_Multi {
                 fullBlock
     }
 
+    lemma subCodeSeqIsSmaller(c:codeSeq)
+        requires |c| > 0
+    {
+        var subCodeSeq := all_but_first(c);
+        if(first(c).Ins?)
+        {
+            assert |c| > |subCodeSeq|;
+        }
+        else if (first(c).Block?)
+        {
+            assert |c| > |subCodeSeq|;
+            var unwrap := first(c).block + subCodeSeq;
+            assert |c| == |subCodeSeq| + 1;
+            assert |unwrap| == |first(c).block| + |subCodeSeq|;
+            assert codeSeqLengthV2([first(c)]) > codeSeqLengthV2(first(c).block);
+        }
+        // assert codeSeqLength(c,0) >= codeSeqLength(subCodeSeq,0);
+    }
+    function codeReLength(c:codeRe) : (len:int)
+        // decreases blockLength(c);
+        // ensures |c| > 0 ==> blockLength(all_but_first(c)) <= blockLength(c);
+        ensures len >= 0
+    {
+            match c
+                case Ins(ins) =>  1
+                case Block(block) => 1 + codeSeqLengthV2(block)
+                case IfElse(ifCond, ifT, ifF) => 1 + codeSeqLengthV2(ifT) + codeSeqLengthV2(ifF)
+                case Divergence(pre,post,patched) => 0
+                case NonImpactIns(NIIns) => 0
+                case CNil => 0
+    }
+
+    function codeSeqLengthV2(c:codeSeq) : (len:int)
+        ensures len >= 0
+        ensures |c| > 0 ==> codeSeqLengthV2(c) >= codeSeqLengthV2(all_but_first(c))
+        ensures |c| > 0 && first(c).Block? ==> (codeSeqLengthV2(c) ==  codeReLength(first(c)) + codeSeqLengthV2(all_but_first(c)));
+        ensures |c| > 0 && first(c).Block? ==> (codeSeqLengthV2(c) == 1 + codeSeqLengthV2(first(c).block) + codeSeqLengthV2(all_but_first(c)));
+        // ensures forall i :: i in c && i.Ins? ==> |c| == codeSeqLengthV2(c)
+        // ensures codeSeqLengthV2(c)
+        // ensures forall a:codeSeq,b:codeSeq :: (a + b == c) ==> codeSeqLengthV2(c) == codeSeqLengthV2(a) + codeSeqLengthV2(b);
+    {
+         if |c| == 0 then
+            0
+        else
+            var first := first(c);
+            assert codeReLength(first) >= 0;
+            assert first.Ins? ==> codeReLength(first) == 1;
+            // assert if forall i :: i in all_but_first(c) && i.Ins? then |all_but_first(c)| == codeSeqLengthV2(all_but_first(c)) else true;
+            codeReLength(first) + codeSeqLengthV2(all_but_first(c))
+    }
+    lemma codeSeqLengthV3(c:codeSeq) returns (len:int)
+    {
+        if |c| == 0 {
+            len := 0;
+        }else{
+            assert |c| > 0;
+            len := 0;
+            var cr := c;
+            while(|cr| > 0)
+                decreases |cr|
+            {
+                var first := first(cr);
+                cr := all_but_first(cr);
+                if (first.Ins?)
+                {
+                    len := len +1;
+                }else if(first.Block?)
+                {
+                    // len := codeSeqLengthV3(first.block);
+                }
+                len := len +1;
+            }
+           
+        }
+    }
+
+    lemma codeSeqLengthV2Addition(a:codeSeq,b:codeSeq,c:codeSeq)
+        requires c == a + b
+        requires forall i :: i in a ==> i.Ins?;
+        requires forall i :: i in b ==> i.Ins?;
+
+        requires |c| > 0
+    {
+        if (|a| == 0)
+        {
+            assert c == b;
+            assert codeSeqLengthV2(a) == 0;
+            assert codeSeqLengthV2(c) == codeSeqLengthV2(a) + codeSeqLengthV2(b);
+        }
+        else if(|b| == 0)
+        {
+            assert c == a;
+            assert codeSeqLengthV2(b) == 0;
+            assert codeSeqLengthV2(c) == codeSeqLengthV2(a) + codeSeqLengthV2(b);
+        }else{
+            assert |c| == |a| + |b|;
+            assert codeSeqLengthV2(c) == codeSeqLengthV2(a+b);
+            var d := [Ins(RET(D(Void)))];
+            var e := [Ins(RET(D(Void)))];
+            var f := [Ins(RET(D(Void))),Ins(RET(D(Void)))];
+            assert f == d + e;
+            assert codeSeqLengthV2(f) == codeSeqLengthV2(d) + codeSeqLengthV2(e);
+            // assert codeSeqLengthV2(d) == 1;
+            // assert codeSeqLengthV2(a + d) == codeSeqLengthV2(a) + 1;
+            // assert codeSeqLengthV2(a) + codeSeqLengthV2(d) == codeSeqLengthV2(a + d);
+            // assert codeSeqLengthV2(c) > codeSeqLengthV2(a);
+            // assert codeSeqLengthV2(c) == codeSeqLengthV2(a) + codeSeqLengthV2(b);
+        }
+    }
+
+
+    function codeSeqLength(c:codeSeq,curr:int) : int
+    {
+        if |c| == 0 then
+            curr
+        else
+        var first := first(c);
+        match first
+            case Ins(ins) =>  codeSeqLength(all_but_first(c),curr + 1)
+            case Block(block) => codeSeqLength(all_but_first(c),curr + codeSeqLength(first.block,0))
+            case IfElse(ifCond, ifT, ifF) => codeSeqLength(all_but_first(c),curr + codeSeqLength(first.ifTrue,0) + codeSeqLength(first.ifFalse,0))
+            case Divergence(pre,post,patched) => 0
+            case NonImpactIns(NIIns) => 0
+            case CNil => 0
+    }
+
+    lemma evalCodeRE_OneStep(c:codeSeq, s:state) returns 
+        (s':state,remainder:codeSeq)
+        requires |c| >= 0;
+        ensures StateNext(s,s');
+        ensures |remainder| >= 0;
+        // ensures codeSeqLengthV2(c) >= codeSeqLengthV2(remainder);
+        // ensures codeSeqLength(c,0) > codeSeqLength(remainder,0);
+    {
+        if (|c| == 0){
+            s' := s;
+            remainder := [];
+            assert s == s';
+            assert NextStep(s,s', Step.stutterStep());
+            assert StateNext(s,s');
+        } else { 
+            assert |c| > 0;
+            var first := first(c);
+            if(first.Ins?) {
+                remainder := all_but_first(c);
+                assert |remainder| < |c|;
+                assert codeSeqLengthV2(c) >= codeSeqLengthV2(remainder);
+                assert codeSeqLengthV2(c) == 1 + codeSeqLengthV2(remainder);
+                s' := evalInsRe(first.ins,s);
+                assert StateNext(s,s');
+            } else if (first.Block?) {
+                //unwrap Block (this is a stutter step)
+                s' := s;
+                remainder := first.block + all_but_first(c);
+                assert c == [first] + all_but_first(c);
+                assert codeSeqLengthV2(c) == codeSeqLengthV2([first]+all_but_first(c));// + codeSeqLengthV2(all_but_first(c));
+                assert codeSeqLengthV2(first.block) < codeSeqLengthV2([first]);
+                // blockIsLongerThanUnwrapped(first);
+                assert (codeSeqLengthV2(first.block) + codeSeqLengthV2(all_but_first(c))) < (codeSeqLengthV2([first]) + codeSeqLengthV2(all_but_first(c)));
+                assert codeSeqLengthV2(remainder) == codeSeqLengthV2(first.block + all_but_first(c));// + codeSeqLengthV2(all_but_first(c));
+                // assert 
+                // assert codeSeqLengthV2(c) >= codeSeqLengthV2(remainder);
+
+                assert NextStep(s,s', Step.stutterStep());
+                assert StateNext(s,s');
+            }
+            else if (first.IfElse?) {
+                //unwrap conditonal Block (this is a stutter step)
+                s' := s;
+                 if (validIfCond(s,first.ifCond)){ // is valid Branch condition?
+                    s' := s;
+                    assert NextStep(s,s', Step.stutterStep());
+                    assert StateNext(s,s');
+                    if(dataToBool(OperandContents(s,first.ifCond))){
+                        remainder := first.ifTrue + all_but_first(c);
+                    }else{
+                        remainder := first.ifFalse + all_but_first(c);
+                    }
+                 }else{ // Not a valid Branch Condition, transition to an error state
+                    var s' := s.(ok := false);
+                    if !s.ok {
+                        assert NextStep(s,s',errorStateStep());
+                    }
+                    else {
+                        assert s.ok;
+                        assert !s'.ok;
+                        assert  NextStep(s,s',validToErrorStep());
+                    }
+                        assert StateNext(s,s');
+                        remainder := [];
+                 }
+            } else if (first.CNil?) {
+                remainder := [];
+                s' := s;
+                assert NextStep(s,s', Step.stutterStep());
+                assert StateNext(s,s'); 
+            }
+            else{ // Catch all (placeholder for divergence and nonimpactIns)
+            //
+                remainder := [];
+                s' := s;
+                assert NextStep(s,s', Step.stutterStep());
+                assert StateNext(s,s'); 
+            }
+        }
+    }
+
     function evalInsRe(ins:ins,s:state) : (s':state)
         // requires ValidInstruction(s, ins)
         // ensures ValidState(s) && ValidInstruction(s, ins) ==> StateNext(s,s')
-        ensures s'.ok ==> NextStep(s,s',Step.evalInsStep(ins)) && StateNext(s,s');
-        ensures (!ValidState(s) || !ValidInstruction(s, ins)) ==> !s'.ok;
-        ensures ((!ValidState(s) || !ValidInstruction(s, ins)) && validEvalIns(ins,s,s')) ==> s'.ok
+        ensures  StateNext(s,s');
+        ensures s'.ok ==> NextStep(s,s',Step.evalInsStep(ins))
+        ensures (!s.ok || !ValidInstruction(s, ins)) ==> !s'.ok;
+        ensures ((!s.ok || !ValidInstruction(s, ins)) && validEvalIns(ins,s,s')) ==> s'.ok
     {
         reveal_ValidBehavior();
         reveal_behaviorOutput();
-        if (!ValidState(s) || !ValidInstruction(s, ins)) then 
+        if (!s.ok || !ValidInstruction(s, ins)) then 
             var notOK := s.(ok := false);
-            notOK
+            if !s.ok then
+                assert NextStep(s,notOK,errorStateStep());
+                assert StateNext(s,notOK);
+                // assert errorStep(s,notOK); 
+                notOK
+            else 
+                assert s.ok;
+                assert !notOK.ok;
+                assert  NextStep(s,notOK,validToErrorStep());
+                assert StateNext(s,notOK);
+                notOK
         else match ins
             case ADD(dst,t,src1,src2) => 
                 var s' := stateUpdateVar(s,dst,evalADD(t,OperandContents(s,src1),OperandContents(s,src2)));
@@ -249,9 +479,12 @@ module LLVM_defRE_Multi {
                     assert MemStateNext(s.m,s'.m,MemStep.stutterStep);
                     assert validEvalIns(ins,s,s');
                     assert s'.ok;
+                    assert NextStep(s,s',Step.evalInsStep(ins));
+                    assert StateNext(s,s');
                     s'
                 else
                     var notOk := s'.(ok := false);
+                    assert  NextStep(s,notOk,validToErrorStep());
                     notOk
             case SUB(dst,t,src1,src2) => 
                 var s' := stateUpdateVar(s,dst,evalSUB(t,OperandContents(s,src1),OperandContents(s,src2)));
@@ -259,9 +492,12 @@ module LLVM_defRE_Multi {
                     assert dst.LV? ==> forall lv :: (lv in s.lvs && lv != dst.l) ==> s'.lvs[lv] == s.lvs[lv];
                     assert MemStateNext(s.m,s'.m,MemStep.stutterStep);
                     assert validEvalIns(ins,s,s');
+                    assert NextStep(s,s',Step.evalInsStep(ins));
+                    assert StateNext(s,s');
                     s'
                 else
                     var notOk := s'.(ok := false);
+                    assert  NextStep(s,notOk,validToErrorStep());
                     notOk
             case SDIV(dst,src1,src2) => 
                 var s' := stateUpdateVar(s,dst,evalSDIV(OperandContents(s,src1),OperandContents(s,src2)));
@@ -269,65 +505,95 @@ module LLVM_defRE_Multi {
                     assert dst.LV? ==> forall lv :: (lv in s.lvs && lv != dst.l) ==> s'.lvs[lv] == s.lvs[lv];
                     assert MemStateNext(s.m,s'.m,MemStep.stutterStep);
                     assert validEvalIns(ins,s,s');
+                    assert NextStep(s,s',Step.evalInsStep(ins));
+                    assert StateNext(s,s');
                     s'
                 else
                     var notOk := s'.(ok := false);
+                    assert  NextStep(s,notOk,validToErrorStep());
                     notOk
             case ICMP(dst,cond,t,src1,src2) => 
                 var s' := stateUpdateVar(s,dst,evalICMP(cond,t,OperandContents(s,src1),OperandContents(s,src2)));
                 assert ValidData(s',evalICMP(cond,t,OperandContents(s,src1),OperandContents(s,src2)));
                     assert MemStateNext(s.m,s'.m,MemStep.stutterStep);
                     assert validEvalIns(ins,s,s');
+                    assert NextStep(s,s',Step.evalInsStep(ins));
+                    assert StateNext(s,s');
                     s'
             case TRUNC(dst,t,src,dstSize) => 
                 var s' := stateUpdateVar(s,dst,evalTRUNC(OperandContents(s,src),dstSize));
                     assert ValidData(s',evalTRUNC(OperandContents(s,src),dstSize));
                     assert MemStateNext(s.m,s'.m,MemStep.stutterStep);
                     assert validEvalIns(ins,s,s');
+                    assert NextStep(s,s',Step.evalInsStep(ins));
+                    assert StateNext(s,s');
                     s'
             case ZEXT(dst,t,src,dstSize) =>
                 var s' := stateUpdateVar(s,dst,evalZEXT(OperandContents(s,src),dstSize));
                 assert ValidData(s',evalZEXT(OperandContents(s,src),dstSize));
                     assert MemStateNext(s.m,s'.m,MemStep.stutterStep);
                     assert validEvalIns(ins,s,s');
+                    assert NextStep(s,s',Step.evalInsStep(ins));
+                    assert StateNext(s,s');
                     s'
             case AND(dst,src1,src2)  =>
                 var s' := stateUpdateVar(s,dst,evalAND(OperandContents(s,dst).itype.size,OperandContents(s,src1),OperandContents(s,src2)));   
                 assert ValidData(s',evalAND(OperandContents(s,dst).itype.size,OperandContents(s,src1),OperandContents(s,src2)));   
                     assert MemStateNext(s.m,s'.m,MemStep.stutterStep);
                     assert validEvalIns(ins,s,s');
+                    assert NextStep(s,s',Step.evalInsStep(ins));
+                    assert StateNext(s,s');
                     s'
             case LSHR(dst,src,shiftAmt) =>
                 var s' := stateUpdateVar(s,dst,evalLSHR(OperandContents(s,src),OperandContents(s,shiftAmt)));
                 assert ValidData(s',evalLSHR(OperandContents(s,src),OperandContents(s,shiftAmt)));
                  assert MemStateNext(s.m,s'.m,MemStep.stutterStep);
                     assert validEvalIns(ins,s,s');
+                    assert NextStep(s,s',Step.evalInsStep(ins));
+                    assert StateNext(s,s');
                     s'
             case STORE(valueToStore,ptr) =>
                 var s' := s.(m := evalStore(s.m,OperandContents(s,ptr).bid,OperandContents(s,ptr).offset,OperandContents(s,valueToStore)));
                 if MemValid(s'.m) then
                     assert MemStateNext(s.m,s'.m,MemStep.storeStep(OperandContents(s,ptr).bid,OperandContents(s,ptr).offset,OperandContents(s,valueToStore),1));
                     assert validEvalIns(ins,s,s');
+                    assert NextStep(s,s',Step.evalInsStep(ins));
                     s'
                 else
                     var notOk := s'.(ok := false);
-                    assert NextStep(s,notOk, Step.errorStateStep());
+                    assert  NextStep(s,notOk,validToErrorStep());
                     notOk
             case LLVM_MEMCPY(dst,src,len,volatile) => 
                 var s' := s.(o := Nil,m := evalMemCpy(s.m,OperandContents(s,dst),OperandContents(s,src)));
                 if MemValid(s'.m) && ValidState(s') then
                     assert MemStateNext(s.m,s'.m,MemStep.memCpyStep(OperandContents(s,src).bid,OperandContents(s,dst).bid));
                     assert validEvalIns(ins,s,s');
+                    assert NextStep(s,s',Step.evalInsStep(ins));
+                    assert StateNext(s,s');
                     s'
                 else
                     var notOk := s'.(ok := false);
-                    assert NextStep(s,notOk, Step.errorStateStep());
+                    assert  NextStep(s,notOk,validToErrorStep());
                     notOk
-            case ALLOCA(dst,t) => var s' := State(s.lvs,s.gvs,AllocaStep(s.m,t),s.o,s.ok);
+            case ALLOCA(dst,t) => 
+                var s' := State(s.lvs,s.gvs,AllocaStep(s.m,t),s.o,s.ok);
+                assert MemStateNext(s.m,s'.m,MemStep.allocStep(s.m.nextBlock,t));
+                assert validEvalIns(ins,s,s');
+                assert NextStep(s,s',Step.evalInsStep(ins));
+                assert StateNext(s,s');
                 s'
-            case BR(if_cond, labelTrue,labelFalse) => s
-            case UNCONDBR(goToLabel) => s
-            case LOAD(dst,size,src) => s // placeholder
+            case BR(if_cond, labelTrue,labelFalse) => 
+                assert NextStep(s,s,Step.stutterStep());
+                assert StateNext(s,s);
+                s
+            case UNCONDBR(goToLabel) => 
+                assert NextStep(s,s,Step.stutterStep());
+                assert StateNext(s,s);
+                s
+            case LOAD(dst,size,src) => 
+                assert NextStep(s,s,Step.stutterStep());
+                assert StateNext(s,s);
+                s // placeholder
             case CALL(dst,fnc) =>
                 var subB := evalBlockRE(fnc,s);
                 if ValidBehavior(subB) && ValidOperand(last(subB),dst) then
@@ -340,28 +606,36 @@ module LLVM_defRE_Multi {
                             var s' := stemp.(o := Nil);
                             assert validEvalIns(ins,s,s');
                             assert s' == last(subB).(o := Nil);
+                            assert NextStep(s,s',Step.evalInsStep(ins));
+                            assert StateNext(s,s');
                             s'
                         else
                             var s' := stemp.(o := SubOut(behaviorOutput(subB)));
                             assert s'.o == SubOut(behaviorOutput(subB));
                             assert validEvalIns(ins,s,s');
+                            assert NextStep(s,s',Step.evalInsStep(ins));
+                            assert StateNext(s,s');
                             s'
                     else 
                         var subO := behaviorOutput(subB);
                         var s' := s.(o := SubOut(behaviorOutput(subB)));
                         assert s'.o == SubOut(behaviorOutput(subB));
                         assert validEvalIns(ins,s,s');
+                        assert NextStep(s,s',Step.evalInsStep(ins));
+                        assert StateNext(s,s');
                         //assert s.o != s'.o;
                         s'
                 else
                     var notOk := s.(ok := false);
-                    assert NextStep(s,notOk, Step.errorStateStep());
+                    assert  NextStep(s,notOk,validToErrorStep());
                     notOk
             case RET(val) => 
                 var s' := s.(o := Out(OperandContents(s,val)));
                 assert ValidState(s');
                 assert MemStateNext(s.m,s'.m,MemStep.stutterStep);
                 assert validEvalIns(ins,s,s');
+                assert NextStep(s,s',Step.evalInsStep(ins));
+                assert StateNext(s,s');
                 s'
             case GETELEMENTPTR(dst,t,op1,op2) => 
                 if(MemValid(s.m) && ValidData(s,evalGETELEMENTPTR(s.m,t,OperandContents(s,op1),OperandContents(s,op2)))) then
@@ -369,11 +643,13 @@ module LLVM_defRE_Multi {
                     assert ValidState(s');
                     assert MemStateNext(s.m,s'.m,MemStep.stutterStep);
                     assert validEvalIns(ins,s,s');
+                    assert NextStep(s,s',Step.evalInsStep(ins));
+                    assert StateNext(s,s');
                     //assert s != s';
                     s'
                 else
                     var notOk := s.(ok := false);
-                    assert NextStep(s,notOk, Step.errorStateStep());
+                    assert NextStep(s,notOk, Step.validToErrorStep());
                     notOk
             case BITCAST(dst,src,castType) =>
                 var s' := stateUpdateVar(s,dst,evalBITCAST(OperandContents(s,src),OperandContents(s,castType)));
@@ -381,14 +657,19 @@ module LLVM_defRE_Multi {
                     assert MemStateNext(s.m,s'.m,MemStep.stutterStep);
                     assert validEvalIns(ins,s,s');
                     assert s'.ok;
+                    assert NextStep(s,s',Step.evalInsStep(ins));
+                    assert StateNext(s,s');
                     s'
                 else
                     var notOk := s'.(ok := false);
+                     assert NextStep(s,notOk, Step.validToErrorStep());
                     notOk
              case VISIBLE_OUT(o) => var s' := s.(o := o);
                 assert ValidState(s');
                 assert MemStateNext(s.m,s'.m,MemStep.stutterStep);
                 assert validEvalIns(ins,s,s');
+                assert NextStep(s,s',Step.evalInsStep(ins));
+                assert StateNext(s,s');
                 s'
     }
 
@@ -672,8 +953,9 @@ module LLVM_defRE_Multi {
             requires (|block| > 0 && first(block).IfElse?) ==> validIfCond(s,first(block).ifCond);
             // requires forall ins :: (ins in block && ins.Ins?) ==> !ins.ins.CALL? // doesnt work with CALLL rn
             // requires ValidState(s);
+            // ensures subBehavior == [last(step)] + evalBlockRE(remainder,last(step));
             ensures (|block| > 0 && !first(block).CNil? && !first(block).Block? && !first(block).IfElse?) ==> |step| > 0
-            ensures (|block| > 0 && !first(block).CNil? && !first(block).Block? && !first(block).IfElse? && !first(block).Divergence?) ==> (b == [s] + step + evalCodeRE(Block(remainder) ,last(step)));
+            ensures (|subBehavior| > 0 && |block| > 0 && !first(block).CNil? && !first(block).Block? && !first(block).IfElse? && !first(block).Divergence?) ==> ( b == [s] + step + all_but_first(subBehavior));
             ensures (|block| > 0 && !first(block).CNil? && !first(block).Block? && !first(block).IfElse? && !first(block).Divergence?) ==> subBehavior == [last(step)] + evalBlockRE(remainder,last(step));
                         ensures (|block| > 0 && first(block).Ins?) ==> subBehavior == b[1..]
 
@@ -689,7 +971,9 @@ module LLVM_defRE_Multi {
                  ==> remainder == first(block).ifFalse + all_but_first(block);
             ensures (|block| > 0 && (first(block).Block? || first(block).IfElse?)) ==> step == [s];
             ensures (|block| > 0 && first(block).Block?) ==> remainder == first(block).block + all_but_first(block);
-            ensures (|block| > 0 && (first(block).Block? || first(block).IfElse? || first(block).Divergence?)) ==> subBehavior == [s] + evalBlockRE(remainder,s);
+            // ensures (|block| > 0 && (first(block).Block? || first(block).IfElse? || first(block).Divergence?)) ==> subBehavior == b[|step|..]; //[s] + evalBlockRE(remainder,s);
+        ensures (|block| > 0 && (first(block).Block?)) ==> subBehavior == b[|step|..]; //[s] + evalBlockRE(remainder,s);
+
             // ensures (|block| > 0 && (first(block).Divergence?)) ==> subBehavior == b;
             ensures (|block| > 0 && first(block).Divergence?) ==> step == [s];
             ensures (|block| > 0 && first(block).Divergence? && first(block).patched)
@@ -697,8 +981,10 @@ module LLVM_defRE_Multi {
             ensures (|block| > 0 && first(block).Divergence? && !first(block).patched)
                      ==> remainder == first(block).pre + all_but_first(block);
             ensures |block| > 0 && first(block).CNil? ==> remainder == all_but_first(block);
-            ensures |block| > 0 && first(block).CNil? ==> subBehavior == [s] + evalBlockRE(remainder,s);
             ensures |block| > 0 && first(block).CNil? ==> step == [s];
+                        ensures |block| > 0 && first(block).CNil? ==> subBehavior == [last(step)] + evalBlockRE(remainder,last(step));
+
+
 
             // ensures (|block| > 0 && first(block).IfElse? && first(block).ifCond ) ==> subBehavior == [s] +  evalBlockRE(first(block).ifTrue,s);
             // ensures (|block| > 0 && first(block).IfElse? && !first(block).ifCond ) ==> subBehavior == [s] +  evalBlockRE(first(block).ifFalse,s);
@@ -732,16 +1018,31 @@ module LLVM_defRE_Multi {
                 assert NextStep(s,step[0], Step.stutterStep());
                 assert ValidState(s) ==> ValidBehavior([s] + step);
                 assert subBehavior == [s] + evalBlockRE(remainder,s);
+                // assert subBehavior == b[|step|..];
+                assert subBehavior == [last(step)] + evalBlockRE(remainder,last(step));
+
             
             }else{
                 assert !(|block| == 0 || first(block).CNil?);
                 if(first(block).Block?){
                     assert b == [s] + evalBlockRE(block,s);
+
                     // assert evalBlockRE(block,s) ==  evalBlockRE(first(block).block + all_but_first(block),s);
+                    
                     step := [s];
+                    // step := evalCodeRE(first(first(block).block),s);
                     remainder := first(block).block + all_but_first(block);
+                    // remainder := all_but_first(first(block)) + all_but_first(block);
                     assert |remainder| == |first(block).block| + |all_but_first(block)| ;
-                    subBehavior := [s] + evalBlockRE(remainder,s);
+                    // subBehavior := [s] + evalBlockRE(remainder,s);
+                    subBehavior := [s] + b[|step|..];
+                    // assert b == [s] + evalBlockRE(block,s);
+                    // assert (|block| > 0 && !first(block).CNil?);
+                    // assert evalBlockRE(block,s) == [s] + evalBlockRE(remainder,s);
+                    //  assert subBehavior == [last(step)] + evalBlockRE(remainder,last(step));
+                     assert b == [s] + step + all_but_first(subBehavior);
+                    assert subBehavior == [last(step)] + evalBlockRE(remainder,last(step));
+                    //  assert b == [s] + step + evalCodeRE(Block(remainder) ,last(step)); // <----
                } else if(first(block).Divergence?){
                     step := [s];
                     if(first(block).patched){
@@ -781,6 +1082,7 @@ module LLVM_defRE_Multi {
                     remainder := all_but_first(block);
                     
                     assert b[1..|step|+1] == step;
+                    assert |step| == 1;
                     subBehavior := b[|step|..];
                     // assert subBehavior == [last(step)] + evalBlockRE(remainder,last(step));
                     assert evalBlockRE([],last(step)) == [last(step)];
