@@ -3,6 +3,8 @@ include "../../LLVM/llvmNEW.i.dfy"
 include "../../LLVM/types.dfy"
 include "../../LLVM/behaviorLemmas.i.dfy"
 include "../../Libraries/Seqs.s.dfy"
+include "../../Libraries/Seqs.i.dfy"
+
 
 module challenge8Benign{
     import opened challenge8CodeNEW
@@ -10,66 +12,202 @@ module challenge8Benign{
     import opened types
     import opened behavior_lemmas
     import opened Collections__Seqs_s
+    import opened Collections__Seqs_i
 
-
-    lemma vulnBehavorsTest(s:state,c:code) returns (preB:behavior)
+    lemma vulnBehavorsTest(s:state,c:seq<Code>) returns (preB:behavior)
         requires ValidState(s);
         requires validStartingState(s);
         requires c == challenge_8_transport_handler_create_conn_vuln_test();
         // decreases *;
     {
-        var b:behavior := evalCodeRE(c,s);
+        reveal_ValidBehavior();
+        //    [ Block([CNil]), Block([CNil]), Block([CNil])]
+        var b:behavior := evalCodeSeqFn(c,s);
         assert ValidBehaviorV2([s] + b);
-        assert |b| >= 2;
-        // var cs := c;
-        // var s',remainder := evalCodeRE_OneStep(c,s);
-        // b := b + [s'];
-        
-        // while (|remainder| > 0)
-        //     decreases codeSeqLengthV2(remainder)
-        // {
-        //     s',remainder := evalCodeRE_OneStep(c,s);
-        //     b := b + [s'];
-        // }
-        preB := [];
+        assert |b| >= 0;
+        assert c == [ Block([CNil]), Block([CNil]), Block([CNil])];
+
+        var step,remainder,subB := unwrapCodeWitness(b,c,s);
+        assert step == evalCodeFn(Block([CNil]),s);
+        assert remainder == [Block([CNil]), Block([CNil])];
+        // lets dive into the block
+            var subStep,subRemainder,subSubB := unwrapCodeWitness(step,[CNil],s);
+            assert subStep == [s];
+            assert subRemainder == [];
+            assert subSubB == [s];
+            // unwrapped entire subBlock
+        assert step == subStep+subSubB;
+        assert b[..|step|] == step;
+
+        var s' := last(step);
+        step,remainder,subB := unwrapCodeWitness(subB,remainder,s');
+        assert step == evalCodeFn(Block([CNil]),s');
+        assert remainder == [ Block([CNil])];
+            // lets dive into the block
+            subStep,subRemainder,subSubB := unwrapCodeWitness(step,[CNil],s');
+            assert subStep == [s'];
+            assert subRemainder == [];
+            assert subSubB == [s'];
+
+         assert step == subStep+subSubB;
+        assert couldBeSubSeq(b,step);
+
+        s' := last(step);
+        step,remainder,subB := unwrapCodeWitness(subB,remainder,s');
+        assert step == evalCodeFn(Block([CNil]),s');
+        assert remainder == [];
+
+        assert subB == [s'];
+        assert ValidBehavior(b);
+        assert NextStep(b[0],b[1],Step.stutterStep());
+        assert StateNext(b[0],b[1]);
+        assert NextStep(b[1],b[2],Step.stutterStep());
+        assert StateNext(b[1],b[2]);
+        assert |b| == 7;
+        preB := b;
     }
-    // function vulnBehavorsTest(s:state,c:codeSeq) : (preB:behavior)
-    // {
-    //         var b:behavior := [s];
-    //         if |c| == 0 then
-    //             b
-    //         else 
-    //         var s',remainder := evalCodeRE_OneStep(c,s);
-    //         if |remainder| >= 0 then
-    //         b + [s'] + evalCodeRE_OneStep(remainder,s')
-    // }
 
-    // lemma vulnBehaviors(s:state,c:codeRe) returns (preB:behavior)
-    //     requires ValidState(s);
-    //     requires validStartingState(s);
-    //     requires c == challenge_8_transport_handler_create_conn_vuln();
+lemma patchBehavorsTest(s:state,c:seq<Code>) returns (postB:behavior)
+        requires ValidState(s);
+        requires validStartingState(s);
+        requires c == challenge_8_transport_handler_create_conn_patch();
+        // decreases *;
+    {
+        reveal_ValidBehavior();
+        //    [ Block([CNil]), Block([CNil]), Block([CNil])]
+        var b:behavior := evalCodeSeqFn(c,s);
+        assert ValidBehaviorV2([s] + b);
+        assert |b| >= 0;
         
-    //     ensures BehaviorEvalsCode(challenge_8_transport_handler_create_conn_vuln(),preB);
-    //     // ensures ValidBehaviorNonTrivial(preB);
-    // {
-    //     reveal_BehaviorEvalsCode();
-    //     assert |c.block| == 3;
-    //     preB := [s] + evalCodeRE(c,s);
+        var step,remainder,subB := unwrapCodeWitness(b,c,s);
+        assert step == evalCodeFn(Block([CNil]),s);
+        // assert remainder == [patch_block,postfixCode()];
+        // lets dive into the block
+            var subStep,subRemainder,subSubB := unwrapCodeWitness(step,[CNil],s);
+            assert subStep == [s];
+            assert subRemainder == [];
+            assert subSubB == [s];
+            // unwrapped entire subBlock
+        assert step == subStep+subSubB;
+        assert b[..|step|] == step;
 
-    //     var step,remainder,subBehavior := unwrapBlockWitness(preB,c.block,s);
-    //     assert preB[0] == s;   
+        var s' := last(step);
+        var mainBlock := remainder;
+        // assert re
+        step,remainder,subB := unwrapCodeWitness(subB,remainder,s');
+        assert remainder == [ Block([CNil])];
+         // lets dive into the block
+            assert step == evalCodeFn(first(mainBlock),s');
+            assert first(mainBlock).Block?;
+            assert step == evalCodeSeqFn(first(mainBlock).block,s');
 
-    //     step,remainder,subBehavior := unwrapBlockWitness(subBehavior,remainder,last(step));
-    //     step,remainder,subBehavior := unwrapBlockWitness(subBehavior,remainder,last(step));
-    //     step,remainder,subBehavior := unwrapBlockWitness(subBehavior,remainder,last(step));
-    //     assert NextStep(preB[0],preB[1],Step.stutterStep());
-    //     assert StateNext(preB[0],preB[1]);
-    //     assert NextStep(preB[1],preB[2],Step.stutterStep());
-    //     assert StateNext(preB[1],preB[2]);
-    //     // assert |preB| == 5;
-    //     // assert ValidBehaviorNonTrivial(preB);
-    //     // assert behaviorOutput(preB) == [Nil,Nil,Nil];
-    // }
+            // assert step == evalCodeSeqFn(first(mainBlock),s');
+            subStep,subRemainder,subSubB := unwrapCodeWitness(step,first(mainBlock).block,s');
+            assert |subStep| == 1;
+            assert s'.ok;
+            assert first(mainBlock).block[0].Ins?;
+            assert first(mainBlock).block[0].ins.SDIV?;
+            assert ValidOperand(s',first(mainBlock).block[0].ins.dst);
+            var testIns := first(mainBlock).block[0].ins;
+                
+            assert ValidInstruction(s', first(mainBlock).block[0].ins);
+            assert NextStep(s',subStep[0],Step.evalInsStep(first(mainBlock).block[0].ins));
+            // assert subRemainder == [];
+            assert b[1] == s';
+            assert b[2] == subStep[0];  
+            s' := subStep[0];
+            var nextIns := subRemainder;
+            subStep,subRemainder,subSubB := unwrapCodeWitness(subSubB,subRemainder,s');
+            assert |subStep| == 1;
+            assert NextStep(s',subStep[0],Step.evalInsStep(first(nextIns).ins));
+            assert b[3] == subStep[0];
+            assert ValidInstruction(s', first(nextIns).ins);
+
+            s' := subStep[0];
+            nextIns := subRemainder;
+            assert first(subRemainder).IfElse?;
+            assert validIfCond(s',first(subRemainder).ifCond);
+                //unwrap branch
+            assert |subRemainder| > 0;
+            subStep,subRemainder,subSubB := unwrapCodeWitness(subSubB,subRemainder,s');
+             
+                if dataToBool(OperandContents(s',first(nextIns).ifCond)){
+                    assert subStep == evalCodeFn(first(nextIns).ifTrue,s');
+                    // new block that needs unwrapping 
+                    patchBehavorsTestsubBlock(subStep,first(nextIns).ifTrue,s');
+                    // var if_true_block := first(nextIns).ifTrue;
+                    // var step_if_then19,remainder_if_then19,subB_if_then19 := unwrapCodeWitness(subStep,if_true_block.block,s');
+                    // assert |step_if_then19| == 1;
+                    // assert first(if_true_block.block).Ins?;
+                    // assert first(if_true_block.block).ins.CALL?;
+                    // assert NextStep(s',step_if_then19[0],Step.evalInsStep(first(if_true_block.block).ins));
+
+                    // var if_true_next := first(remainder_if_then19);
+                    // s' := first(step_if_then19); 
+                    // step_if_then19,remainder_if_then19,subB_if_then19 := unwrapCodeWitness(subB_if_then19,remainder_if_then19,s');
+                    // assert |step_if_then19| == 1;
+                    // assert NextStep(s',step_if_then19[0],Step.evalInsStep((if_true_next).ins));
+                    // assert |remainder_if_then19| == 1;
+
+
+                }else{
+                    assert subStep == evalCodeFn(first(nextIns).ifFalse,s');
+                    assert subRemainder == [];
+                    assert subSubB == [s']; 
+                    assert b[4] == subStep[0]; 
+                    assert b[5] == subStep[0];
+                    assert |b| == 10;
+                }
+        
+        s' := last(step);
+        step,remainder,subB := unwrapCodeWitness(subB,remainder,s');
+        assert step == evalCodeFn(Block([CNil]),s');
+        assert remainder == [];
+
+        assert subB == [s'];
+
+
+            // assert subSubB == [s];
+
+
+    }
+
+    lemma {:opaque} patchBehavorsTestsubBlock(b:behavior,c:Code,s:state)
+        requires c == if_then19();
+        requires ValidState(s);
+        requires validConfig(s,allVariablesConfig());
+        requires b == evalCodeSeqFn(c.block,s);
+        ensures  first(c.block).Ins?;
+        ensures first(c.block).ins.CALL?;
+        
+        
+    {
+        var behavior := evalCodeSeqFn(c.block,s);
+        var initalCode := c.block;
+        var step,remainder,subB := unwrapCodeWitness(b,c.block,s);
+        assert |step| == 1;
+        assert first(initalCode).Ins?;
+        assert first(initalCode).ins.CALL?;
+        assert StateNext(s,step[0]);
+        // assert step == [evalInsRe(first(initalCode).ins,s)];
+        // assert s.ok;
+        assert NextStep(s,step[0],Step.evalInsStep(first(initalCode).ins));
+        initalCode := remainder;
+        var s' := step[0];
+        assert ValidState(s');
+        step,remainder,subB := unwrapCodeWitness(subB,remainder,last(step));
+        assert |step| == 1;
+        assert first(initalCode).Ins?;
+        assert first(initalCode).ins.STORE?; 
+        // assert ensures first(c.block).ins.STORE?;
+        // assert s'.ok;
+        // assert ValidOperand(s',first(initalCode).ins.valueToStore);
+        // assert ValidOperand(s',first(initalCode).ins.ptr);
+        // assert ValidInstruction(s',first(initalCode).ins);
+        // assert NextStep(s',step[0],Step.evalInsStep(first(initalCode).ins));
+
+        // assert false;
+    }
 
 
     // lemma patchBehaviors(s:state,c:codeRe) returns (postB:behavior)

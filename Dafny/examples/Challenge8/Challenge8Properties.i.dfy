@@ -22,6 +22,7 @@ module challenge8Benign{
         var cs := c;
         var s',remainder := evalCodeRE_OneStep(c,s);
         b := b + [s'];
+        
         // while (|remainder| > 0)
         //     decreases codeSeqLengthV2(remainder)
         // {

@@ -193,7 +193,7 @@ module LLVM_defRE_Multi {
         ensures |b| > 0
         ensures (c.Ins?) ==> |b| == 1
         ensures (c.Ins? && b[0].ok) ==> StateNext(s,b[0])
-        ensures c.Block? ==> |b| == |evalBlockRE(c.block, s)| +1
+        ensures c.Block? ==> |b| == |evalBlockRE(c.block, s)| //+1
         // ensures c.IfElse? ==> if c.ifCond then |b| == |evalBlockRE(c.ifTrue,s)| else |b| == |evalBlockRE(c.ifFalse,s)|
         ensures (c.Ins? && validEvalIns(c.ins,s,b[0]) && b[0].ok) ==> ValidBehavior([s] + b)
         
@@ -202,7 +202,7 @@ module LLVM_defRE_Multi {
         reveal_ValidBehavior();
             match c
                 case Ins(ins) => [evalInsRe(ins,s)]
-                case Block(block) => [s] + evalBlockRE(block, s) 
+                case Block(block) => evalBlockRE(block, s) //[s] + evalBlockRE(block, s) 
                 case IfElse(ifCond, ifT, ifF) => 
                     if (validIfCond(s,ifCond)) then
                         if dataToBool(OperandContents(s,ifCond)) then evalBlockRE(ifT, s) else evalBlockRE(ifF,s)
@@ -213,7 +213,16 @@ module LLVM_defRE_Multi {
                 case CNil => [s]
     }
 
-//   function evalBlockREV2()
+  function evalBlockREV2(block:codeSeq, s:state): (b:behavior)
+  {
+    if |block| == 0 then
+            [s]
+    else
+        var metaBehavior := evalCodeRE(first(block),s);
+        var theRest := evalBlockRE(all_but_first(block),last(metaBehavior));
+        var fullBlock := [s] + metaBehavior + theRest;
+        fullBlock
+  }
 
   function evalBlockRE(block:codeSeq, s:state): (b:behavior)
         ensures |b| > 0
@@ -943,7 +952,35 @@ module LLVM_defRE_Multi {
     }
 
 
+    lemma unwrapCodeWitness(b:behavior,c:codeSeq,s:state) 
+            returns (step:state,remainder:codeSeq,subBehavior:behavior)
+        requires b == evalBlockRE(c,s);
 
+        // ensures (|c| > 0 ) ==> subBehavior == b[1..];
+        // ensures (|c| == 0 ) ==> subBehavior == evalBlockRE(remainder,step);
+    {
+        
+        if (|c| == 0 ) {
+            assert b == [s];
+            step := s;
+            remainder := [];
+            subBehavior := [];
+            assert NextStep(s,step, Step.stutterStep());
+        }else{
+            assert |c| > 0;
+            var first := first(c);
+            if(first.Ins?){
+                step := evalCodeRE(first, s)[0];
+                subBehavior := b[1..];
+                remainder := all_but_first(c);
+                assert step == evalInsRe(first.ins,s);
+                assert step.ok ==> NextStep(s,step,Step.evalInsStep(first.ins));
+                assert subBehavior == evalBlockRE(remainder,step);
+            }else if(first.Block?){
+                // step := evalCodeRE(first.block, s)[0];
+            }
+        }
+    }
 
     // Control flow unwrap witness
         lemma unwrapBlockWitness(b:behavior,block:codeSeq,s:state) 
@@ -971,8 +1008,8 @@ module LLVM_defRE_Multi {
                  ==> remainder == first(block).ifFalse + all_but_first(block);
             ensures (|block| > 0 && (first(block).Block? || first(block).IfElse?)) ==> step == [s];
             ensures (|block| > 0 && first(block).Block?) ==> remainder == first(block).block + all_but_first(block);
-            // ensures (|block| > 0 && (first(block).Block? || first(block).IfElse? || first(block).Divergence?)) ==> subBehavior == b[|step|..]; //[s] + evalBlockRE(remainder,s);
-        ensures (|block| > 0 && (first(block).Block?)) ==> subBehavior == b[|step|..]; //[s] + evalBlockRE(remainder,s);
+            ensures (|block| > 0 && (first(block).Block? || first(block).IfElse? || first(block).Divergence?)) ==> subBehavior == [s] + evalBlockRE(remainder,s);
+        // ensures (|block| > 0 && (first(block).Block?)) ==> subBehavior == b[|step|..]; //[s] + evalBlockRE(remainder,s);
 
             // ensures (|block| > 0 && (first(block).Divergence?)) ==> subBehavior == b;
             ensures (|block| > 0 && first(block).Divergence?) ==> step == [s];
@@ -1034,13 +1071,13 @@ module LLVM_defRE_Multi {
                     remainder := first(block).block + all_but_first(block);
                     // remainder := all_but_first(first(block)) + all_but_first(block);
                     assert |remainder| == |first(block).block| + |all_but_first(block)| ;
-                    // subBehavior := [s] + evalBlockRE(remainder,s);
-                    subBehavior := [s] + b[|step|..];
+                    subBehavior := [s] + evalBlockRE(remainder,s);
+                    // subBehavior := [s] + b[|step|..];
                     // assert b == [s] + evalBlockRE(block,s);
                     // assert (|block| > 0 && !first(block).CNil?);
                     // assert evalBlockRE(block,s) == [s] + evalBlockRE(remainder,s);
                     //  assert subBehavior == [last(step)] + evalBlockRE(remainder,last(step));
-                     assert b == [s] + step + all_but_first(subBehavior);
+                    //  assert b == [s] + step + all_but_first(subBehavior);
                     assert subBehavior == [last(step)] + evalBlockRE(remainder,last(step));
                     //  assert b == [s] + step + evalCodeRE(Block(remainder) ,last(step)); // <----
                } else if(first(block).Divergence?){

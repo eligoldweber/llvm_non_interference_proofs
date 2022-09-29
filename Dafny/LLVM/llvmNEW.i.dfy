@@ -35,22 +35,25 @@ module LLVM_def_NEW {
         gvs:map<GlobalVar, Data>,
         m:MemState,
         o:output,
+        pc:int,
         ok:bool)
 
 
 ///
     datatype version = Version(pre:bool,post:bool)
 
+    datatype configuration = Config(ops:map<string, operand>)
+
     datatype output = Out(o:Data) | SubOut(os:seq<output>) | Nil
 
     // type codeSeq = seq<codeRe>
 
-    datatype code =
+    datatype Code =
     | Ins(ins:ins)
-    | Block(block:seq<code>)
-    | IfElse(ifCond:operand, ifTrue:seq<code>, ifFalse:seq<code>)
+    | Block(block:seq<Code>)
+    | IfElse(ifCond:operand, ifTrue:Code, ifFalse:Code)
     | CNil
-    //  | Divergence(pre:seq<code>,post:seq<code>,patched:bool)
+    // | Divergence(pre:seq<Code>,post:seq<Code>,patched:bool)
     // | NonImpactIns(NIIns:ins)
             
     type behavior = seq<state>
@@ -69,10 +72,10 @@ module LLVM_def_NEW {
     | LSHR(dst:operand,src:operand,shiftAmt:operand)
     | STORE(valueToStore:operand,ptr:operand)
     | LLVM_MEMCPY(dst:operand,src:operand,len:bitWidth,volatile:bool)
-    | CALL(dst:operand,fnc:seq<code>)
+    | CALL(dst:operand,fnc:seq<Code>)
     | GETELEMENTPTR(dst:operand,t:bitWidth,op1:operand,op2:operand)
-    | UNCONDBR(goToLabel:code)
-    | BR(if_cond:operand, labelTrue:code,labelFalse:code)
+    | UNCONDBR(goToLabel:Code)
+    | BR(if_cond:operand, labelTrue:Code,labelFalse:Code)
     | ALLOCA(dst:operand,t:bitWidth)
     | LOAD(dst:operand,t:bitWidth,src:operand)
     | BITCAST(dst:operand,src:operand,castType:operand)
@@ -152,6 +155,15 @@ module LLVM_def_NEW {
         !s.ok && !s'.ok
     }
 
+    lemma validNonTrivalStepIsIns(s:state, s':state, step:Step)
+        requires NextStep(s,s',step)
+        requires ValidState(s)
+        requires ValidState(s')
+        requires s != s'
+        ensures step.evalInsStep?;
+    {
+        assert step.evalInsStep?;
+    }
 
     predicate {:opaque} ValidBehavior(states:behavior)
     {
@@ -162,7 +174,7 @@ module LLVM_def_NEW {
             && forall i :: 0 <= i < |states|- 1 ==> StateNext(states[i],states[i+1]))
     }
 
-    predicate {:opaque} ValidBehaviorV2(states:behavior)
+    predicate {:opaque} ValidSimpleBehavior(states:behavior)
     {
         || |states| == 0
         || (|states| == 1) 
@@ -171,42 +183,42 @@ module LLVM_def_NEW {
     }
 
     lemma subValidBIsValid(b:behavior,s:state)
-        requires ValidBehaviorV2([s] + b);
+        requires ValidSimpleBehavior([s] + b);
         requires |b| > 0;
-        ensures ValidBehaviorV2(b);
+        ensures ValidSimpleBehavior(b);
         ensures StateNext(s,b[0]);
     {
-        reveal_ValidBehaviorV2();
+        reveal_ValidSimpleBehavior();
         var combo := [s] + b;
         assert StateNext(combo[0],combo[1]);
         assert StateNext(s,b[0]);
-        assert ValidBehaviorV2([s]);
+        assert ValidSimpleBehavior([s]);
         if (|b| == 1)
         {
-            assert ValidBehaviorV2(b);
+            assert ValidSimpleBehavior(b);
         }else{
             assert |b| >= 2;
             assert b == combo[1..];
-            assert ValidBehaviorV2(b);
+            assert ValidSimpleBehavior(b);
         }
     }
 
     lemma validConcatIsValid(a:behavior,b:behavior)
-        requires ValidBehaviorV2(a);
-        requires ValidBehaviorV2(b);
+        requires ValidSimpleBehavior(a);
+        requires ValidSimpleBehavior(b);
         requires |a| > 0
         requires |b| > 0
-        requires ValidBehaviorV2([last(a)] + b);
-        ensures ValidBehaviorV2(a+b);
+        requires ValidSimpleBehavior([last(a)] + b);
+        ensures ValidSimpleBehavior(a+b);
     {
-        reveal_ValidBehaviorV2();
+        reveal_ValidSimpleBehavior();
         var combo := [last(a)] + b;
-        assert ValidBehaviorV2(combo);
+        assert ValidSimpleBehavior(combo);
         assert last(a) == combo[0];
         assert first(b) == combo[1];
-        assert ValidBehaviorV2(a+b);
+        assert ValidSimpleBehavior(a+b);
     }
-
+   
 
     function {:opaque} behaviorOutput(b:behavior) : (bOut:seq<output>)
         ensures |bOut| == |b| 
@@ -229,118 +241,95 @@ module LLVM_def_NEW {
 /// EVAL CODE / CONTROL FLOW
 
 
-    predicate validIfCond(s:state, o:operand)
-    {
-        ValidOperand(s,o) && ValidState(s) && isBoolData(OperandContents(s,o))
-    }
+predicate validIfCond(s:state, o:operand)
+{
+    ValidOperand(s,o) && ValidState(s) && isBoolData(OperandContents(s,o))
+}
 //
-function evalCodeFn(c:code,s:state) : (b:behavior)
+function evalCodeFn(c:Code,s:state) : (b:behavior)
     ensures |b| > 0
     ensures (c.Ins?) ==> |b| == 1
+    ensures b == [s] ==> NextStep(s,s, Step.stutterStep()) && StateNext(s,s);
     ensures  StateNext(s,b[0])
-    ensures ValidBehaviorV2([s] + b);
+    ensures ValidSimpleBehavior([s] + b);
     decreases c, 0
 {
-    reveal_ValidBehaviorV2();
+    reveal_ValidSimpleBehavior();
     match c 
         case Ins(ins) => 
             var s' := evalInsRe(c.ins,s);
-            assert StateNext(s,s');
-            assert ValidBehaviorV2([s] + [s']);
             [s']
         case Block(block) => 
             var blockB := evalCodeSeqFn(c.block,s); 
-            assert ValidBehaviorV2([s] + blockB);
             blockB
         case IfElse(ifCond, ifT, ifF) => 
             if (validIfCond(s,ifCond)) then
                 if dataToBool(OperandContents(s,ifCond)) then
-                    var blockB_true := evalCodeSeqFn(c.ifTrue,s); 
-                    assert ValidBehaviorV2([s] + blockB_true);
+                    var blockB_true := evalCodeFn(c.ifTrue,s); 
                     blockB_true 
                 else 
-                    var blockB_false := evalCodeSeqFn(c.ifFalse,s); 
-                    assert ValidBehaviorV2([s] + blockB_false);
+                    var blockB_false := evalCodeFn(c.ifFalse,s); 
                     blockB_false
             else
-                assert NextStep(s,s, Step.stutterStep());
-                assert StateNext(s,s);
-                assert ValidBehaviorV2([s] + [s]);
                 [s]
         case CNil => 
-            assert NextStep(s,s, Step.stutterStep());
-            assert StateNext(s,s);
-            assert ValidBehaviorV2([s] + [s]);
             [s]
 }
-function evalCodeSeqFn(block:seq<code>, s:state) : (b:behavior)
+function evalCodeSeqFn(block:seq<Code>, s:state) : (b:behavior)
     ensures |b| > 0;
+    ensures b == [s] ==> NextStep(s,s, Step.stutterStep()) && StateNext(s,s);
     ensures StateNext(s,b[0]);
-    ensures ValidBehaviorV2([s] + b);
-    decreases block,0
+    ensures ValidSimpleBehavior([s] + b);
+    ensures |block| == 0 ==> b == [s]
+    decreases block
   {
-    reveal_ValidBehaviorV2();
+    reveal_ValidSimpleBehavior();
     if |block| == 0 then
-        assert NextStep(s,s, Step.stutterStep());
-        assert StateNext(s,s);
-        assert ValidBehaviorV2([s] + [s]);
-        // assert |stutter| == 1;
         [s]
-        
-        // b := stutter;
-        // remainder := [CNil];
     else
         var first := first(block);
         var remainder := all_but_first(block);
-
         var firstStep := evalCodeFn(first,s);
-        assert StateNext(s,firstStep[0]);
         var restB := evalCodeSeqFn(remainder,last(firstStep));
-
-        assert ValidBehaviorV2([s] + firstStep);
         subValidBIsValid(firstStep,s);
-        assert ValidBehaviorV2(firstStep);
-        assert ValidBehaviorV2([last(firstStep)] + restB);
         subValidBIsValid(restB,last(firstStep));
-        assert ValidBehaviorV2(restB);
         var seqB := firstStep + restB;
-        validConcatIsValid(firstStep,restB);
-        assert ValidBehaviorV2(seqB);
+        // validConcatIsValid(firstStep,restB);
         seqB
     
   }
 
 ///////
-    lemma evalCodeRE(c:code, s:state) returns (b:behavior)
+    lemma evalCodeRE(c:Code, s:state) returns (b:behavior)
         ensures |b| > 0
         ensures (c.Ins?) ==> |b| == 1
         ensures  StateNext(s,b[0])
-        ensures ValidBehaviorV2([s] + b);
+        ensures ValidSimpleBehavior([s] + b);
         // ensures c.Block? ==> |b| == |evalBlockRE(c.block, s)| //+1
         // // ensures c.IfElse? ==> if c.ifCond then |b| == |evalBlockRE(c.ifTrue,s)| else |b| == |evalBlockRE(c.ifFalse,s)|
         // ensures (c.Ins? && validEvalIns(c.ins,s,b[0]) && b[0].ok) ==> ValidBehavior([s] + b)
         
         decreases c, 0
     {
-        reveal_ValidBehaviorV2();
+        reveal_ValidSimpleBehavior();
         if (c.Ins?){
             var s' := evalInsRe(c.ins,s);
-            assert ValidBehaviorV2([s] + [s']);
+            assert ValidSimpleBehavior([s] + [s']);
             b := [s'];
         }
         else if(c.Block?){
             var blockB := evalCodeSeq(c.block,s); 
-            assert ValidBehaviorV2([s] + blockB);
+            assert ValidSimpleBehavior([s] + blockB);
             b := blockB;
         }else if(c.IfElse?){
             if (validIfCond(s,c.ifCond)) {
                 if dataToBool(OperandContents(s,c.ifCond)){
-                    var blockB_true := evalCodeSeq(c.ifTrue,s); 
-                    assert ValidBehaviorV2([s] + blockB_true);
+                    var blockB_true := evalCodeFn(c.ifTrue,s); 
+                    assert ValidSimpleBehavior([s] + blockB_true);
                     b := blockB_true;
                 }  else {
-                    var blockB_false := evalCodeSeq(c.ifFalse,s); 
-                    assert ValidBehaviorV2([s] + blockB_false);
+                    var blockB_false := evalCodeFn(c.ifFalse,s); 
+                    assert ValidSimpleBehavior([s] + blockB_false);
                     b := blockB_false;
                 }
             }else{
@@ -357,18 +346,18 @@ function evalCodeSeqFn(block:seq<code>, s:state) : (b:behavior)
     }
 
 
-  lemma evalCodeSeq(block:seq<code>, s:state) returns (b:behavior)
+  lemma evalCodeSeq(block:seq<Code>, s:state) returns (b:behavior)
     ensures |b| > 0;
     ensures StateNext(s,b[0]);
-    ensures ValidBehaviorV2([s] + b);
+    ensures ValidSimpleBehavior([s] + b);
     decreases block,0
   {
-    reveal_ValidBehaviorV2();
+    reveal_ValidSimpleBehavior();
     if (|block| == 0) {
         var stutter := [s];
         assert NextStep(s,stutter[0], Step.stutterStep());
         assert StateNext(s,stutter[0]);
-        assert ValidBehaviorV2([s] + stutter);
+        assert ValidSimpleBehavior([s] + stutter);
         assert |stutter| == 1;
         b := stutter;
         // remainder := [CNil];
@@ -380,101 +369,26 @@ function evalCodeSeqFn(block:seq<code>, s:state) : (b:behavior)
         assert StateNext(s,firstStep[0]);
         var restB := evalCodeSeq(remainder,last(firstStep));
 
-        assert ValidBehaviorV2([s] + firstStep);
+        assert ValidSimpleBehavior([s] + firstStep);
         subValidBIsValid(firstStep,s);
-        assert ValidBehaviorV2(firstStep);
-        assert ValidBehaviorV2([last(firstStep)] + restB);
+        assert ValidSimpleBehavior(firstStep);
+        assert ValidSimpleBehavior([last(firstStep)] + restB);
         subValidBIsValid(restB,last(firstStep));
-        assert ValidBehaviorV2(restB);
+        assert ValidSimpleBehavior(restB);
         var seqB := firstStep + restB;
         validConcatIsValid(firstStep,restB);
-        assert ValidBehaviorV2(seqB);
+        assert ValidSimpleBehavior(seqB);
 
         b := seqB;
     }
   }
 
-
-
-    lemma evalCodeRE_OneStep(c:seq<code>, s:state) returns 
-        (s':state,remainder:seq<code>)
-        requires |c| >= 0;
-        ensures StateNext(s,s');
-        ensures |remainder| >= 0;
-        // ensures codeSeqLengthV2(c) >= codeSeqLengthV2(remainder);
-        // ensures codeSeqLength(c,0) > codeSeqLength(remainder,0);
+    function incPC(s:state):(s':state)
+        ensures s' == s.(pc := s.pc+1);
+        ensures s != s';
     {
-        if (|c| == 0){
-            s' := s;
-            remainder := [];
-            assert s == s';
-            assert NextStep(s,s', Step.stutterStep());
-            assert StateNext(s,s');
-        } else { 
-            assert |c| > 0;
-            var first := first(c);
-            if(first.Ins?) {
-                remainder := all_but_first(c);
-                assert |remainder| < |c|;
-                assert codeSeqLengthV2(c) >= codeSeqLengthV2(remainder);
-                assert codeSeqLengthV2(c) == 1 + codeSeqLengthV2(remainder);
-                s' := evalInsRe(first.ins,s);
-                assert StateNext(s,s');
-            } else if (first.Block?) {
-                //unwrap Block (this is a stutter step)
-                s' := s;
-                remainder := first.block + all_but_first(c);
-                assert c == [first] + all_but_first(c);
-                assert codeSeqLengthV2(c) == codeSeqLengthV2([first]+all_but_first(c));// + codeSeqLengthV2(all_but_first(c));
-                assert codeSeqLengthV2(first.block) < codeSeqLengthV2([first]);
-                // blockIsLongerThanUnwrapped(first);
-                assert (codeSeqLengthV2(first.block) + codeSeqLengthV2(all_but_first(c))) < (codeSeqLengthV2([first]) + codeSeqLengthV2(all_but_first(c)));
-                assert codeSeqLengthV2(remainder) == codeSeqLengthV2(first.block + all_but_first(c));// + codeSeqLengthV2(all_but_first(c));
-                // assert 
-                // assert codeSeqLengthV2(c) >= codeSeqLengthV2(remainder);
-
-                assert NextStep(s,s', Step.stutterStep());
-                assert StateNext(s,s');
-            }
-            else if (first.IfElse?) {
-                //unwrap conditonal Block (this is a stutter step)
-                s' := s;
-                 if (validIfCond(s,first.ifCond)){ // is valid Branch condition?
-                    s' := s;
-                    assert NextStep(s,s', Step.stutterStep());
-                    assert StateNext(s,s');
-                    if(dataToBool(OperandContents(s,first.ifCond))){
-                        remainder := first.ifTrue + all_but_first(c);
-                    }else{
-                        remainder := first.ifFalse + all_but_first(c);
-                    }
-                 }else{ // Not a valid Branch Condition, transition to an error state
-                    var s' := s.(ok := false);
-                    if !s.ok {
-                        assert NextStep(s,s',errorStateStep());
-                    }
-                    else {
-                        assert s.ok;
-                        assert !s'.ok;
-                        assert  NextStep(s,s',validToErrorStep());
-                    }
-                        assert StateNext(s,s');
-                        remainder := [];
-                 }
-            } else if (first.CNil?) {
-                remainder := [];
-                s' := s;
-                assert NextStep(s,s', Step.stutterStep());
-                assert StateNext(s,s'); 
-            }
-            else{ // Catch all (placeholder for divergence and nonimpactIns)
-            //
-                remainder := [];
-                s' := s;
-                assert NextStep(s,s', Step.stutterStep());
-                assert StateNext(s,s'); 
-            }
-        }
+        var s' := s.(pc := s.pc+1);
+        s'
     }
 
     function evalInsRe(ins:ins,s:state) : (s':state)
@@ -482,6 +396,7 @@ function evalCodeSeqFn(block:seq<code>, s:state) : (b:behavior)
         // ensures ValidState(s) && ValidInstruction(s, ins) ==> StateNext(s,s')
         ensures  StateNext(s,s');
         ensures s'.ok ==> NextStep(s,s',Step.evalInsStep(ins))
+        // ensures s'.ok ==> s != s'
         ensures (!s.ok || !ValidInstruction(s, ins)) ==> !s'.ok;
         ensures ((!s.ok || !ValidInstruction(s, ins)) && validEvalIns(ins,s,s')) ==> s'.ok
     {
@@ -504,6 +419,8 @@ function evalCodeSeqFn(block:seq<code>, s:state) : (b:behavior)
             case ADD(dst,t,src1,src2) => 
                 var s' := stateUpdateVar(s,dst,evalADD(t,OperandContents(s,src1),OperandContents(s,src2)));
                 if ValidData(s',evalADD(t,OperandContents(s,src1),OperandContents(s,src2))) then 
+                    var s' := incPC(s');
+                    assert s'.pc == s.pc+1;
                     assert MemStateNext(s.m,s'.m,MemStep.stutterStep);
                     assert validEvalIns(ins,s,s');
                     assert s'.ok;
@@ -517,6 +434,7 @@ function evalCodeSeqFn(block:seq<code>, s:state) : (b:behavior)
             case SUB(dst,t,src1,src2) => 
                 var s' := stateUpdateVar(s,dst,evalSUB(t,OperandContents(s,src1),OperandContents(s,src2)));
                 if ValidData(s',evalSUB(t,OperandContents(s,src1),OperandContents(s,src2))) then 
+                    var s' := incPC(s');
                     assert dst.LV? ==> forall lv :: (lv in s.lvs && lv != dst.l) ==> s'.lvs[lv] == s.lvs[lv];
                     assert MemStateNext(s.m,s'.m,MemStep.stutterStep);
                     assert validEvalIns(ins,s,s');
@@ -530,6 +448,7 @@ function evalCodeSeqFn(block:seq<code>, s:state) : (b:behavior)
             case SDIV(dst,src1,src2) => 
                 var s' := stateUpdateVar(s,dst,evalSDIV(OperandContents(s,src1),OperandContents(s,src2)));
                 if ValidData(s',evalSDIV(OperandContents(s,src1),OperandContents(s,src2))) then 
+                    var s' := incPC(s');
                     assert dst.LV? ==> forall lv :: (lv in s.lvs && lv != dst.l) ==> s'.lvs[lv] == s.lvs[lv];
                     assert MemStateNext(s.m,s'.m,MemStep.stutterStep);
                     assert validEvalIns(ins,s,s');
@@ -543,6 +462,7 @@ function evalCodeSeqFn(block:seq<code>, s:state) : (b:behavior)
             case ICMP(dst,cond,t,src1,src2) => 
                 var s' := stateUpdateVar(s,dst,evalICMP(cond,t,OperandContents(s,src1),OperandContents(s,src2)));
                 assert ValidData(s',evalICMP(cond,t,OperandContents(s,src1),OperandContents(s,src2)));
+                    var s' := incPC(s');
                     assert MemStateNext(s.m,s'.m,MemStep.stutterStep);
                     assert validEvalIns(ins,s,s');
                     assert NextStep(s,s',Step.evalInsStep(ins));
@@ -550,6 +470,7 @@ function evalCodeSeqFn(block:seq<code>, s:state) : (b:behavior)
                     s'
             case TRUNC(dst,t,src,dstSize) => 
                 var s' := stateUpdateVar(s,dst,evalTRUNC(OperandContents(s,src),dstSize));
+                    var s' := incPC(s');
                     assert ValidData(s',evalTRUNC(OperandContents(s,src),dstSize));
                     assert MemStateNext(s.m,s'.m,MemStep.stutterStep);
                     assert validEvalIns(ins,s,s');
@@ -559,6 +480,7 @@ function evalCodeSeqFn(block:seq<code>, s:state) : (b:behavior)
             case ZEXT(dst,t,src,dstSize) =>
                 var s' := stateUpdateVar(s,dst,evalZEXT(OperandContents(s,src),dstSize));
                 assert ValidData(s',evalZEXT(OperandContents(s,src),dstSize));
+                   var s' := incPC(s');
                     assert MemStateNext(s.m,s'.m,MemStep.stutterStep);
                     assert validEvalIns(ins,s,s');
                     assert NextStep(s,s',Step.evalInsStep(ins));
@@ -567,6 +489,7 @@ function evalCodeSeqFn(block:seq<code>, s:state) : (b:behavior)
             case AND(dst,src1,src2)  =>
                 var s' := stateUpdateVar(s,dst,evalAND(OperandContents(s,dst).itype.size,OperandContents(s,src1),OperandContents(s,src2)));   
                 assert ValidData(s',evalAND(OperandContents(s,dst).itype.size,OperandContents(s,src1),OperandContents(s,src2)));   
+                    var s' := incPC(s');
                     assert MemStateNext(s.m,s'.m,MemStep.stutterStep);
                     assert validEvalIns(ins,s,s');
                     assert NextStep(s,s',Step.evalInsStep(ins));
@@ -574,6 +497,7 @@ function evalCodeSeqFn(block:seq<code>, s:state) : (b:behavior)
                     s'
             case LSHR(dst,src,shiftAmt) =>
                 var s' := stateUpdateVar(s,dst,evalLSHR(OperandContents(s,src),OperandContents(s,shiftAmt)));
+                var s' := incPC(s');
                 assert ValidData(s',evalLSHR(OperandContents(s,src),OperandContents(s,shiftAmt)));
                  assert MemStateNext(s.m,s'.m,MemStep.stutterStep);
                     assert validEvalIns(ins,s,s');
@@ -583,6 +507,7 @@ function evalCodeSeqFn(block:seq<code>, s:state) : (b:behavior)
             case STORE(valueToStore,ptr) =>
                 var s' := s.(m := evalStore(s.m,OperandContents(s,ptr).bid,OperandContents(s,ptr).offset,OperandContents(s,valueToStore)));
                 if MemValid(s'.m) then
+                    var s' := incPC(s');
                     assert MemStateNext(s.m,s'.m,MemStep.storeStep(OperandContents(s,ptr).bid,OperandContents(s,ptr).offset,OperandContents(s,valueToStore),1));
                     assert validEvalIns(ins,s,s');
                     assert NextStep(s,s',Step.evalInsStep(ins));
@@ -594,6 +519,7 @@ function evalCodeSeqFn(block:seq<code>, s:state) : (b:behavior)
             case LLVM_MEMCPY(dst,src,len,volatile) => 
                 var s' := s.(o := Nil,m := evalMemCpy(s.m,OperandContents(s,dst),OperandContents(s,src)));
                 if MemValid(s'.m) && ValidState(s') then
+                    var s' := incPC(s');
                     assert MemStateNext(s.m,s'.m,MemStep.memCpyStep(OperandContents(s,src).bid,OperandContents(s,dst).bid));
                     assert validEvalIns(ins,s,s');
                     assert NextStep(s,s',Step.evalInsStep(ins));
@@ -604,28 +530,33 @@ function evalCodeSeqFn(block:seq<code>, s:state) : (b:behavior)
                     assert  NextStep(s,notOk,validToErrorStep());
                     notOk
             case ALLOCA(dst,t) => 
-                var s' := State(s.lvs,s.gvs,AllocaStep(s.m,t),s.o,s.ok);
+                var s' := State(s.lvs,s.gvs,AllocaStep(s.m,t),s.o,s.pc,s.ok);
+                var s' := incPC(s');
                 assert MemStateNext(s.m,s'.m,MemStep.allocStep(s.m.nextBlock,t));
                 assert validEvalIns(ins,s,s');
                 assert NextStep(s,s',Step.evalInsStep(ins));
                 assert StateNext(s,s');
                 s'
-            case BR(if_cond, labelTrue,labelFalse) => 
-                assert NextStep(s,s,Step.stutterStep());
-                assert StateNext(s,s);
-                s
+            case BR(if_cond, labelTrue,labelFalse) =>
+                var s' := incPC(s); 
+                assert NextStep(s,s',Step.evalInsStep(ins));
+                assert StateNext(s,s');
+                s'
             case UNCONDBR(goToLabel) => 
-                assert NextStep(s,s,Step.stutterStep());
-                assert StateNext(s,s);
-                s
+                var s' := incPC(s); 
+                assert NextStep(s,s',Step.evalInsStep(ins));
+                assert StateNext(s,s');
+                s'
             case LOAD(dst,size,src) => 
-                assert NextStep(s,s,Step.stutterStep());
-                assert StateNext(s,s);
-                s // placeholder
+                var s' := incPC(s); 
+                assert NextStep(s,s',Step.evalInsStep(ins));
+                assert StateNext(s,s');
+                s'
             case CALL(dst,fnc) =>
-                assert NextStep(s,s,Step.stutterStep());
-                assert StateNext(s,s);
-                s // placeholder
+                var s' := incPC(s); 
+                assert NextStep(s,s',Step.evalInsStep(ins));
+                assert StateNext(s,s');
+                s'
                 // var subB := evalBlockRE(fnc,s);
                 // if ValidBehavior(subB) && ValidOperand(last(subB),dst) then
                 //     assert |subB| > 0;
@@ -662,6 +593,7 @@ function evalCodeSeqFn(block:seq<code>, s:state) : (b:behavior)
                 //     notOk
             case RET(val) => 
                 var s' := s.(o := Out(OperandContents(s,val)));
+                var s' := incPC(s');
                 assert ValidState(s');
                 assert MemStateNext(s.m,s'.m,MemStep.stutterStep);
                 assert validEvalIns(ins,s,s');
@@ -671,6 +603,7 @@ function evalCodeSeqFn(block:seq<code>, s:state) : (b:behavior)
             case GETELEMENTPTR(dst,t,op1,op2) => 
                 if(MemValid(s.m) && ValidData(s,evalGETELEMENTPTR(s.m,t,OperandContents(s,op1),OperandContents(s,op2)))) then
                     var s' := stateUpdateVar(s,dst,evalGETELEMENTPTR(s.m,t,OperandContents(s,op1),OperandContents(s,op2)));   
+                    var s' := incPC(s');
                     assert ValidState(s');
                     assert MemStateNext(s.m,s'.m,MemStep.stutterStep);
                     assert validEvalIns(ins,s,s');
@@ -685,6 +618,7 @@ function evalCodeSeqFn(block:seq<code>, s:state) : (b:behavior)
             case BITCAST(dst,src,castType) =>
                 var s' := stateUpdateVar(s,dst,evalBITCAST(OperandContents(s,src),OperandContents(s,castType)));
                 if ValidData(s',evalBITCAST(OperandContents(s,src),OperandContents(s,castType))) then 
+                    var s' := incPC(s');
                     assert MemStateNext(s.m,s'.m,MemStep.stutterStep);
                     assert validEvalIns(ins,s,s');
                     assert s'.ok;
@@ -695,8 +629,10 @@ function evalCodeSeqFn(block:seq<code>, s:state) : (b:behavior)
                     var notOk := s'.(ok := false);
                      assert NextStep(s,notOk, Step.validToErrorStep());
                     notOk
-             case VISIBLE_OUT(o) => var s' := s.(o := o);
+             case VISIBLE_OUT(o) => 
+                var s' := s.(o := o);
                 assert ValidState(s');
+                var s' := incPC(s');
                 assert MemStateNext(s.m,s'.m,MemStep.stutterStep);
                 assert validEvalIns(ins,s,s');
                 assert NextStep(s,s',Step.evalInsStep(ins));
@@ -778,7 +714,8 @@ function evalCodeSeqFn(block:seq<code>, s:state) : (b:behavior)
     predicate validEvalIns(ins:ins, s:state, s':state)
     {   
         && s.ok 
-        && ValidInstruction(s, ins) 
+        && ValidInstruction(s, ins)
+        && s'.pc == s.pc + 1
         && match ins
             case ADD(dst,t,src1,src2) => ValidState(s')
                                 && ValidData(s',evalADD(t,OperandContents(s,src1),OperandContents(s,src2))) 
@@ -807,13 +744,12 @@ function evalCodeSeqFn(block:seq<code>, s:state) : (b:behavior)
             case STORE(valueToStore,ptr) => ValidState(s') && Store(s.m,s'.m,OperandContents(s,ptr).bid,OperandContents(s,ptr).offset,OperandContents(s,valueToStore))
                                         && (MemValid(s'.m))
             case LLVM_MEMCPY(dst,src,len,volatile) => ValidState(s') && memCpy(s.m, OperandContents(s,dst),OperandContents(s,src), s'.m)                            
-            case ALLOCA(dst,t) => //Alloc(s.m,s'.m,s.m.nextBlock,t)
-                                        ValidState(s') && ValidData(s',evalALLOCA(s.m,t))
-                                        && s' == State(s.lvs,s.gvs,AllocaStep(s.m,t),s.o,s.ok)
-                                        && evalAlloca(s, dst, evalALLOCA(s.m,t),t,s')
+            case ALLOCA(dst,t) => ValidState(s') && ValidData(s',evalALLOCA(s.m,t))
+                                  && s' == State(s.lvs,s.gvs,AllocaStep(s.m,t),s.o,s.pc+1,s.ok)
+                                  && evalAlloca(s, dst, evalALLOCA(s.m,t),t,s')
             case RET(val) => ValidState(s') && s'.m == s.m && s'.o == Out(OperandContents(s,val))   
-            case BR(if_cond, labelTrue,labelFalse) => s == s'
-            case UNCONDBR(goToLabel) =>  s == s'
+            case BR(if_cond, labelTrue,labelFalse) =>  s' == incPC(s) //s == s'
+            case UNCONDBR(goToLabel) =>  s' == incPC(s)// s == s'
             case CALL(dst,fnc)  =>  ValidState(s') && ValidOperand(s',dst) && ValidData(s',OperandContents(s',dst))// maybe adjsut //&& evalUpdate(s, dst, OperandContents(s',dst),s')
             case GETELEMENTPTR(dst,t,op1,op2) => ValidState(s') //o == dst 
                                 && ValidData(s',evalGETELEMENTPTR(s.m,t,OperandContents(s,op1),OperandContents(s,op2)))
@@ -822,11 +758,11 @@ function evalCodeSeqFn(block:seq<code>, s:state) : (b:behavior)
             //                            && s'.m == s.m 
             //                            && ValidData(s',evalLOAD(s.m,s'.m,size,OperandContents(s,src)))
             //                            && evalUpdate(s, dst, evalLOAD(s.m,s'.m,size,OperandContents(s,src)),s')
-            case LOAD(dst,size,src) => s == s' // placeholder
+            case LOAD(dst,size,src) => s' == incPC(s)  //s == s' // placeholder
             case BITCAST(dst,src,castType) => ValidState(s')
                                             && ValidData(s',evalBITCAST(OperandContents(s,src),OperandContents(s,castType)))    
                                             && evalUpdate(s, dst, evalBITCAST(OperandContents(s,src),OperandContents(s,castType)),s')
-            case VISIBLE_OUT(o) => ValidState(s')// && s == s'.(s'.o == o)
+            case VISIBLE_OUT(o) =>  s'.pc == s.pc+1 && ValidState(s')// && s == s'.(s'.o == o)
     }
 
 
@@ -841,9 +777,6 @@ function evalCodeSeqFn(block:seq<code>, s:state) : (b:behavior)
          ensures dst.LV? ==> forall lv :: (lv in s.lvs && lv != dst.l) ==> s'.lvs[lv] == s.lvs[lv];
          ensures dst.GV? ==> forall gv :: (gv in s.gvs && gv != dst.g) ==> s'.gvs[gv] == s.gvs[gv]; 
          ensures ValidOperand(s',dst)
-         ensures ValidState(s) ==> evalUpdate(s,dst,d,s');
-         //ensures s != s'
-
 
          {
              if dst.LV? then
@@ -868,9 +801,9 @@ function evalCodeSeqFn(block:seq<code>, s:state) : (b:behavior)
  predicate evalAlloca(s:state, o:operand, d:Data, size:nat,s':state)
         requires ValidState(s)
         requires ValidOperand(s,o)
-        requires s' == State(s.lvs,s.gvs,AllocaStep(s.m,size),s.o,s.ok);
+        requires s' == State(s.lvs,s.gvs,AllocaStep(s.m,size),s.o,s.pc+1,s.ok);
         // requires ValidState(s'); 
-            // requires validBitWidth(size);
+        // requires validBitWidth(size);
         // ensures o.D? ==> ValidData(s',d)
         ensures  ValidState(s')
     {
@@ -881,7 +814,7 @@ function evalCodeSeqFn(block:seq<code>, s:state) : (b:behavior)
         assert MemValid(newMem);
         assert ValidVarState(s,s.lvs,s.gvs); 
         // assert ValidVarState(s',s'.lvs,s'.gvs);
-        var newState := State(s.lvs,s.gvs,newMem,s.o,s.ok);
+        var newState := State(s.lvs,s.gvs,newMem,s.o,s.pc+1,s.ok);
         assert newState.m == AllocaStep(s.m,size);
         assert s' == newState;
         equalStateVarsValid(s,newState,size);
@@ -909,9 +842,6 @@ function evalCodeSeqFn(block:seq<code>, s:state) : (b:behavior)
         assert forall l:LocalVar :: l in s'.lvs  && s'.lvs[l].Int? ==> ValidData(s',s'.lvs[l]);
         assert forall l:LocalVar :: l in s'.lvs  && s'.lvs[l].Bytes? ==> ValidData(s',s'.lvs[l]);
         assert forall l:LocalVar :: l in s'.lvs  && s'.lvs[l].Ptr? ==> ValidData(s',s'.lvs[l]);
-        // assert forall g:GlobalVar :: g in s'.gvs  && s'.gvs[g].Void? ==> ValidData(s',s'.gvs[g]);
-        // assert forall g:GlobalVar :: g in s'.gvs  && s'.gvs[g].Int? ==> ValidData(s',s'.gvs[g]);
-        // assert forall g:GlobalVar :: g in s'.gvs  && s'.gvs[g].Bytes? ==> ValidData(s',s'.gvs[g]);
         assert forall g:GlobalVar :: g in s'.gvs  && s'.gvs[g].Ptr? ==> ValidData(s',s'.gvs[g]);
     }
     
@@ -967,59 +897,102 @@ function evalCodeSeqFn(block:seq<code>, s:state) : (b:behavior)
         
         
         match o
-            case D(d) => data == d && s' == s.(o := Nil) 
-            case GV(g) => s' == s.(gvs := s.gvs[g := data],o := Nil) 
-            case LV(l) => s' == s.(lvs := s.lvs[l := data],o := Nil) 
+            case D(d) => data == d && s' == s.(o := Nil, pc := s.pc +1) 
+            case GV(g) => s' == s.(gvs := s.gvs[g := data],o := Nil,pc := s.pc +1) 
+            case LV(l) => s' == s.(lvs := s.lvs[l := data],o := Nil,pc := s.pc +1) 
             
     }
 
 
-    predicate behaviorEvalsCode(b:behavior,c:code,s:state)
-    {
-        // var b' := evalCodeRE(c,s);
-        // b == b'
-        true
-    }
-
-    lemma unwrapCodeWitness(b:behavior,c:seq<code>,s:state) 
-            returns (step:state,remainder:seq<code>,subBehavior:behavior)
+    lemma unwrapCodeWitness(b:behavior,c:seq<Code>,s:state) 
+            returns (step:behavior,remainder:seq<Code>,subBehavior:behavior)
         requires b == evalCodeSeqFn(c,s);
         // requires b == evalCodeRE(c,s)
+        ensures |c| > 0 ==> step == evalCodeFn(first(c),s);
+        ensures |c| > 0 ==> remainder == c[1..];
+        ensures |c| > 0 ==> subBehavior == evalCodeSeqFn(c[1..],last(evalCodeFn(first(c),s)));
 
         // ensures (|c| > 0 ) ==> subBehavior == b[1..];
         // ensures (|c| == 0 ) ==> subBehavior == evalBlockRE(remainder,step);
     {
         if(|c| == 0){
-            step := s;
+            step := [s];
             remainder := [];
             subBehavior := [];
-            assert NextStep(s,step, Step.stutterStep());
+            assert NextStep(s,step[0], Step.stutterStep());
+            assert subBehavior == b[1..];
         }else{
             assert |c| > 0;
             var first := first(c);
             if (first.CNil?) {
-                // assert b == [s];
-                step := s;
+                step := [s];
                 remainder := c[1..];
-                assert NextStep(s,step, Step.stutterStep());
+                subBehavior := evalCodeSeqFn(remainder,s);
+                assert NextStep(s,step[0], Step.stutterStep());
+                assert subBehavior == b[1..];
             }else if(first.Ins?) {
-                    // var first_step := evalCodeRE(first, s)[0];
-                    // step := first_step;
-                    // subBehavior := b[1..];
-                    // remainder := all_but_first(c);
-                    // assert step == evalInsRe(first.ins,s);
-                    // assert step.ok ==> NextStep(s,step,Step.evalInsStep(first.ins));
-                    // assert subBehavior == evalBlockRE(remainder,step);
-                // else if(first.Block?){
-                //     // step := evalCodeRE(first.block, s)[0];
-                // }
+                    step := evalCodeFn(first, s);
+                    assert |step| == 1;
+                    assert step[0].ok ==> NextStep(s,step[0],Step.evalInsStep(first.ins));
+                    assert StateNext(s,step[0]);
+                    remainder := c[1..];
+                    subBehavior := evalCodeSeqFn(remainder,step[0]);
+                    assert subBehavior == b[1..];
+            } else if(first.Block?){
+                if(|first.block| == 0) { 
+                    step := [s];
+                    assert |step| == 1;
+                    remainder := c[1..];
+                    subBehavior := evalCodeSeqFn(remainder,s);
+                    assert NextStep(s,step[0], Step.stutterStep());
+                    var firstStep := evalCodeFn(first,s);
+                    var restB := evalCodeSeqFn(remainder,last(firstStep));
+                    assert b == firstStep + restB;
+                    assert firstStep == evalCodeSeqFn(first.block,s); 
+                    // assert firstStep == [s];
+                    assert subBehavior == b[1..];
+                }else{
+                //     assert |first.block| > 0;
+                    step := evalCodeFn(first,s);
+                    remainder := c[1..];
+                    subBehavior := evalCodeSeqFn(remainder,last(step));
+                //     assert StateNext(s,step);
+                //     remainder := all_but_first(first.block) + c[1..];
+                //     subBehavior := evalCodeSeqFn(remainder,step);
+                    
+                //     var firstStep := evalCodeFn(first,s);
+                //     var restB := evalCodeSeqFn(all_but_first(c),last(firstStep));
+                // assert restB == evalCodeSeqFn(c[1..],last(firstStep));
+                // assert b == firstStep + restB;
+
+                //     assert step == firstStep[0];
+
+                //     // assert last(firstStep) == last(evalCodeSeqFn(all_but_first(first.block),step));
+
+                //     assert firstStep == evalCodeSeqFn(first.block,s);
+                //     // assert firstStep[1..] == evalCodeSeqFn(all_but_first(first.block),step);
+                //     var firstStep_firstStep := evalCodeFn(first.block[0],s);
+                //     var restB_firstStep :=  evalCodeSeqFn(all_but_first(first.block),last(firstStep_firstStep));
+                //     assert firstStep == firstStep_firstStep + restB_firstStep;
+                //     assert firstStep_firstStep[0] == step;
+                // assert |firstStep_firstStep| == 1;
+                // assert firstStep == [step] + evalCodeSeqFn(all_but_first(first.block),step);
+                // assert subBehavior == b[1..];
+                }
             }
+            step := evalCodeFn(first,s);
+                    remainder := c[1..];
+                    subBehavior := evalCodeSeqFn(remainder,last(step));
         }
+        
     }
 
+
+    /////////////// OLD
+
     // // Control flow unwrap witness
-    //     lemma unwrapBlockWitness(b:behavior,block:seq<code>,s:state) 
-    //         returns (step:behavior,remainder:seq<code>,subBehavior:behavior)
+    //     lemma unwrapBlockWitness(b:behavior,block:seq<Code>,s:state) 
+    //         returns (step:behavior,remainder:seq<Code>,subBehavior:behavior)
     //         requires b == [s] + evalBlockRE(block,s);
 
     //         requires (|block| > 0 && first(block).IfElse?) ==> validIfCond(s,first(block).ifCond);
@@ -1164,7 +1137,7 @@ function evalCodeSeqFn(block:seq<code>, s:state) : (b:behavior)
     //         }
     //     }
     
-//   function evalBlockRE(block:seq<code>, s:state): (b:behavior)
+//   function evalBlockRE(block:seq<Code>, s:state): (b:behavior)
 //         ensures |b| > 0
 //         // ensures (first(block).CNil?) ==> |b| == 1
 //         // ensures forall c :: c in block && c.Ins? ==> |b| == |block|
@@ -1191,130 +1164,270 @@ function evalCodeSeqFn(block:seq<code>, s:state) : (b:behavior)
 //                 fullBlock
 //     }
 
-    lemma subCodeSeqIsSmaller(c:seq<code>)
-        requires |c| > 0
-    {
-        var subCodeSeq := all_but_first(c);
-        if(first(c).Ins?)
-        {
-            assert |c| > |subCodeSeq|;
-        }
-        else if (first(c).Block?)
-        {
-            assert |c| > |subCodeSeq|;
-            var unwrap := first(c).block + subCodeSeq;
-            assert |c| == |subCodeSeq| + 1;
-            assert |unwrap| == |first(c).block| + |subCodeSeq|;
-            assert codeSeqLengthV2([first(c)]) > codeSeqLengthV2(first(c).block);
-        }
-        // assert codeSeqLength(c,0) >= codeSeqLength(subCodeSeq,0);
-    }
-    function codeReLength(c:code) : (len:int)
-        // decreases blockLength(c);
-        // ensures |c| > 0 ==> blockLength(all_but_first(c)) <= blockLength(c);
-        ensures len >= 0
-    {
-            match c
-                case Ins(ins) =>  1
-                case Block(block) => 1 + codeSeqLengthV2(block)
-                case IfElse(ifCond, ifT, ifF) => 1 + codeSeqLengthV2(ifT) + codeSeqLengthV2(ifF)
-                // case Divergence(pre,post,patched) => 0
-                // case NonImpactIns(NIIns) => 0
-                case CNil => 0
-    }
+    // lemma subCodeSeqIsSmaller(c:seq<Code>)
+    //     requires |c| > 0
+    // {
+    //     var subCodeSeq := all_but_first(c);
+    //     if(first(c).Ins?)
+    //     {
+    //         assert |c| > |subCodeSeq|;
+    //     }
+    //     else if (first(c).Block?)
+    //     {
+    //         assert |c| > |subCodeSeq|;
+    //         var unwrap := first(c).block + subCodeSeq;
+    //         assert |c| == |subCodeSeq| + 1;
+    //         assert |unwrap| == |first(c).block| + |subCodeSeq|;
+    //         assert codeSeqLengthV2([first(c)]) > codeSeqLengthV2(first(c).block);
+    //     }
+    //     // assert codeSeqLength(c,0) >= codeSeqLength(subCodeSeq,0);
+    // }
+    // function codeReLength(c:Code) : (len:int)
+    //     // decreases blockLength(c);
+    //     // ensures |c| > 0 ==> blockLength(all_but_first(c)) <= blockLength(c);
+    //     ensures len >= 0
+    // {
+    //         match c
+    //             case Ins(ins) =>  1
+    //             case Block(block) => 1 + codeSeqLengthV2(block)
+    //             case IfElse(ifCond, ifT, ifF) => 1 + codeSeqLengthV2(ifT) + codeSeqLengthV2(ifF)
+    //             // case Divergence(pre,post,patched) => 0
+    //             // case NonImpactIns(NIIns) => 0
+    //             case CNil => 0
+    // }
 
-    function codeSeqLengthV2(c:seq<code>) : (len:int)
-        ensures len >= 0
-        ensures |c| > 0 ==> codeSeqLengthV2(c) >= codeSeqLengthV2(all_but_first(c))
-        ensures |c| > 0 && first(c).Block? ==> (codeSeqLengthV2(c) ==  codeReLength(first(c)) + codeSeqLengthV2(all_but_first(c)));
-        ensures |c| > 0 && first(c).Block? ==> (codeSeqLengthV2(c) == 1 + codeSeqLengthV2(first(c).block) + codeSeqLengthV2(all_but_first(c)));
-        // ensures forall i :: i in c && i.Ins? ==> |c| == codeSeqLengthV2(c)
-        // ensures codeSeqLengthV2(c)
-        // ensures forall a:codeSeq,b:codeSeq :: (a + b == c) ==> codeSeqLengthV2(c) == codeSeqLengthV2(a) + codeSeqLengthV2(b);
-    {
-         if |c| == 0 then
-            0
-        else
-            var first := first(c);
-            assert codeReLength(first) >= 0;
-            assert first.Ins? ==> codeReLength(first) == 1;
-            // assert if forall i :: i in all_but_first(c) && i.Ins? then |all_but_first(c)| == codeSeqLengthV2(all_but_first(c)) else true;
-            codeReLength(first) + codeSeqLengthV2(all_but_first(c))
-    }
-    lemma codeSeqLengthV3(c:seq<code>) returns (len:int)
-    {
-        if |c| == 0 {
-            len := 0;
-        }else{
-            assert |c| > 0;
-            len := 0;
-            var cr := c;
-            while(|cr| > 0)
-                decreases |cr|
-            {
-                var first := first(cr);
-                cr := all_but_first(cr);
-                if (first.Ins?)
-                {
-                    len := len +1;
-                }else if(first.Block?)
-                {
-                    // len := codeSeqLengthV3(first.block);
-                }
-                len := len +1;
-            }
+    // function codeSeqLengthV2(c:seq<Code>) : (len:int)
+    //     ensures len >= 0
+    //     ensures |c| > 0 ==> codeSeqLengthV2(c) >= codeSeqLengthV2(all_but_first(c))
+    //     ensures |c| > 0 && first(c).Block? ==> (codeSeqLengthV2(c) ==  codeReLength(first(c)) + codeSeqLengthV2(all_but_first(c)));
+    //     ensures |c| > 0 && first(c).Block? ==> (codeSeqLengthV2(c) == 1 + codeSeqLengthV2(first(c).block) + codeSeqLengthV2(all_but_first(c)));
+    //     // ensures forall i :: i in c && i.Ins? ==> |c| == codeSeqLengthV2(c)
+    //     // ensures codeSeqLengthV2(c)
+    //     // ensures forall a:codeSeq,b:codeSeq :: (a + b == c) ==> codeSeqLengthV2(c) == codeSeqLengthV2(a) + codeSeqLengthV2(b);
+    // {
+    //      if |c| == 0 then
+    //         0
+    //     else
+    //         var first := first(c);
+    //         assert codeReLength(first) >= 0;
+    //         assert first.Ins? ==> codeReLength(first) == 1;
+    //         // assert if forall i :: i in all_but_first(c) && i.Ins? then |all_but_first(c)| == codeSeqLengthV2(all_but_first(c)) else true;
+    //         codeReLength(first) + codeSeqLengthV2(all_but_first(c))
+    // }
+    // lemma codeSeqLengthV3(c:seq<Code>) returns (len:int)
+    // {
+    //     if |c| == 0 {
+    //         len := 0;
+    //     }else{
+    //         assert |c| > 0;
+    //         len := 0;
+    //         var cr := c;
+    //         while(|cr| > 0)
+    //             decreases |cr|
+    //         {
+    //             var first := first(cr);
+    //             cr := all_but_first(cr);
+    //             if (first.Ins?)
+    //             {
+    //                 len := len +1;
+    //             }else if(first.Block?)
+    //             {
+    //                 // len := codeSeqLengthV3(first.block);
+    //             }
+    //             len := len +1;
+    //         }
            
-        }
-    }
+    //     }
+    // }
 
-    lemma codeSeqLengthV2Addition(a:seq<code>,b:seq<code>,c:seq<code>)
-        requires c == a + b
-        requires forall i :: i in a ==> i.Ins?;
-        requires forall i :: i in b ==> i.Ins?;
+    // lemma codeSeqLengthV2Addition(a:seq<Code>,b:seq<Code>,c:seq<Code>)
+    //     requires c == a + b
+    //     requires forall i :: i in a ==> i.Ins?;
+    //     requires forall i :: i in b ==> i.Ins?;
 
-        requires |c| > 0
-    {
-        if (|a| == 0)
-        {
-            assert c == b;
-            assert codeSeqLengthV2(a) == 0;
-            assert codeSeqLengthV2(c) == codeSeqLengthV2(a) + codeSeqLengthV2(b);
-        }
-        else if(|b| == 0)
-        {
-            assert c == a;
-            assert codeSeqLengthV2(b) == 0;
-            assert codeSeqLengthV2(c) == codeSeqLengthV2(a) + codeSeqLengthV2(b);
-        }else{
-            assert |c| == |a| + |b|;
-            assert codeSeqLengthV2(c) == codeSeqLengthV2(a+b);
-            var d := [Ins(RET(D(Void)))];
-            var e := [Ins(RET(D(Void)))];
-            var f := [Ins(RET(D(Void))),Ins(RET(D(Void)))];
-            assert f == d + e;
-            assert codeSeqLengthV2(f) == codeSeqLengthV2(d) + codeSeqLengthV2(e);
-            // assert codeSeqLengthV2(d) == 1;
-            // assert codeSeqLengthV2(a + d) == codeSeqLengthV2(a) + 1;
-            // assert codeSeqLengthV2(a) + codeSeqLengthV2(d) == codeSeqLengthV2(a + d);
-            // assert codeSeqLengthV2(c) > codeSeqLengthV2(a);
-            // assert codeSeqLengthV2(c) == codeSeqLengthV2(a) + codeSeqLengthV2(b);
-        }
-    }
+    //     requires |c| > 0
+    // {
+    //     if (|a| == 0)
+    //     {
+    //         assert c == b;
+    //         assert codeSeqLengthV2(a) == 0;
+    //         assert codeSeqLengthV2(c) == codeSeqLengthV2(a) + codeSeqLengthV2(b);
+    //     }
+    //     else if(|b| == 0)
+    //     {
+    //         assert c == a;
+    //         assert codeSeqLengthV2(b) == 0;
+    //         assert codeSeqLengthV2(c) == codeSeqLengthV2(a) + codeSeqLengthV2(b);
+    //     }else{
+    //         assert |c| == |a| + |b|;
+    //         assert codeSeqLengthV2(c) == codeSeqLengthV2(a+b);
+    //         var d := [Ins(RET(D(Void)))];
+    //         var e := [Ins(RET(D(Void)))];
+    //         var f := [Ins(RET(D(Void))),Ins(RET(D(Void)))];
+    //         assert f == d + e;
+    //         assert codeSeqLengthV2(f) == codeSeqLengthV2(d) + codeSeqLengthV2(e);
+    //         // assert codeSeqLengthV2(d) == 1;
+    //         // assert codeSeqLengthV2(a + d) == codeSeqLengthV2(a) + 1;
+    //         // assert codeSeqLengthV2(a) + codeSeqLengthV2(d) == codeSeqLengthV2(a + d);
+    //         // assert codeSeqLengthV2(c) > codeSeqLengthV2(a);
+    //         // assert codeSeqLengthV2(c) == codeSeqLengthV2(a) + codeSeqLengthV2(b);
+    //     }
+    // }
 
 
-    function codeSeqLength(c:seq<code>,curr:int) : int
-    {
-        if |c| == 0 then
-            curr
-        else
-        var first := first(c);
-        match first
-            case Ins(ins) =>  codeSeqLength(all_but_first(c),curr + 1)
-            case Block(block) => codeSeqLength(all_but_first(c),curr + codeSeqLength(first.block,0))
-            case IfElse(ifCond, ifT, ifF) => codeSeqLength(all_but_first(c),curr + codeSeqLength(first.ifTrue,0) + codeSeqLength(first.ifFalse,0))
-            // case Divergence(pre,post,patched) => 0
-            // case NonImpactIns(NIIns) => 0
-            case CNil => 0
-    }
+    // function codeSeqLength(c:seq<Code>,curr:int) : int
+    // {
+    //     if |c| == 0 then
+    //         curr
+    //     else
+    //     var first := first(c);
+    //     match first
+    //         case Ins(ins) =>  codeSeqLength(all_but_first(c),curr + 1)
+    //         case Block(block) => codeSeqLength(all_but_first(c),curr + codeSeqLength(first.block,0))
+    //         case IfElse(ifCond, ifT, ifF) => codeSeqLength(all_but_first(c),curr + codeSeqLength(first.ifTrue,0) + codeSeqLength(first.ifFalse,0))
+    //         // case Divergence(pre,post,patched) => 0
+    //         // case NonImpactIns(NIIns) => 0
+    //         case CNil => 0
+    // }
+
+    //  lemma subBehaviorHasSameLastState(s:state,b:behavior,c:seq<Code>) returns (b':behavior)
+    //     requires b ==  evalCodeSeqFn(c,s);
+    //     requires |c| > 0;
+    //     // ensures b[1..] == b';
+    //     decreases c,0
+    // {
+    //     var firstStep := evalCodeFn(first(c),s);
+    //     var restB := evalCodeSeqFn(all_but_first(c),last(firstStep));
+    //     assert b == firstStep + restB;
+    //     var step := b[0];
+    //     assert StateNext(s,step);
+    //     var subC := c[1..];
+    //     // var fullSub := [Block(all_but_first(c[0].block))] + all_but_first(c);
+    //     // assert |fullSub| > 0;
+    //     // assert subC == fullSub[1..];
+    //     b' := evalCodeSeqFn(subC,step);
+    //     assert b[0] == step;
+    //     if (|firstStep| == 1)
+    //     {
+    //         assert b[1] == b'[0];
+    //         assert b == [step] + b';
+    //         assert last(b) == last(b');
+    //         assert b[1..] == b';
+    //     }else{
+    //         assert |firstStep| > 0;
+    //         assert c[0].Block? || c[0].IfElse?;
+    //         var test := evalCodeSeqFn(subC,last(firstStep));
+    //         assert test == restB;
+    //         if(c[0].Block?){
+    //             assert |c[0].block| > 0;
+    //             var fullSub := [Block(all_but_first(c[0].block))] + all_but_first(c);
+    //             assert subC == fullSub[1..];
+    //             assert |fullSub| <= |c|;
+    //             var evalFullSub := evalCodeSeqFn(fullSub,step);
+    //             var firstStep' := evalCodeFn(first(fullSub),step);
+    //             var restB' := evalCodeSeqFn(all_but_first(fullSub),last(firstStep'));
+    //             assert evalFullSub == firstStep' + restB';
+    //             assert firstStep == evalCodeSeqFn(first(c).block,s);
+    //             // assert firstStep == [step] + evalCodeSeqFn([Block(all_but_first(c[0].block))],step);
+    //             // assert b[1] == b'[0];
+    //         }
+    //     }
+    //     // forall i | i >= 0 && i < |b|
+    //     // {
+    //     //     b[i] == evalCodeFn(first,s);
+    //     // }
+    //     // assert b[1] == b'[0];
+    //     // assert b == [s] + b';
+    // }
+
+    // lemma behaviorMinusFirstStateIsSubBehavior(s:state,b:behavior,c:seq<Code>)
+    //     requires b ==  evalCodeSeqFn(c,s);
+    //     requires |c| > 0;
+    //     requires c[0].Block?;
+    //     requires |c[0].block| > 0;
+    // {
+    //     var step := b[0];
+    //     assert StateNext(s,step);
+    //     var subCode := [Block(all_but_first(c[0].block))] + all_but_first(c);
+    //     var b' := evalCodeSeqFn(subCode,step);
+    //     // b
+    //     var firstStep := evalCodeFn(first(c),s);
+    //     var restB := evalCodeSeqFn(all_but_first(c),last(firstStep));
+    //     assert b == firstStep + restB;
+    //     assert step == firstStep[0];
+    //     assert b[1..] == all_but_first(firstStep) + restB;
+    //     //b'
+    //     // assert |subCode| > 0;
+    //     if(|subCode| == 0)
+    //     {
+    //         // assert
+    //     }else{
+    //         var firstStep' := evalCodeFn(first(subCode),step);
+    //         assert |firstStep'| > 0;
+    //         assert evalCodeFn(first(c),s) == evalCodeSeqFn(first(c).block,s);
+    //         assert evalCodeSeqFn(first(c).block,s)[0] == step;
+    //         // assert firstStep == [step] + evalCodeFn(first(subCode),step);
+
+    //         var restB' := evalCodeSeqFn(all_but_first(subCode),last(firstStep'));
+    //         assert b' == firstStep' + restB';
+    //         // assert
+    //         assert all_but_first(subCode) == all_but_first(c);
+    //         // assert last(firstStep) == last(firstStep');
+    //         // assert b == [step] + firstStep' + restB';
+    //         // assert restB' == restB;
+    //     }
+
+    //     // assert b' == all_but_first(firstStep) + restB;
+    //     // assert b == [step] + evalCodeSeqFn(all_but_first(c),step);
+    //     // assert b[1..] == b';
+    // }
+//  function evalCodeSeqFnV2(block:seq<Code>, s:state) : (b:behavior)
+//     ensures |b| > 0;
+//     ensures StateNext(s,b[0]);
+//     ensures ValidSimpleBehavior([s] + b);
+//     ensures |block| == 0 ==> b == [s]
+//     decreases block,0
+//   {
+//     reveal_ValidSimpleBehavior();
+//     if |block| == 0 then
+//         assert NextStep(s,s, Step.stutterStep());
+//         assert StateNext(s,s);
+//         assert ValidSimpleBehavior([s] + [s]);
+//         // assert |stutter| == 1;
+//         [s]
+        
+//         // b := stutter;
+//         // remainder := [CNil];
+//     else
+//         var first := first(block);
+//         // if first.Block? && |first.block| > 0 then
+//         //     var first' := first.block[0];
+//         //     var remainder := [Block(all_but_first(first.block))] + all_but_first(block);
+            
+//         //     assert NextStep(s,s, Step.stutterStep());
+//         //     assert StateNext(s,s);
+//         //     assert ValidSimpleBehavior([s] + [s]);
+//         //     // assert |stutter| == 1;
+//         //     [s]
+//         // else
+//             var remainder := all_but_first(block);
+
+//             var firstStep := evalCodeFn(first,s);
+        
+//             assert StateNext(s,firstStep[0]);
+//             var restB := evalCodeSeqFn(remainder,last(firstStep));
+
+//             assert ValidSimpleBehavior([s] + firstStep);
+//             subValidBIsValid(firstStep,s);
+//             assert ValidSimpleBehavior(firstStep);
+//             assert ValidSimpleBehavior([last(firstStep)] + restB);
+//             subValidBIsValid(restB,last(firstStep));
+//             assert ValidSimpleBehavior(restB);
+//             var seqB := firstStep + restB;
+//             validConcatIsValid(firstStep,restB);
+//             assert ValidSimpleBehavior(seqB);
+//             seqB
+    
+//   }
 
 }
