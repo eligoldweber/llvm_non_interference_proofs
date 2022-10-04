@@ -30,61 +30,61 @@ module LLVM_def_NEW {
 // Code Representation
 //-----------------------------------------------------------------------------
 
-    datatype state = State(
+    datatype State = State(
         lvs:map<LocalVar, Data>,
         gvs:map<GlobalVar, Data>,
         m:MemState,
-        o:output,
+        o:Output,
         pc:int,
         ok:bool)
 
 
 ///
-    datatype version = Version(pre:bool,post:bool)
+    datatype Version = Version(pre:bool,post:bool)
 
-    datatype configuration = Config(ops:map<string, operand>)
+    datatype Configuration = Config(ops:map<string, Operand>)
 
-    datatype output = Out(o:Data) | SubOut(os:seq<output>) | Nil
+    datatype Output = Out(o:Data) | SubOut(os:seq<Output>) | Nil
 
     // type codeSeq = seq<codeRe>
 
     datatype Code =
     | Ins(ins:ins)
     | Block(block:seq<Code>)
-    | IfElse(ifCond:operand, ifTrue:Code, ifFalse:Code)
+    | IfElse(ifCond:Operand, ifTrue:Code, ifFalse:Code)
     | CNil
     // | Divergence(pre:seq<Code>,post:seq<Code>,patched:bool)
     // | NonImpactIns(NIIns:ins)
             
-    type behavior = seq<state>
+    type Behavior = seq<State>
 
-    datatype operand = D(d:Data) | LV(l:LocalVar) | GV(g:GlobalVar)
+    datatype Operand = D(d:Data) | LV(l:LocalVar) | GV(g:GlobalVar)
     
   
  datatype ins =
-    | ADD(dst:operand, size:nat, src1ADD:operand, src2ADD:operand)
-    | SUB(dst:operand, size:nat, src1SUB:operand, src2SUB:operand)
-    | SDIV(dst:operand, src1:operand, src2:operand)
-    | ICMP(dst:operand,cond:condition,size:nat,src1:operand,src2:operand)
-    | TRUNC(dst:operand,size:nat,src:operand,dstSize:bitWidth)
-    | ZEXT(dst:operand,size:nat,src:operand,dstSize:bitWidth)
-    | AND(dst:operand,src1:operand,src2:operand)
-    | LSHR(dst:operand,src:operand,shiftAmt:operand)
-    | STORE(valueToStore:operand,ptr:operand)
-    | LLVM_MEMCPY(dst:operand,src:operand,len:bitWidth,volatile:bool)
-    | CALL(dst:operand,fnc:seq<Code>)
-    | GETELEMENTPTR(dst:operand,t:bitWidth,op1:operand,op2:operand)
+    | ADD(dst:Operand, size:nat, src1ADD:Operand, src2ADD:Operand)
+    | SUB(dst:Operand, size:nat, src1SUB:Operand, src2SUB:Operand)
+    | SDIV(dst:Operand, src1:Operand, src2:Operand)
+    | ICMP(dst:Operand,cond:condition,size:nat,src1:Operand,src2:Operand)
+    | TRUNC(dst:Operand,size:nat,src:Operand,dstSize:bitWidth)
+    | ZEXT(dst:Operand,size:nat,src:Operand,dstSize:bitWidth)
+    | AND(dst:Operand,src1:Operand,src2:Operand)
+    | LSHR(dst:Operand,src:Operand,shiftAmt:Operand)
+    | STORE(valueToStore:Operand,ptr:Operand)
+    | LLVM_MEMCPY(dst:Operand,src:Operand,len:bitWidth,volatile:bool)
+    | CALL(dst:Operand,fnc:seq<Code>)
+    | GETELEMENTPTR(dst:Operand,t:bitWidth,op1:Operand,op2:Operand)
     | UNCONDBR(goToLabel:Code)
-    | BR(if_cond:operand, labelTrue:Code,labelFalse:Code)
-    | ALLOCA(dst:operand,t:bitWidth)
-    | LOAD(dst:operand,t:bitWidth,src:operand)
-    | BITCAST(dst:operand,src:operand,castType:operand)
-    | RET(val:operand)
-    | VISIBLE_OUT(o:output)
+    | BR(if_cond:Operand, labelTrue:Code,labelFalse:Code)
+    | ALLOCA(dst:Operand,t:bitWidth)
+    | LOAD(dst:Operand,t:bitWidth,src:Operand)
+    | BITCAST(dst:Operand,src:Operand,castType:Operand)
+    | RET(val:Operand)
+    | VISIBLE_OUT(o:Output)
 
 
 // STATE TRANSITIONS
-    predicate State_Init(s:state)
+    predicate State_Init(s:State)
     {
         s.ok 
         && |s.lvs| == 0
@@ -93,7 +93,7 @@ module LLVM_def_NEW {
         && s.o.Nil?   
     }
 
-    predicate ValidData(s:state, d:Data)
+    predicate ValidData(s:State, d:Data)
     {    
         match d
             case Void => true
@@ -103,14 +103,14 @@ module LLVM_def_NEW {
     }
 
 
-    predicate ValidVarState(s:state,lvs:map<LocalVar, Data>,gvs:map<GlobalVar, Data>)
+    predicate ValidVarState(s:State,lvs:map<LocalVar, Data>,gvs:map<GlobalVar, Data>)
     {
         && (forall l:LocalVar :: l in lvs ==> ValidData(s,lvs[l]))
         && (forall g:GlobalVar :: g in gvs ==> ValidData(s,gvs[g]))
     }
 
 
-    predicate ValidState(s:state)
+    predicate ValidState(s:State)
     {
         && ValidVarState(s,s.lvs,s.gvs) 
         && MemValid(s.m) 
@@ -123,7 +123,7 @@ module LLVM_def_NEW {
     | validToErrorStep()
     | errorStateStep()
 
-    predicate NextStep(s:state, s':state, step:Step)
+    predicate NextStep(s:State, s':State, step:Step)
     {
         match step  
             case evalInsStep(ins) => validEvalIns(ins,s,s') && s'.ok
@@ -132,7 +132,7 @@ module LLVM_def_NEW {
             case errorStateStep() => errorStep(s,s')
     }
 
-    predicate StateNext(s:state,s':state)
+    predicate StateNext(s:State,s':State)
     {
         && exists step :: NextStep(s,s',step)
         // && ValidState(s)
@@ -140,22 +140,22 @@ module LLVM_def_NEW {
     }
 
     
-    predicate stutter(s:state,s':state)
+    predicate stutter(s:State,s':State)
     {
         s == s'
     }
     
-    predicate validToError(s:state,s':state)
+    predicate validToError(s:State,s':State)
     {
         s.ok && !s'.ok
     }
 
-    predicate errorStep(s:state,s':state)
+    predicate errorStep(s:State,s':State)
     {
         !s.ok && !s'.ok
     }
 
-    lemma validNonTrivalStepIsIns(s:state, s':state, step:Step)
+    lemma validNonTrivalStepIsIns(s:State, s':State, step:Step)
         requires NextStep(s,s',step)
         requires ValidState(s)
         requires ValidState(s')
@@ -165,7 +165,7 @@ module LLVM_def_NEW {
         assert step.evalInsStep?;
     }
 
-    predicate {:opaque} ValidBehavior(states:behavior)
+    predicate {:opaque} ValidBehavior(states:Behavior)
     {
         || |states| == 0
         || (|states| == 1 && ValidState(states[0])) 
@@ -174,7 +174,7 @@ module LLVM_def_NEW {
             && forall i :: 0 <= i < |states|- 1 ==> StateNext(states[i],states[i+1]))
     }
 
-    predicate {:opaque} ValidSimpleBehavior(states:behavior)
+    predicate {:opaque} ValidSimpleBehavior(states:Behavior)
     {
         || |states| == 0
         || (|states| == 1) 
@@ -182,7 +182,7 @@ module LLVM_def_NEW {
             && forall i :: 0 <= i < |states|- 1 ==> StateNext(states[i],states[i+1]))
     }
 
-    lemma subValidBIsValid(b:behavior,s:state)
+    lemma subValidBIsValid(b:Behavior,s:State)
         requires ValidSimpleBehavior([s] + b);
         requires |b| > 0;
         ensures ValidSimpleBehavior(b);
@@ -203,7 +203,7 @@ module LLVM_def_NEW {
         }
     }
 
-    lemma validConcatIsValid(a:behavior,b:behavior)
+    lemma validConcatIsValid(a:Behavior,b:Behavior)
         requires ValidSimpleBehavior(a);
         requires ValidSimpleBehavior(b);
         requires |a| > 0
@@ -220,7 +220,7 @@ module LLVM_def_NEW {
     }
    
 
-    function {:opaque} behaviorOutput(b:behavior) : (bOut:seq<output>)
+    function {:opaque} behaviorOutput(b:Behavior) : (bOut:seq<Output>)
         ensures |bOut| == |b| 
         ensures forall i :: (i >= 0 && i < |b|) 
             ==> (if (b[i].o == SubOut([Nil])) then
@@ -241,17 +241,26 @@ module LLVM_def_NEW {
 /// EVAL CODE / CONTROL FLOW
 
 
-predicate validIfCond(s:state, o:operand)
+predicate validIfCond(s:State, o:Operand)
 {
     ValidOperand(s,o) && ValidState(s) && isBoolData(OperandContents(s,o))
 }
 //
-function evalCodeFn(c:Code,s:state) : (b:behavior)
+function {:opaque} evalCodeFn(c:Code,s:State) : (b:Behavior)
     ensures |b| > 0
     ensures (c.Ins?) ==> |b| == 1
     ensures b == [s] ==> NextStep(s,s, Step.stutterStep()) && StateNext(s,s);
     ensures  StateNext(s,b[0])
     ensures ValidSimpleBehavior([s] + b);
+    ensures (c.Ins?) ==> b == [evalInsRe(c.ins,s)];
+    ensures (c.Block?) ==> b == evalCodeSeqFn(c.block,s); 
+    ensures (c.IfElse? && (validIfCond(s,c.ifCond)) && dataToBool(OperandContents(s,c.ifCond))) 
+            ==> b == evalCodeFn(c.ifTrue,s); 
+    ensures (c.IfElse? && (validIfCond(s,c.ifCond)) && !dataToBool(OperandContents(s,c.ifCond))) 
+            ==> b == evalCodeFn(c.ifFalse,s); 
+    ensures (c.IfElse? && (!validIfCond(s,c.ifCond))) 
+            ==> b == [s]
+    ensures (c.CNil?) ==> b == [s]
     decreases c, 0
 {
     reveal_ValidSimpleBehavior();
@@ -275,12 +284,13 @@ function evalCodeFn(c:Code,s:state) : (b:behavior)
         case CNil => 
             [s]
 }
-function evalCodeSeqFn(block:seq<Code>, s:state) : (b:behavior)
+function {:opaque} evalCodeSeqFn(block:seq<Code>, s:State) : (b:Behavior)
     ensures |b| > 0;
     ensures b == [s] ==> NextStep(s,s, Step.stutterStep()) && StateNext(s,s);
     ensures StateNext(s,b[0]);
     ensures ValidSimpleBehavior([s] + b);
     ensures |block| == 0 ==> b == [s]
+    ensures |block| > 0 ==> b == evalCodeFn(first(block),s) + evalCodeSeqFn(all_but_first(block),last(evalCodeFn(first(block),s)));
     decreases block
   {
     reveal_ValidSimpleBehavior();
@@ -294,13 +304,14 @@ function evalCodeSeqFn(block:seq<Code>, s:state) : (b:behavior)
         subValidBIsValid(firstStep,s);
         subValidBIsValid(restB,last(firstStep));
         var seqB := firstStep + restB;
+        assert seqB == evalCodeFn(first,s) + evalCodeSeqFn(all_but_first(block),last(evalCodeFn(first,s)));
         // validConcatIsValid(firstStep,restB);
         seqB
     
   }
 
 ///////
-    lemma evalCodeRE(c:Code, s:state) returns (b:behavior)
+    lemma evalCodeRE(c:Code, s:State) returns (b:Behavior)
         ensures |b| > 0
         ensures (c.Ins?) ==> |b| == 1
         ensures  StateNext(s,b[0])
@@ -346,7 +357,7 @@ function evalCodeSeqFn(block:seq<Code>, s:state) : (b:behavior)
     }
 
 
-  lemma evalCodeSeq(block:seq<Code>, s:state) returns (b:behavior)
+  lemma evalCodeSeq(block:seq<Code>, s:State) returns (b:Behavior)
     ensures |b| > 0;
     ensures StateNext(s,b[0]);
     ensures ValidSimpleBehavior([s] + b);
@@ -383,7 +394,7 @@ function evalCodeSeqFn(block:seq<Code>, s:state) : (b:behavior)
     }
   }
 
-    function incPC(s:state):(s':state)
+    function incPC(s:State):(s':State)
         ensures s' == s.(pc := s.pc+1);
         ensures s != s';
     {
@@ -391,7 +402,7 @@ function evalCodeSeqFn(block:seq<Code>, s:state) : (b:behavior)
         s'
     }
 
-    function evalInsRe(ins:ins,s:state) : (s':state)
+    function evalInsRe(ins:ins,s:State) : (s':State)
         // requires ValidInstruction(s, ins)
         // ensures ValidState(s) && ValidInstruction(s, ins) ==> StateNext(s,s')
         ensures  StateNext(s,s');
@@ -640,7 +651,7 @@ function evalCodeSeqFn(block:seq<Code>, s:state) : (b:behavior)
                 s'
     }
 
-    predicate ValidInstruction(s:state, ins:ins)
+    predicate ValidInstruction(s:State, ins:ins)
     {
         ValidState(s) && match ins
             case ADD(dst,t,src1,src2) => (dst.LV? || dst.GV?) && ValidOperand(s,src1) && ValidOperand(s,src2)
@@ -711,7 +722,7 @@ function evalCodeSeqFn(block:seq<Code>, s:state) : (b:behavior)
     
     }
 
-    predicate validEvalIns(ins:ins, s:state, s':state)
+    predicate validEvalIns(ins:ins, s:State, s':State)
     {   
         && s.ok 
         && ValidInstruction(s, ins)
@@ -767,7 +778,7 @@ function evalCodeSeqFn(block:seq<Code>, s:state) : (b:behavior)
 
 
 
-    function stateUpdateVar(s:state, dst:operand, d:Data): (s':state)
+    function stateUpdateVar(s:State, dst:Operand, d:Data): (s':State)
          requires dst.LV? || dst.GV?
          requires MemValid(s.m) 
          requires ValidData(s,d)
@@ -798,7 +809,7 @@ function evalCodeSeqFn(block:seq<Code>, s:state) : (b:behavior)
                     s'
          }
 
- predicate evalAlloca(s:state, o:operand, d:Data, size:nat,s':state)
+ predicate evalAlloca(s:State, o:Operand, d:Data, size:nat,s':State)
         requires ValidState(s)
         requires ValidOperand(s,o)
         requires s' == State(s.lvs,s.gvs,AllocaStep(s.m,size),s.o,s.pc+1,s.ok);
@@ -825,7 +836,7 @@ function evalCodeSeqFn(block:seq<Code>, s:state) : (b:behavior)
             case LV(l) => s' == newState
     }
 
-     lemma equalStateVarsValid(s:state,s':state, size:nat)
+     lemma equalStateVarsValid(s:State,s':State, size:nat)
         requires ValidState(s);
         requires s'.lvs == s.lvs;
         requires s'.gvs == s.gvs;
@@ -847,7 +858,7 @@ function evalCodeSeqFn(block:seq<Code>, s:state) : (b:behavior)
     
 //// Util Predicates
 
-    predicate ValidOperand(s:state,o:operand)
+    predicate ValidOperand(s:State,o:Operand)
     {
         match o
             case D(d) => ValidData(s,d)
@@ -855,7 +866,7 @@ function evalCodeSeqFn(block:seq<Code>, s:state) : (b:behavior)
             case GV(g) => g in s.gvs && ValidData(s,s.gvs[g])
     }
 
-    function method OperandContents(s:state, o:operand) : (out:Data)
+    function method OperandContents(s:State, o:Operand) : (out:Data)
         requires ValidOperand(s,o)
         requires ValidState(s)
     {
@@ -868,19 +879,19 @@ function evalCodeSeqFn(block:seq<Code>, s:state) : (b:behavior)
            
     }
 
-    lemma uniqueOperandContent(s:state,o:operand)
+    lemma uniqueOperandContent(s:State,o:Operand)
         requires ValidOperand(s,o)
         requires ValidState(s)
     {
         assert forall x,y :: (OperandContents(s,o) == x && OperandContents(s,o) == y) ==> x == y;
     }
 
-    lemma uniqueOperandInState(s:state,o:operand)
+    lemma uniqueOperandInState(s:State,o:Operand)
         requires ValidOperand(s,o)
         requires o.LV?
         requires ValidState(s)
     {
-        assert forall x:operand,y:operand :: (&& x.LV? 
+        assert forall x:Operand,y:Operand :: (&& x.LV? 
                                                 && y.LV?  
                                                 && x.l in s.lvs 
                                                 && y.l in s.lvs 
@@ -889,7 +900,7 @@ function evalCodeSeqFn(block:seq<Code>, s:state) : (b:behavior)
     }
 
 
-    predicate evalUpdate(s:state, o:operand, data:Data, s':state)
+    predicate evalUpdate(s:State, o:Operand, data:Data, s':State)
         requires ValidState(s)
         requires ValidData(s',data)
         ensures evalUpdate(s, o, data, s') ==> ValidState(s')
@@ -904,8 +915,8 @@ function evalCodeSeqFn(block:seq<Code>, s:state) : (b:behavior)
     }
 
 
-    lemma unwrapCodeWitness(b:behavior,c:seq<Code>,s:state) 
-            returns (step:behavior,remainder:seq<Code>,subBehavior:behavior)
+    lemma unwrapCodeWitness(b:Behavior,c:seq<Code>,s:State) 
+            returns (step:Behavior,remainder:seq<Code>,subBehavior:Behavior)
         requires b == evalCodeSeqFn(c,s);
         // requires b == evalCodeRE(c,s)
         ensures |c| > 0 ==> step == evalCodeFn(first(c),s);
@@ -991,8 +1002,8 @@ function evalCodeSeqFn(block:seq<Code>, s:state) : (b:behavior)
     /////////////// OLD
 
     // // Control flow unwrap witness
-    //     lemma unwrapBlockWitness(b:behavior,block:seq<Code>,s:state) 
-    //         returns (step:behavior,remainder:seq<Code>,subBehavior:behavior)
+    //     lemma unwrapBlockWitness(b:Behavior,block:seq<Code>,s:State) 
+    //         returns (step:Behavior,remainder:seq<Code>,subBehavior:Behavior)
     //         requires b == [s] + evalBlockRE(block,s);
 
     //         requires (|block| > 0 && first(block).IfElse?) ==> validIfCond(s,first(block).ifCond);
@@ -1137,7 +1148,7 @@ function evalCodeSeqFn(block:seq<Code>, s:state) : (b:behavior)
     //         }
     //     }
     
-//   function evalBlockRE(block:seq<Code>, s:state): (b:behavior)
+//   function evalBlockRE(block:seq<Code>, s:State): (b:Behavior)
 //         ensures |b| > 0
 //         // ensures (first(block).CNil?) ==> |b| == 1
 //         // ensures forall c :: c in block && c.Ins? ==> |b| == |block|
@@ -1290,7 +1301,7 @@ function evalCodeSeqFn(block:seq<Code>, s:state) : (b:behavior)
     //         case CNil => 0
     // }
 
-    //  lemma subBehaviorHasSameLastState(s:state,b:behavior,c:seq<Code>) returns (b':behavior)
+    //  lemma subBehaviorHasSameLastState(s:State,b:Behavior,c:seq<Code>) returns (b':Behavior)
     //     requires b ==  evalCodeSeqFn(c,s);
     //     requires |c| > 0;
     //     // ensures b[1..] == b';
@@ -1340,7 +1351,7 @@ function evalCodeSeqFn(block:seq<Code>, s:state) : (b:behavior)
     //     // assert b == [s] + b';
     // }
 
-    // lemma behaviorMinusFirstStateIsSubBehavior(s:state,b:behavior,c:seq<Code>)
+    // lemma behaviorMinusFirstStateIsSubBehavior(s:State,b:Behavior,c:seq<Code>)
     //     requires b ==  evalCodeSeqFn(c,s);
     //     requires |c| > 0;
     //     requires c[0].Block?;
@@ -1381,7 +1392,7 @@ function evalCodeSeqFn(block:seq<Code>, s:state) : (b:behavior)
     //     // assert b == [step] + evalCodeSeqFn(all_but_first(c),step);
     //     // assert b[1..] == b';
     // }
-//  function evalCodeSeqFnV2(block:seq<Code>, s:state) : (b:behavior)
+//  function evalCodeSeqFnV2(block:seq<Code>, s:State) : (b:Behavior)
 //     ensures |b| > 0;
 //     ensures StateNext(s,b[0]);
 //     ensures ValidSimpleBehavior([s] + b);

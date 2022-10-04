@@ -19,7 +19,7 @@ module challenge8CodeNEW{
 //     Block([prefixCode(), Block([CNil]),postfixCode()])
 // }
 
-function allVariablesConfig():configuration
+function allVariablesConfig():Configuration
 {
     var var_11 := LV("var_11");
     var var_num_packets := LV("var_num_packets");
@@ -47,9 +47,41 @@ function allVariablesConfig():configuration
             "var_size" := var_size])
 }
 
-predicate validConfig(s:state,c:configuration)
+predicate validConfig(s:State)
+    requires ValidState(s)
 {
-    forall op :: op in c.ops ==> ValidOperand(s,c.ops[op])
+    var c := allVariablesConfig();
+    && (forall op :: op in c.ops ==> 
+        && c.ops[op].LV? 
+        && c.ops[op].l in s.lvs
+        && ValidOperand(s,c.ops[op]))
+    && "var_11" in c.ops
+    && "var_num_packets" in c.ops
+    && "var_conv15" in c.ops
+    && "var_12" in c.ops
+    && "var_size_addr" in c.ops
+    && "var_size" in c.ops
+    && "var_conv16" in c.ops
+    && "var_div" in c.ops
+    && "var_cmp17" in c.ops
+    && "var_call20" in c.ops
+    && "var_retval" in c.ops
+    && "var_26" in c.ops
+    && s.lvs["var_11"].Ptr?
+    && s.lvs["var_num_packets"].Int?
+    && s.lvs["var_size"].Int?
+    && s.lvs["var_conv15"].Int?
+    && s.lvs["var_12"].Ptr?
+    && s.lvs["var_size_addr"].Int?
+    && s.lvs["var_conv16"].Int?
+    && s.lvs["var_div"].Int?
+    && s.lvs["var_cmp17"].Int?
+    && s.lvs["var_call20"].Int?
+    && s.lvs["var_retval"].Ptr?
+    && s.lvs["var_26"].Int?
+    && s.m.mem[OperandContents(s,c.ops["var_retval"]).bid][OperandContents(s,c.ops["var_retval"]).offset].mb? 
+    && s.m.mem[OperandContents(s,c.ops["var_retval"]).bid][OperandContents(s,c.ops["var_retval"]).offset].size == 1
+    // assumption becasue skipping alloc step
 }
 
 function challenge_8_transport_handler_create_conn_vuln_test():seq<Code> {
@@ -65,45 +97,15 @@ function postfixCode():Code{
     Block([CNil])
 }
 
-// function patchBlock():codeRe{
-//      var var_11 := LV(" var_11 ");
-//     var var_num_packets := LV(" var_num_packets ");
-//     var var_conv15 := LV(" var_conv15 ");
-//     var var_12 := LV(" var_12 ");
-//     var var_size_addr := LV(" var_size_addr ");
-//     var var_conv16 := LV(" var_conv16 ");
-//     var var_div := LV(" var_div ");
-//     var var_cmp17 := LV(" var_cmp17 ");
-//     var var_call20 := LV(" var_call20 ");
-//     var var_retval := LV(" var_retval ");
-//     var var_26 := LV(" var_26 ");
-//     var var_size := LV("var_size");
+function postfixCodeSimple():Code{
 
-
-
-//     var return_ := Block([Ins(LOAD(var_26,1,var_retval)),
-//     Ins(RET(var_26))]);
-
-//     // 
-//     var if_then19 := Block([Ins(CALL(D(Void),delete_connection())),
-//     Ins(STORE(D(Int(0,IntType(1,false))),var_retval)),
-//     Ins(UNCONDBR(return_))]);
-
-//     // var patch_block := Block([Ins(LOAD(var_11,1,var_num_packets)),
-//     // Ins(ZEXT(var_conv15,1,var_11,4)),
-//     // Ins(LOAD(var_12,2,var_size_addr)),
-//     // Ins(ZEXT(var_conv16,2,var_12,4)),
-//     // Ins(SDIV(var_div,var_conv16,D(Int(7,IntType(4,false))))),
-//     // Ins(ICMP(var_cmp17,sgt,4,var_conv15,var_div)),
-//     // Ins(BR(var_cmp17,if_then19,postfix))]);
-
+    var config := allVariablesConfig();
     
-//     var patch_block := Block([Ins(SDIV(var_div,var_size,D(Int(7,IntType(4,false))))),
-//     Ins(ICMP(var_cmp17,sgt,4,var_num_packets,var_div)),
-//     Ins(BR(var_cmp17,if_then19,postfixCode()))]);
+    Block([Ins(STORE(D(Int(1,IntType(1,false))),config.ops["var_retval"])),
+    Ins(LOAD(config.ops["var_26"],1,config.ops["var_retval"])),
+    Ins(RET(config.ops["var_26"]))])
+}
 
-//     patch_block
-// }
 function return_():Code{
     var config := allVariablesConfig();
     
@@ -116,53 +118,6 @@ function return_():Code{
 
 }
 
-lemma returntest(s:state)
-   requires ValidState(s);
-    requires validStartingState(s)
-    requires validConfig(s,allVariablesConfig());
-{
-    var config := allVariablesConfig();
-
-    var b := [s] + evalCodeFn(return_(),s);
-    // assert s == b[0];
-    assert StateNext(b[0],b[1]);
-    // assert ValidState(b[1]);
-
-
-    // assert evalCodeFn(return_(),s) == evalCodeSeqFn(return_().block,s); 
-    // assert evalCodeSeqFn(return_().block,s) == evalCodeFn(first(return_().block),s) + evalCodeSeqFn(all_but_first(return_().block),last(evalCodeFn(first(return_().block),s)));
-    // var rest := evalCodeSeqFn(all_but_first(return_().block),last(evalCodeFn(first(return_().block),s)));
-    // assert first(return_().block).Ins?; 
-    // assert evalCodeFn(first(return_().block),s) == [evalInsRe(first(return_().block).ins,s)];
-    assert ValidState(b[1]);
-    assert ValidState(b[2]);
-    assert ValidState(b[3]);
-    assert |b| == 4;
-    assert NextStep(b[0],b[1],evalInsStep((LOAD(config.ops["var_26"],1,config.ops["var_retval"]))));
-    assert NextStep(b[1],b[2],evalInsStep((RET(config.ops["var_26"]))));
-    assert NextStep(b[2],b[3],Step.stutterStep());
-
-    // asser t
-    // assert b[1] == evalInsRe(first(return_().block).ins,s);
-    // assert b[1].ok ==> NextStep(b[0],b[1],Step.evalInsStep(first(return_().block).ins));
-    if(b[1].ok){
-        // assert NextStep(b[0],b[1],Step.evalInsStep(first(return_().block).ins));
-        assert exists step :: NextStep(b[0],b[1],step);
-        var step :| NextStep(b[0],b[1],step);
-        assert ValidState(b[0]);
-        assert ValidState(b[1]);
-        // assert b[0] != b[1];
-        assert step.evalInsStep?;
-    }
-    
-           assert exists step' :: NextStep(b[1],b[2],step');
-        var step' :| NextStep(b[1],b[2],step');
-        assert ValidState(b[1]);
-        assert ValidState(b[2]);
-        // assert b[0] != b[1];
-        assert step'.evalInsStep?;
-    // assert NextStep(b[0],b[1],evalInsStep((LOAD(config.ops["var_26"],1,config.ops["var_retval"]))));
-}
 
 function if_then19():Code {
         // 
@@ -173,7 +128,36 @@ function if_then19():Code {
     if_then19
 }
 
-function challenge_8_transport_handler_create_conn_patch():seq<Code>  {
+function patch_block(size:Operand):Code
+    requires size.D?;
+    requires size.d.Int?;
+    requires size.d.itype == IntType(4,false);
+{
+        var config := allVariablesConfig();
+
+    // var patch_block := Block([Ins(LOAD(var_11,1,var_num_packets)),
+    // Ins(ZEXT(var_conv15,1,var_11,4)),
+    // Ins(LOAD(var_12,2,var_size_addr)),
+    // Ins(ZEXT(var_conv16,2,var_12,4)),
+    // Ins(SDIV(var_div,var_conv16,D(Int(7,IntType(4,false))))),
+    // Ins(ICMP(var_cmp17,sgt,4,var_conv15,var_div)),
+    // Ins(BR(var_cmp17,if_then19,postfix))]);
+
+    
+    var patch_block := Block(
+        [Ins(SDIV(config.ops["var_div"],size,D(Int(7,IntType(4,false))))),
+        Ins(ICMP(config.ops["var_cmp17"],sgt,4,config.ops["var_num_packets"],config.ops["var_div"])),
+        IfElse(config.ops["var_cmp17"],
+            if_then19(),
+            postfixCodeSimple())]);//CNil
+    patch_block
+}
+
+function challenge_8_transport_handler_create_conn_patch(size:Operand):seq<Code>  
+    requires size.D?;
+    requires size.d.Int?;
+    requires size.d.itype == IntType(4,false);
+    {
 
     // var num_packets := LV(" num_packets ");
     // var size := LV(" size ");
@@ -201,8 +185,8 @@ function challenge_8_transport_handler_create_conn_patch():seq<Code>  {
         //   %idxprom3 = zext i8 %4 to i64
         //   %arrayidx4 = getelementptr inbounds [256 x %struct.ConnectionInfo*], [256 x %struct.ConnectionInfo*]* @connection_infos, i64 0, i64 %idxprom3
         //   %5 = load %struct.ConnectionInfo*, %struct.ConnectionInfo** %arrayidx4, align 8
-        //   %state = getelementptr inbounds %struct.ConnectionInfo, %struct.ConnectionInfo* %5, i32 0, i32 0
-        //   store i32 0, i32* %state, align 8
+        //   %State = getelementptr inbounds %struct.ConnectionInfo, %struct.ConnectionInfo* %5, i32 0, i32 0
+        //   store i32 0, i32* %State, align 8
         //   %6 = load i8, i8* @src, align 1
         //   %idxprom5 = zext i8 %6 to i64
         //   %arrayidx6 = getelementptr inbounds [256 x %struct.ConnectionInfo*], [256 x %struct.ConnectionInfo*]* @connection_infos, i64 0, i64 %idxprom5
@@ -247,37 +231,7 @@ function challenge_8_transport_handler_create_conn_patch():seq<Code>  {
         //   store i8 0, i8* %retval, align 1
         //   br label %return
 
-    // var postfix := postfixCode();
-
-    // var var_11 := LV("var_11");
-    // var var_num_packets := LV("var_num_packets");
-    // var var_conv15 := LV("var_conv15");
-    // var var_12 := LV("var_12");
-    // var var_size_addr := LV("var_size_addr");
-    // var var_conv16 := LV("var_conv16");
-    // var var_div := LV("var_div");
-    // var var_cmp17 := LV("var_cmp17");
-    // var var_call20 := LV("var_call20");
-    // // var var_retval := LV("var_retval");
-    // var var_26 := LV("var_26");
-    // var var_size := LV("var_size");
-    var config := allVariablesConfig();
-
-    // var patch_block := Block([Ins(LOAD(var_11,1,var_num_packets)),
-    // Ins(ZEXT(var_conv15,1,var_11,4)),
-    // Ins(LOAD(var_12,2,var_size_addr)),
-    // Ins(ZEXT(var_conv16,2,var_12,4)),
-    // Ins(SDIV(var_div,var_conv16,D(Int(7,IntType(4,false))))),
-    // Ins(ICMP(var_cmp17,sgt,4,var_conv15,var_div)),
-    // Ins(BR(var_cmp17,if_then19,postfix))]);
-
-    
-    var patch_block := 
-    Block([Ins(SDIV(config.ops["var_div"],config.ops["var_size"],D(Int(7,IntType(4,false))))),
-    Ins(ICMP(config.ops["var_cmp17"],sgt,4,config.ops["var_num_packets"],config.ops["var_div"])),
-    IfElse(config.ops["var_cmp17"],if_then19(),postfixCode())]);
-
-        //         if.end21:                                         ; preds = %if.end14
+        //if.end21:                                         ; preds = %if.end14
         //   %13 = load i8, i8* @src, align 1
         //   %idxprom22 = zext i8 %13 to i64
         //   %arrayidx23 = getelementptr inbounds [256 x %struct.ConnectionInfo*], [256 x %struct.ConnectionInfo*]* @connection_infos, i64 0, i64 %idxprom22
@@ -328,7 +282,7 @@ function challenge_8_transport_handler_create_conn_patch():seq<Code>  {
         //   %26 = load i8, i8* %retval, align 1
         //   ret i8 %26
 
-    [prefixCode(),patch_block,postfixCode()]
+    [prefixCode(),patch_block(size)]
 }
 
 // function challenge_8_transport_handler_create_conn_mergerd_simple(patched:bool):codeRe {
@@ -405,9 +359,10 @@ function challenge_8_transport_handler_create_conn_patch():seq<Code>  {
         [CNil]
     }
 
-    predicate validStartingState(s:state)
+    predicate validStartingState(s:State)
         // requires ValidState(s)
     {
+        
         var var_11 := LV("var_11");
         var var_num_packets := LV("var_num_packets");
         var var_conv15 := LV("var_conv15");
@@ -466,5 +421,95 @@ function challenge_8_transport_handler_create_conn_patch():seq<Code>  {
         && s.lvs["var_size"].val >= 0 
         && s.lvs["var_size"].val < 0x10000
     }
+predicate validIntState(s:State)
+        // requires ValidState(s)
+    {
+        var config := allVariablesConfig();
+        forall v :: v in config.ops ==> ValidOperand(s,config.ops[v])
+
+        // var var_11 := LV("var_11");
+        // var var_num_packets := LV("var_num_packets");
+        // var var_conv15 := LV("var_conv15");
+        // var var_12 := LV("var_12");
+        // var var_size_addr := LV("var_size_addr");
+        // var var_size := LV("var_size");
+        // var var_conv16 := LV("var_conv16");
+        // var var_div := LV("var_div");
+        // var var_cmp17 := LV("var_cmp17");
+        // var var_call20 := LV("var_call20");
+        // var var_retval := LV("var_retval");
+        // var var_26 := LV("var_26");
+        // && ValidOperand(s,var_11)
+        // && ValidOperand(s,var_num_packets)
+        // && ValidOperand(s,var_conv15)
+        // && ValidOperand(s,var_12)
+        // && ValidOperand(s,var_size_addr)
+        // && ValidOperand(s,var_size)
+        // && ValidOperand(s,var_conv16)
+        // && ValidOperand(s,var_div)
+        // && ValidOperand(s,var_cmp17)
+        // && ValidOperand(s,var_call20)
+        // && ValidOperand(s,var_retval)
+        // && ValidOperand(s,var_26)
+        // && s.lvs["var_11"].Ptr?
+        // && s.lvs["var_num_packets"].Int?
+        // && s.lvs["var_size"].Int?
+        // && s.lvs["var_conv15"].Int?
+        // && s.lvs["var_12"].Ptr?
+        // && s.lvs["var_size_addr"].Int?
+        // && s.lvs["var_conv16"].Int?
+        // && s.lvs["var_div"].Int?
+        // && s.lvs["var_cmp17"].Int?
+        // && s.lvs["var_call20"].Int?
+        // && s.lvs["var_retval"].Ptr?
+        // && s.lvs["var_26"].Int?
+    }
+lemma returntest(s:State)
+   requires ValidState(s);
+    requires validStartingState(s)
+    requires validConfig(s);
+{
+    var config := allVariablesConfig();
+
+    var b := [s] + evalCodeFn(return_(),s);
+    // assert s == b[0];
+    assert StateNext(b[0],b[1]);
+    // assert ValidState(b[1]);
+
+
+    // assert evalCodeFn(return_(),s) == evalCodeSeqFn(return_().block,s); 
+    // assert evalCodeSeqFn(return_().block,s) == evalCodeFn(first(return_().block),s) + evalCodeSeqFn(all_but_first(return_().block),last(evalCodeFn(first(return_().block),s)));
+    // var rest := evalCodeSeqFn(all_but_first(return_().block),last(evalCodeFn(first(return_().block),s)));
+    // assert first(return_().block).Ins?; 
+    // assert evalCodeFn(first(return_().block),s) == [evalInsRe(first(return_().block).ins,s)];
+    assert ValidState(b[1]);
+    assert ValidState(b[2]);
+    assert ValidState(b[3]);
+    assert |b| == 4;
+    assert NextStep(b[0],b[1],evalInsStep((LOAD(config.ops["var_26"],1,config.ops["var_retval"]))));
+    assert NextStep(b[1],b[2],evalInsStep((RET(config.ops["var_26"]))));
+    assert NextStep(b[2],b[3],Step.stutterStep());
+
+    // asser t
+    // assert b[1] == evalInsRe(first(return_().block).ins,s);
+    // assert b[1].ok ==> NextStep(b[0],b[1],Step.evalInsStep(first(return_().block).ins));
+    if(b[1].ok){
+        // assert NextStep(b[0],b[1],Step.evalInsStep(first(return_().block).ins));
+        assert exists step :: NextStep(b[0],b[1],step);
+        var step :| NextStep(b[0],b[1],step);
+        assert ValidState(b[0]);
+        assert ValidState(b[1]);
+        // assert b[0] != b[1];
+        assert step.evalInsStep?;
+    }
+    
+           assert exists step' :: NextStep(b[1],b[2],step');
+        var step' :| NextStep(b[1],b[2],step');
+        assert ValidState(b[1]);
+        assert ValidState(b[2]);
+        // assert b[0] != b[1];
+        assert step'.evalInsStep?;
+    // assert NextStep(b[0],b[1],evalInsStep((LOAD(config.ops["var_26"],1,config.ops["var_retval"]))));
+}
 
 }

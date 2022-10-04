@@ -66,8 +66,12 @@ module binary_operations_i {
         ensures out.itype.signed
         ensures out.itype.size == 4
         ensures validBitWidth(out.itype.size)
+        ensures out == FromTwosComp(UInt32(v0.val/v1.val % 0x8000_0000));
+        // ensures FromTwosComp(out).val == FromTwosComp(UInt32(BitwiseDiv32(DataToUInt32(ToTwosComp(v0)),DataToUInt32(ToTwosComp(v1))))).val
     {
-        FromTwosComp(UInt32(BitwiseDiv32(DataToUInt32(ToTwosComp(v0)),DataToUInt32(ToTwosComp(v1))))) 
+        var div := UInt32(v0.val/v1.val % 0x8000_0000);
+        FromTwosComp(div)
+        // FromTwosComp(UInt32(BitwiseDiv32(DataToUInt32(ToTwosComp(v0)),DataToUInt32(ToTwosComp(v1))))) 
     }
 
     

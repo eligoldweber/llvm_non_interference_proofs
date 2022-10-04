@@ -91,8 +91,9 @@ function method {:opaque} BitMod(x:bv32, y:bv32): bv32
     x % y
 }
 
-function method {:opaque} BitDiv(x:bv32, y:bv32): bv32
+function method {:opaque} BitDiv(x:bv32, y:bv32): (out:bv32)
     requires y != 0
+    ensures out == x/y
 {
     x / y
 }
@@ -322,10 +323,12 @@ function BitwiseMul32(x:uint32, y:uint32):uint32
     BitsToWord(BitMul(WordToBits(x), WordToBits(y)))
 }
 
-function BitwiseDiv32(x:uint32, y:uint32):uint32
+function BitwiseDiv32(x:uint32, y:uint32): (out:uint32)
     requires y != 0;
+    ensures out == BitsToWord((WordToBits(x)/WordToBits(y)))
 {
-    if WordToBits(y) == 0 then 0 else BitsToWord(BitDiv(WordToBits(x), WordToBits(y)))
+    reveal_BitDiv();
+    BitsToWord(BitDiv(WordToBits(x), WordToBits(y)))
 }
 
 function BitwiseMod32(x:uint32, y:uint32):uint32
