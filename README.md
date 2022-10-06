@@ -2,9 +2,9 @@
 
 This repo is an evolving work aimed at proving properties about micro-patches. We reason about patches at the LLVM IR level using formalisms in Dafny
 
-The link to the corresponding repo is [https://github.com/eligoldweber/llvm_non_interference_proofs](https://github.com/eligoldweber/llvm_non_interference_proofs) (specifically this [branch](https://github.com/eligoldweber/llvm_non_interference_proofs/tree/challengeProblem6))
+The link to the corresponding repo is [https://github.com/eligoldweber/llvm_non_interference_proofs/tree/currentWorkingBranch_hackathon](https://github.com/eligoldweber/llvm_non_interference_proofs) (specifically this [branch](https://github.com/eligoldweber/llvm_non_interference_proofs/tree/currentWorkingBranch))
 
-**Note: For the October Hackathon use branch: _branch_**   
+**Note: For the October Hackathon use branch: currentWorkingBranch_hackathon**   
 
 #Overview
 This repo contains the ongoing work to produce non-interference proofs for software patches
@@ -12,6 +12,12 @@ This repo contains the ongoing work to produce non-interference proofs for softw
 Included in this repo are operational semantics for LLVM defined in [Dafny](https://github.com/dafny-lang/dafny). Additionally, there are defined instruction level state transitions for a subset of LLVM instructions. Lastly there is a collection of examples of how to represent an LLVM program in terms of the operational semantics in a state machine format, and proofs of safety for these programs.
 
 This README outlines the steps necessary for building and verifying dafny files using [scons](https://scons.org/) or .NET on either a **supplied Docker image** or locally. 
+
+Note this branch is currently a WIP, there is refactoring going on. For the most current versions of the dafny files, look for a prefix NEW. 
+
+
+See `tools` directory for information on a LLVM to Dafny Script with a README and Examples. 
+
 
 # Running With Docker
 
@@ -211,6 +217,8 @@ Eli Goldweber -- [edgoldwe@umich.edu](mailto:edgoldwe@umich.edu)
 
 
 ## Automation(WIP)
+
+See `tools` directory for information on a LLVM to Dafny Script with a README and Examples. 
 
 > **Note:** This is WIP and does not do much at the moment. In the future this will hopefully help to automatically parse an llvm program into dafny using the operational semantics defined in this repo. This tool also aims to help generate small-step proof lemmas to aid in the production of larger non-interference proofs
 
