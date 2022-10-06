@@ -87,7 +87,14 @@ predicate validConfig(s:State)
 function challenge_8_transport_handler_create_conn_vuln_test():seq<Code> {
     [prefixCode(), Block([CNil]),postfixCode()]
 }
-//  Block([prefixCode(),patch_block,postfix])
+
+function challenge_8_transport_handler_create_conn_vuln_postfix_simple(size:Operand):seq<Code> 
+    requires size.D?;
+    requires size.d.Int?;
+    requires size.d.itype == IntType(4,false);
+{
+    [prefixCode(), Block([CNil]),postfixCodeSimple()]
+}
 
 function prefixCode():Code{
     Block([CNil])
@@ -100,7 +107,7 @@ function postfixCode():Code{
 function postfixCodeSimple():Code{
 
     var config := allVariablesConfig();
-    
+
     Block([Ins(STORE(D(Int(1,IntType(1,false))),config.ops["var_retval"])),
     Ins(LOAD(config.ops["var_26"],1,config.ops["var_retval"])),
     Ins(RET(config.ops["var_26"]))])
@@ -464,52 +471,6 @@ predicate validIntState(s:State)
         // && s.lvs["var_retval"].Ptr?
         // && s.lvs["var_26"].Int?
     }
-lemma returntest(s:State)
-   requires ValidState(s);
-    requires validStartingState(s)
-    requires validConfig(s);
-{
-    var config := allVariablesConfig();
 
-    var b := [s] + evalCodeFn(return_(),s);
-    // assert s == b[0];
-    assert StateNext(b[0],b[1]);
-    // assert ValidState(b[1]);
-
-
-    // assert evalCodeFn(return_(),s) == evalCodeSeqFn(return_().block,s); 
-    // assert evalCodeSeqFn(return_().block,s) == evalCodeFn(first(return_().block),s) + evalCodeSeqFn(all_but_first(return_().block),last(evalCodeFn(first(return_().block),s)));
-    // var rest := evalCodeSeqFn(all_but_first(return_().block),last(evalCodeFn(first(return_().block),s)));
-    // assert first(return_().block).Ins?; 
-    // assert evalCodeFn(first(return_().block),s) == [evalInsRe(first(return_().block).ins,s)];
-    assert ValidState(b[1]);
-    assert ValidState(b[2]);
-    assert ValidState(b[3]);
-    assert |b| == 4;
-    assert NextStep(b[0],b[1],evalInsStep((LOAD(config.ops["var_26"],1,config.ops["var_retval"]))));
-    assert NextStep(b[1],b[2],evalInsStep((RET(config.ops["var_26"]))));
-    assert NextStep(b[2],b[3],Step.stutterStep());
-
-    // asser t
-    // assert b[1] == evalInsRe(first(return_().block).ins,s);
-    // assert b[1].ok ==> NextStep(b[0],b[1],Step.evalInsStep(first(return_().block).ins));
-    if(b[1].ok){
-        // assert NextStep(b[0],b[1],Step.evalInsStep(first(return_().block).ins));
-        assert exists step :: NextStep(b[0],b[1],step);
-        var step :| NextStep(b[0],b[1],step);
-        assert ValidState(b[0]);
-        assert ValidState(b[1]);
-        // assert b[0] != b[1];
-        assert step.evalInsStep?;
-    }
-    
-           assert exists step' :: NextStep(b[1],b[2],step');
-        var step' :| NextStep(b[1],b[2],step');
-        assert ValidState(b[1]);
-        assert ValidState(b[2]);
-        // assert b[0] != b[1];
-        assert step'.evalInsStep?;
-    // assert NextStep(b[0],b[1],evalInsStep((LOAD(config.ops["var_26"],1,config.ops["var_retval"]))));
-}
 
 }
