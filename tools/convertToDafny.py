@@ -1,9 +1,5 @@
 #!/usr/bin/python
-
-
 import sys, getopt
-
-
 def findSize(s):
 	s = s.replace(',',"")
 	if('i8' in s):
@@ -29,9 +25,10 @@ def handleArg(arg,size):
 		convertedArg = "D(Int("+arg+",IntType("+str(size)+",false)))"
 		return convertedArg
 		
+def codeFnHeader(name):
+	return "function " + name + "():Code{\n\tvar config := allVariablesConfig();\n"		
 		
-		
-def parseLLVM(in_filename,out_filename):
+def parseLLVM(in_filename,out_filename,module_name):
 	fo = open(in_filename,"r+")
 	fout = open(out_filename,"w+")
 	
@@ -51,8 +48,8 @@ def parseLLVM(in_filename,out_filename):
 			if(args[0][-1] == ':'): #this is a block name
 				parsedList = []
 				insList = []
-				totalDafnyCode = totalDafnyCode + "var " + args[0][0:-1].replace('.',"_") + " := "
-				labelList.append(args[0][0:-1].replace('.',"_"));
+				totalDafnyCode = totalDafnyCode + codeFnHeader(args[0][0:-1].replace('.',"_")) + "\tvar " + args[0][0:-1].replace('.',"_") + " := "
+				labelList.append(args[0][0:-1].replace('.',"_"))
 				# fout.write("var " + args[0][0:-1] + " := ")
 				continue
 			
@@ -136,7 +133,16 @@ def parseLLVM(in_filename,out_filename):
 					parsedList.append(str(size))
 					# parsedList.append(arg1)
 	
-			
+				if(ins == 'sdiv'):
+					size = findSize(args[3])
+					# parsedList.append(str(size))
+					arg1 = args[4].replace(',',"")
+					arg2 = args[5].replace(',',"")
+				
+					arg1 = handleArg(arg1,size)
+					arg2 = handleArg(arg2,size)
+					parsedList.append(arg1)
+					parsedList.append(arg2)
 				
 			if(args[0] == 'store'):
 				arg1Size = findSize(args[1])
@@ -167,47 +173,67 @@ def parseLLVM(in_filename,out_filename):
 				if(args[1] == "void"):
 					parsedList.append("D(Void)")
 				else:
-					parsedList.append(args[1])
+					# parsedList.append("config.ops[\""+args[2]+"\"]")
+					parsedList.append(args[2])
 		
-				
-		
+			if(args[0] == "call"): #void call
+				parsedList.append(args[0])
+				if(args[1] == "void"):
+					parsedList.append("D(Void)")
+				parsedList.append(args[2].replace('@',""))
+
 			if(len(parsedList) > 0):
 				formattedIns = formatIns(parsedList)
 				insList.append(insToDafny(formattedIns))
 				lv = handleLV(formattedIns,lv)
 			
-		# print (insList)
 		else:
 			totalDafnyCode = totalDafnyCode + createLLVMBlock(insList)
 			# fout.write(createLLVMBlock(insList))
 	
-	# add LVS
-	for lvs in lv:
-		fout.write("\n" + lv[lvs])
-	for i in reversed(totalDafnyCode.split("\n\n")):
+	# add module header
+	fout.write(handleModuleHeader(module_name))
+	# add LVS Config
+	handleConfig(fout,lv)
+	reversedLabelCounter = len(labelList)-1
+	for i in reversed(totalDafnyCode.split("\n\n")[:-1]):
 		fout.write("\n\n" + i)
-	fout.write("\n\n"+labelList[0])
-	# Close opend file
+		fout.write("\n\t"+labelList[reversedLabelCounter] + "\n}")
+		reversedLabelCounter = reversedLabelCounter - 1
+	fout.write("\n}")
 	fo.close()
 	fout.close()
-	
-	
+
+def handleModuleHeader(module):
+	header = "module " + str(module) +"\n{\n\timport opened LLVM_def_NEW\n\timport opened types\n\n"
+	return header
+
+def handleConfig(fout,lv):
+	fout.write("function allVariablesConfig():Configuration\n{")
+	for lvs in lv:
+		fout.write("\n\t" + lv[lvs])
+	fout.write("\n\tConfig(map[")
+	lvNames = list(lv.keys())
+	for i in range(len(lvNames[:-1])):
+		fout.write("\n\t\t \"" + (lvNames[i]) + "\" := " + (lvNames[i]) + ",")
+	fout.write("\n\t\t \"" + str(lvNames[len(lvNames[:-1])]) + "\" := " + str(lvNames[len(lvNames[:-1])]))
+	fout.write("])\n}")
+
 def handleLV(ins,lvs):
 	for i in ins:
 		if("var_" in str(i) and not(i in lvs)):
-			lvs[str(i)] = "var " + str(i) + " := LV(\" " + str(i) + " \");"
+			lvs[str(i)] = "var " + str(i) + " := LV(\"" + str(i) + "\");"
 	return lvs
 	
 	
 def createLLVMBlock(listOfIns):
 	block = "Block(["
 	for ins in listOfIns[:len(listOfIns)-1]:
-		block = block + str(ins) + ",\n"
-	block = block + listOfIns[len(listOfIns)-1].replace('%',"").replace('.',"_") + "]);\n\n"
+		block = block + str(ins) + ",\n\t"		
+	block = block + listOfIns[len(listOfIns)-1].replace('%',"") + "]);\n\n"
 	return block
 
 def formatIns(ins):
-	# print(ins)
 	formattedIns = []
 	for i in range(len(ins)):
 		if((ins[0] == "UNCONDBR" or ins[0] == "br")):
@@ -222,20 +248,42 @@ def formatIns(ins):
 		
 def insToDafny(ins):
 	insStart = "Ins("
-	insStart = insStart+ins[0].upper()+"("
-	for item in ins[1:len(ins)-1]:
-		# itemStripped = item.replace('%',"var_")
-# 		itemStripped = itemStripped.replace(".","_")
-		insStart = insStart + item + ","
-	insStart = insStart + ins[len(ins)-1] + "))"
-	return insStart
+	if(ins[0]== "UNCONDBR"):
+		return str(ins[1])+"()"
+	elif(ins[0]== "br"):
+		ifElse = "IfElse("
+		for item in ins[1:len(ins)-1]:
+			if item.startswith("var"):
+				item = "config.ops[\""+item+"\"]"
+			else:
+				item = item + "()"
+			ifElse = ifElse + item + ","
+		lastitem =  ins[len(ins)-1]
+		if lastitem.startswith("var"):
+			lastitem = "config.ops[\""+lastitem+"\"]"
+		else:
+			lastitem = lastitem + "()"
+		ifElse = ifElse + lastitem + ")"
+		return ifElse	
+	else:
+		insStart = insStart+ins[0].upper()+"("
+		for item in ins[1:len(ins)-1]:
+			if item.startswith("var"):
+				item = "config.ops[\""+item+"\"]"
+			insStart = insStart + item + ","
+		lastitem =  ins[len(ins)-1]
+		if lastitem.startswith("var"):
+				lastitem = "config.ops[\""+lastitem+"\"]"
+		insStart = insStart + lastitem + "))"
+		return insStart
 	
 	
 def main(argv):
    inputfile = ''
    outputfile = ''
+   module = ''
    try:
-      opts, args = getopt.getopt(argv,"hi:o:",["ifile=","ofile="])
+      opts, args = getopt.getopt(argv,"hi:o:m:",["ifile=","ofile=","module="])
    except getopt.GetoptError:
       print('test.py -i <inputfile> -o <outputfile>')
       sys.exit(2)
@@ -247,10 +295,13 @@ def main(argv):
          inputfile = arg
       elif opt in ("-o", "--ofile"):
          outputfile = arg
+      elif opt in ("-m", "--module"):
+         module = arg
    print('Input file is "', inputfile)
    print('Output file is "', outputfile)
+   print('Module is "', module)   
    # cleanInputFile(inputfile)
-   parseLLVM(inputfile,outputfile)
+   parseLLVM(inputfile,outputfile,module)
    
    #sanitze keyword 'return'
    with open(outputfile) as f:

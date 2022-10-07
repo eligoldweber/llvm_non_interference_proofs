@@ -1,7 +1,7 @@
 include "../../LLVM/llvm.i.dfy"
 include "../../LLVM/control_flow.i.dfy"
 include "../../LLVM/generalInstructionsBehavior.i.dfy"
-include "../../LLVM/types.dfy"
+include "../../LLVM/types.s.dfy"
 include "../../LLVM/memory.i.dfy"
 include "../../LLVM/control_flow.i.dfy"
 include "../../LLVM/Operations/otherOperations.i.dfy"

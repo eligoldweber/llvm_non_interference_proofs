@@ -1,7 +1,7 @@
 include "simpleBugCode.i.dfy"
 include "simpleBugGeneral.i.dfy"
 include "../../LLVM/llvmREFACTOR.i.dfy"
-include "../../LLVM/types.dfy"
+include "../../LLVM/types.s.dfy"
 
 module simpleBugBenignLemmas{
     import opened simpleBugCode

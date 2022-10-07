@@ -1,7 +1,7 @@
 // include "LLVM/llvm.i.dfy" // needs to be re-factored
 include "LLVM/llvmREFACTOR.i.dfy" // needs to be re-factored
 include "LLVM/control_flow.i.dfy"
-include "LLVM/types.dfy"
+include "LLVM/types.s.dfy"
 include "LLVM/Operations/otherOperations.i.dfy"
 include "Libraries/Seqs.s.dfy"
 

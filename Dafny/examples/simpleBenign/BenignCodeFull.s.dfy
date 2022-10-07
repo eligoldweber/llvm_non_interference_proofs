@@ -1,5 +1,5 @@
 include "../../LLVM/llvmREFACTOR_Multi.i.dfy"
-include "../../LLVM/types.dfy"
+include "../../LLVM/types.s.dfy"
 include "../../LLVM/control_flow.i.dfy"
 include "../../LLVM/behaviorLemmas.i.dfy"
 include "../../Libraries/Seqs.s.dfy"

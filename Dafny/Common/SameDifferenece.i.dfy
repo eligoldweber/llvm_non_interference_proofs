@@ -1,6 +1,6 @@
 
 include "../LLVM/ops.dfy"
-include "../LLVM/types.dfy"
+include "../LLVM/types.s.dfy"
 include "../Libraries/Seqs.s.dfy"
 include "../Libraries/Seqs.i.dfy"
 

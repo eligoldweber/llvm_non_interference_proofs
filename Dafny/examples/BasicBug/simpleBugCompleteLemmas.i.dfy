@@ -1,7 +1,7 @@
 include "simpleBugCode.i.dfy"
 include "simpleBugGeneral.i.dfy"
 include "../../LLVM/llvmREFACTOR.i.dfy"
-include "../../LLVM/types.dfy"
+include "../../LLVM/types.s.dfy"
 include "../../Libraries/Seqs.s.dfy"
 
 module simpleBugCompleteLemmas{

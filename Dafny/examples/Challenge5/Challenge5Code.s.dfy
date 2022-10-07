@@ -1,5 +1,5 @@
 include "../../LLVM/llvm.i.dfy"
-include "../../LLVM/types.dfy"
+include "../../LLVM/types.s.dfy"
 include "../../LLVM/control_flow.i.dfy"
 
 

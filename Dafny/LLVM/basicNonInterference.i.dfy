@@ -1,7 +1,7 @@
 
 include "../AbstractNonInterferenceProof.s.dfy"
 include "llvmREFACTOR.i.dfy"
-include "./types.dfy"
+include "./types.s.dfy"
 include "./Operations/binaryOperations.i.dfy"
 include "../Libraries/Seqs.s.dfy"
 

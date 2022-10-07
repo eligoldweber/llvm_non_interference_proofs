@@ -1,5 +1,5 @@
 include "ops.dfy"
-include "types.dfy"
+include "types.s.dfy"
 include "Maps.i.dfy"
 
 module simple_memory {

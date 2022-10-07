@@ -1,7 +1,7 @@
 include "BenignCode.s.dfy"
 include "../../LLVM/behaviorLemmas.i.dfy"
 include "../../LLVM/llvmREFACTOR.i.dfy"
-include "../../LLVM/types.dfy"
+include "../../LLVM/types.s.dfy"
 include "../../Libraries/Sets.i.dfy"
 
 module simpleBenignProperties{

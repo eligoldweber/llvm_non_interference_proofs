@@ -2,7 +2,7 @@ include "simpleBugBenignLemmas.i.dfy"
 include "simpleBugCompleteLemmas.i.dfy"
 include "simpleBugCode.i.dfy"
 include "../../LLVM/llvmREFACTOR.i.dfy"
-include "../../LLVM/types.dfy"
+include "../../LLVM/types.s.dfy"
 include "simpleBugGeneral.i.dfy"
 include "../../Libraries/Seqs.s.dfy"
 

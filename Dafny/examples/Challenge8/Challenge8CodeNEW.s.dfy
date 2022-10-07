@@ -1,5 +1,5 @@
 include "../../LLVM/llvmNEW.i.dfy"
-include "../../LLVM/types.dfy"
+include "../../LLVM/types.s.dfy"
 include "../../LLVM/control_flow.i.dfy"
 include "../../LLVM/behaviorLemmas.i.dfy"
 include "../../Libraries/Seqs.s.dfy"
@@ -159,6 +159,7 @@ function patch_block(size:Operand):Code
             postfixCodeSimple())]);//CNil
     patch_block
 }
+
 
 function challenge_8_transport_handler_create_conn_patch(size:Operand):seq<Code>  
     requires size.D?;

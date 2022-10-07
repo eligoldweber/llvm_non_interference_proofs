@@ -1,4 +1,4 @@
-include "types.dfy"
+include "types.s.dfy"
 include "../Libraries/Math/mod_auto.i.dfy"
 module memory {
 

@@ -1,5 +1,5 @@
 include "../ops.dfy"
-include "../types.dfy"
+include "../types.s.dfy"
 include "binaryOperationsHelper.i.dfy"
 
 // Contains the following conversion operations: ADD, SUB

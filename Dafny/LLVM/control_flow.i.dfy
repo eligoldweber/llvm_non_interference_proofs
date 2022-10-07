@@ -1,5 +1,5 @@
 include "llvm.i.dfy"
-include "types.dfy"
+include "types.s.dfy"
 include "memory.i.dfy"
 
 // Adapted from Vale

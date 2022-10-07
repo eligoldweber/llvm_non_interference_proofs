@@ -1,6 +1,6 @@
 include "./llvm.i.dfy"
 include "./control_flow.i.dfy"
-include "./types.dfy"
+include "./types.s.dfy"
 include "./memory.i.dfy"
 include "./Operations/binaryOperations.i.dfy"
 include "./Operations/conversionOperations.i.dfy"

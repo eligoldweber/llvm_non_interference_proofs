@@ -1,7 +1,7 @@
 include "BenignCode.s.dfy"
 include "simpleBenignCommon.i.dfy"
 include "../../LLVM/llvmREFACTOR_Multi.i.dfy"
-include "../../LLVM/types.dfy"
+include "../../LLVM/types.s.dfy"
 include "../../Libraries/Seqs.s.dfy"
 
 module simpleBenignIsBenign{

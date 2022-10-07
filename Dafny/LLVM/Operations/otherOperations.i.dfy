@@ -1,5 +1,5 @@
 include "../ops.dfy"
-include "../types.dfy"
+include "../types.s.dfy"
 
 // Contains the following conversion operations: ICMP
 // TODO: FCMP, PHI, CALL 

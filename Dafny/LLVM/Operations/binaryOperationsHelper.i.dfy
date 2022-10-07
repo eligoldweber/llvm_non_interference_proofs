@@ -1,5 +1,5 @@
 include "../ops.dfy"
-include "../types.dfy"
+include "../types.s.dfy"
 
 
 module binary_operations_helper_i {

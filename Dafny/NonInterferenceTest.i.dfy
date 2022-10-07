@@ -1,7 +1,7 @@
 //// TEST EXAMPLES
 include "./AbstractNonInterferenceProof.s.dfy" 
 include "LLVM/control_flow.i.dfy"
-include "LLVM/types.dfy"
+include "LLVM/types.s.dfy"
 
 module challenge5 refines AbstractNonInterferenceProof {
     import opened types

@@ -1,5 +1,5 @@
 include "../../LLVM/llvmREFACTOR.i.dfy"
-include "../../LLVM/types.dfy"
+include "../../LLVM/types.s.dfy"
 include "../../Libraries/Seqs.s.dfy"
 include "../../Libraries/Sets.i.dfy"
 include "./simpleBugCode.i.dfy"

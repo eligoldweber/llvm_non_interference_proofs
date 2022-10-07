@@ -1,4 +1,4 @@
-include "types.dfy"
+include "types.s.dfy"
 
 module ops {
 
