@@ -142,14 +142,6 @@ function patch_block(size:Operand):Code
 {
         var config := allVariablesConfig();
 
-    // var patch_block := Block([Ins(LOAD(var_11,1,var_num_packets)),
-    // Ins(ZEXT(var_conv15,1,var_11,4)),
-    // Ins(LOAD(var_12,2,var_size_addr)),
-    // Ins(ZEXT(var_conv16,2,var_12,4)),
-    // Ins(SDIV(var_div,var_conv16,D(Int(7,IntType(4,false))))),
-    // Ins(ICMP(var_cmp17,sgt,4,var_conv15,var_div)),
-    // Ins(BR(var_cmp17,if_then19,postfix))]);
-
     
     var patch_block := Block(
         [Ins(SDIV(config.ops["var_div"],size,D(Int(7,IntType(4,false))))),

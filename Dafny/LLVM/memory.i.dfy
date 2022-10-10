@@ -103,7 +103,10 @@ predicate NextMemStep(s:MemState, s':MemState, step:MemStep)
                                             && MemValid(s)
                                             && (Store(s,s',bid,offset,data)))
         case memCpyStep(bid,bid') => bid' in s'.mem && bid in s.mem && s'.mem[bid'] == s.mem[bid]
-        case loadStep(t,op1,d) => op1.Ptr? && IsValidPtr(s, op1.bid, op1.offset,1) && Load(s,s',op1.bid,op1.offset,d)
+        case loadStep(t,op1,d) => && op1.Ptr? 
+                                  && MemValid(s)
+                                  && IsValidPtr(s, op1.bid, op1.offset,1) 
+                                  && d == evalLoadRE(s,op1.bid,op1.offset)
         case stutterStep() => s == s'
 }
 
@@ -169,18 +172,25 @@ function evalStore(s:MemState, bid:nat, offset:nat, data:Data) : (s':MemState)
     s'
 }
 
+function evalLoadRE(s:MemState,bid:nat, offset:nat) : (out:Data)
+    requires MemValid(s)
+    requires IsValidPtr(s, bid, offset,1)
+    ensures out.Int? || out.Ptr? || out.Void?
+    ensures s.mem[bid][offset].mb? && validBitWidth(s.mem[bid][offset].size) ==> (out.Int? && IntFits(out.val,out.itype))
+    ensures s.mem[bid][offset].mptr? && IsValidPtr(s,s.mem[bid][offset].block,s.mem[bid][offset].offset,1) ==> (out.Ptr? && IsValidPtr(s,out.bid,out.offset,out.size) )
+{
+    var out := s.mem[bid][offset];
+    if out.mb? && validBitWidth(out.size) then
+        var outInt := Int(out.data,IntType(out.size,false));
+        assert IntFits(out.data,IntType(out.size,false));
+        outInt
+    else
+        if out.mptr? && IsValidPtr(s,out.block,out.offset,1) then
+            Ptr(out.block,out.block,out.offset,1)
+        else
+            Void
+}
 
-// lemma StoreImpliesStoreStep(s:MemState, s':MemState, bid:nat, offset:nat, data:Data)
-//     requires IsValidPtr(s, bid, offset,1)
-//     requires data.Int? && IntType(1, false) == data.itype;
-//     requires Store(s,s',bid,offset,data);
-//     ensures NextMemStep(s, s', MemStep.storeStep(bid,offset,data,1));
-// {
-//     assert IsValidPtr(s, bid, offset,1);
-//     assert data.Int? && IntType(1, false) == data.itype;
-//     assert (Store(s,s',bid,offset,data));
-//     assert NextMemStep(s, s', MemStep.storeStep(bid,offset,data,1));
-// }
 // // Memory Access and Addressing Operations // 
 function evalLOAD(s:MemState,s':MemState,t:bitWidth,op1:Data): (out:Data)
     requires MemValid(s)

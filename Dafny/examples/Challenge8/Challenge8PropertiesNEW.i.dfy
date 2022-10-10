@@ -55,8 +55,115 @@ module challenge8Properties{
     var rB := returnBlockNoStutter(b[2]);
 }
 
+lemma patchIsSuccesful()
+{
+    forall s:State,size:Operand | && ValidState(s)
+                                  && validIntState(s)
+                                  && validStartingState(s)
+                                  && validConfig(s)
+                                  && size.D?
+                                  && size.d.Int?
+                                  && size.d.itype == IntType(4,false)
+                                  && ValidOperand(s,size)
+     {
+        var b:=patchBlockNoStutter1(s,size);
+        assert !miniSpec2(s,b,size);
+     }
+}
 
 
+lemma patchBlockNoStutter1(s:State,size:Operand) returns (b:Behavior)
+    requires ValidState(s);
+    requires validIntState(s);
+    // requires validStartingState(s);
+
+    requires validConfig(s);
+    requires size.D?;
+    requires size.d.Int?;
+    requires size.d.itype == IntType(4,false);
+    requires ValidOperand(s,size)
+    ensures b ==  [s] + evalCodeFn(patch_block(size),s);
+    ensures |b| >= 6;
+    ensures ValidBehavior(b)
+    ensures !miniSpec2(s,b,size);
+{
+    var config := allVariablesConfig();
+    // b := [s] + evalCodeFn(patch_block(size),s);
+    b := patchIsValidB(s,size);
+    // assert |b| == 7;
+    // assert NextStep(b[0],b[1],evalInsStep((SDIV(config.ops["var_div"],size,D(Int(7,IntType(4,false)))))));
+    // assert NextStep(b[1],b[2],evalInsStep((ICMP(config.ops["var_cmp17"],sgt,4,config.ops["var_num_packets"],config.ops["var_div"]))));
+    if dataToBool(OperandContents(b[2],config.ops["var_cmp17"])){
+        // assert |b| == 7;
+        assert size.d.val/Int(7,IntType(4,false)).val < (OperandContents(s,config.ops["var_num_packets"]).val);
+            // assert NextStep(b[2],b[3],evalInsStep((CALL(D(Void),delete_connection()))));
+            // assert NextStep(b[3],b[4],evalInsStep((STORE(D(Int(0,IntType(1,false))),allVariablesConfig().ops["var_retval"]))));
+            // assert NextStep(b[4],b[5],evalInsStep((LOAD(allVariablesConfig().ops["var_26"],1,allVariablesConfig().ops["var_retval"]))));
+            // assert NextStep(b[5],b[6],evalInsStep((RET(allVariablesConfig().ops["var_26"]))));
+        // assert {:split_here}  OperandContents(last(b),allVariablesConfig().ops["var_26"]).val == 0;
+
+    }else{
+        // assert |b| == 6;
+        assert  !(size.d.val/Int(7,IntType(4,false)).val < (OperandContents(s,config.ops["var_num_packets"]).val));
+        // assert NextStep(b[2],b[3],evalInsStep((STORE(D(Int(1,IntType(1,false))),allVariablesConfig().ops["var_retval"]))));
+        // assert NextStep(b[3],b[4],evalInsStep((LOAD(allVariablesConfig().ops["var_26"],1,allVariablesConfig().ops["var_retval"]))));
+        // assert NextStep(b[4],b[5],evalInsStep((RET(allVariablesConfig().ops["var_26"]))));
+        // assert OperandContents(last(b),allVariablesConfig().ops["var_26"]).val == 1;
+    }   
+}
+
+lemma patchIsValidB(s:State,size:Operand) returns (b:Behavior)
+    requires ValidState(s);
+    requires validIntState(s);
+    requires validStartingState(s);
+
+    requires validConfig(s);
+    requires size.D?;
+    requires size.d.Int?;
+    requires size.d.itype == IntType(4,false);
+    ensures ValidBehavior(b)
+    ensures b ==  [s] + evalCodeFn(patch_block(size),s);
+    ensures |b| >= 6;
+
+{
+     var config := allVariablesConfig();
+     b := [s] + evalCodeFn(patch_block(size),s);
+     if dataToBool(OperandContents(b[2],config.ops["var_cmp17"])){
+        // assert |b| == 7;
+        assert size.d.val/Int(7,IntType(4,false)).val < (OperandContents(s,config.ops["var_num_packets"]).val);
+            // assert NextStep(b[2],b[3],evalInsStep((CALL(D(Void),delete_connection()))));
+            // assert NextStep(b[3],b[4],evalInsStep((STORE(D(Int(0,IntType(1,false))),allVariablesConfig().ops["var_retval"]))));
+            // assert NextStep(b[4],b[5],evalInsStep((LOAD(allVariablesConfig().ops["var_26"],1,allVariablesConfig().ops["var_retval"]))));
+            // assert NextStep(b[5],b[6],evalInsStep((RET(allVariablesConfig().ops["var_26"]))));
+        // assert {:split_here}  OperandContents(last(b),allVariablesConfig().ops["var_26"]).val == 0;
+
+    }else{
+        // assert |b| == 6;
+        assert  !(size.d.val/Int(7,IntType(4,false)).val < (OperandContents(s,config.ops["var_num_packets"]).val));
+        // assert NextStep(b[2],b[3],evalInsStep((STORE(D(Int(1,IntType(1,false))),allVariablesConfig().ops["var_retval"]))));
+        // assert NextStep(b[3],b[4],evalInsStep((LOAD(allVariablesConfig().ops["var_26"],1,allVariablesConfig().ops["var_retval"]))));
+        // assert NextStep(b[4],b[5],evalInsStep((RET(allVariablesConfig().ops["var_26"]))));
+        // assert OperandContents(last(b),allVariablesConfig().ops["var_26"]).val == 1;
+    }
+}   
+
+    predicate miniSpec2(s:State,b:Behavior,size:Operand)
+        requires size.D?;
+        requires size.d.Int?;
+        requires size.d.itype == IntType(4,false);
+    {
+        reveal_ValidBehavior();
+        assert forall s :: |evalCodeFn(postfixCodeSimple(),s)| == 3;
+        var config := allVariablesConfig();
+       && ValidState(s)
+       && validStartingState(s)
+       && ValidBehavior(b)
+       && |b| > 0
+       && ValidOperand(last(b),allVariablesConfig().ops["var_26"])
+       && OperandContents(last(b),allVariablesConfig().ops["var_26"]).Int?
+       && OperandContents(last(b),allVariablesConfig().ops["var_26"]).val == 1
+       && (size.d.val/Int(7,IntType(4,false)).val < (OperandContents(s,config.ops["var_num_packets"]).val))
+    }
 
 
 
@@ -216,6 +323,10 @@ module challenge8Properties{
 
         assert NextStep(b[0],b[1],evalInsStep((SDIV(config.ops["var_div"],size,D(Int(7,IntType(4,false)))))));
         // assert ValidState(b[1]);
+            assert  4 == OperandContents(b[1],config.ops["var_num_packets"]).itype.size;
+
+            assert ValidInstruction(b[1],(ICMP(config.ops["var_cmp17"],sgt,4,config.ops["var_num_packets"],config.ops["var_div"])));
+
         assert NextStep(b[1],b[2],evalInsStep((ICMP(config.ops["var_cmp17"],sgt,4,config.ops["var_num_packets"],config.ops["var_div"]))));
         if dataToBool(OperandContents(b[2],config.ops["var_cmp17"])){
             // assert evalCodeFn_Stutter(c.ifTrue,s);

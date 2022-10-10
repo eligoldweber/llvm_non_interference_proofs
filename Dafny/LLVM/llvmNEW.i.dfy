@@ -252,7 +252,7 @@ predicate validCode(c:Code)
     || (c.IfElse? && validCode(c.ifTrue) && validCode(c.ifFalse))
 }
 //
-function  evalCodeFn(c:Code,s:State) : (b:Behavior)
+function evalCodeFn(c:Code,s:State) : (b:Behavior)
     requires validCode(c)
     ensures  |b| > 0
     ensures (c.Ins?) ==> |b| == 1
@@ -486,7 +486,8 @@ function  evalCodeSeqFn(block:seq<Code>, s:State) : (b:Behavior)
                 assert StateNext(s,s');
                 s'
             case LOAD(dst,size,src) => 
-                var s' := incPC(s); 
+                var s' := stateUpdateVar(s,dst,evalLoadRE(s.m,OperandContents(s,src).bid,OperandContents(s,src).offset));
+                var s' := incPC(s'); 
                 assert NextStep(s,s',Step.evalInsStep(ins));
                 assert StateNext(s,s');
                 s'
@@ -639,6 +640,7 @@ function  evalCodeSeqFn(block:seq<Code>, s:State) : (b:Behavior)
                                                 //    && |s.m.mem[OperandContents(s,op1).bid]| == t
             case LOAD(dst,size,src) => (dst.LV? || dst.GV?) && ValidOperand(s,dst) && ValidOperand(s,src) 
                                 && MemValid(s.m) && OperandContents(s,src).Ptr? 
+                                && OperandContents(s,dst).Int? 
                                 && IsValidPtr(s.m,OperandContents(s,src).bid,OperandContents(s,src).offset,size)
             case BITCAST(dst,src,castType) => (dst.LV? || dst.GV?) && ValidOperand(s,dst) && ValidOperand(s,src) && ValidOperand(s,castType)
                                                         && ValidOperand(s,dst) 
@@ -692,11 +694,9 @@ function  evalCodeSeqFn(block:seq<Code>, s:State) : (b:Behavior)
             case GETELEMENTPTR(dst,t,op1,op2) => ValidState(s') //o == dst 
                                 && ValidData(s',evalGETELEMENTPTR(s.m,t,OperandContents(s,op1),OperandContents(s,op2)))
                                 && evalUpdate(s, dst, evalGETELEMENTPTR(s.m,t,OperandContents(s,op1),OperandContents(s,op2)),s')
-            // case LOAD(dst,size,src) => ValidState(s') 
-            //                            && s'.m == s.m 
-            //                            && ValidData(s',evalLOAD(s.m,s'.m,size,OperandContents(s,src)))
-            //                            && evalUpdate(s, dst, evalLOAD(s.m,s'.m,size,OperandContents(s,src)),s')
-            case LOAD(dst,size,src) => s' == incPC(s)  //s == s' // placeholder
+            case LOAD(dst,size,src) => ValidState(s') // o == dst 
+                                && ValidData(s',evalLoadRE(s.m,OperandContents(s,src).bid,OperandContents(s,src).offset))
+                                && evalUpdate(s, dst, evalLoadRE(s.m,OperandContents(s,src).bid,OperandContents(s,src).offset),s')
             case BITCAST(dst,src,castType) => ValidState(s')
                                             && ValidData(s',evalBITCAST(OperandContents(s,src),OperandContents(s,castType)))    
                                             && evalUpdate(s, dst, evalBITCAST(OperandContents(s,src),OperandContents(s,castType)),s')
