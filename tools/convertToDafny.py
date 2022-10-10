@@ -195,6 +195,7 @@ def parseLLVM(in_filename,out_filename,module_name):
 	fout.write(handleModuleHeader(module_name))
 	# add LVS Config
 	handleConfig(fout,lv)
+	handleValidConfigPredicate(fout,lv)
 	reversedLabelCounter = len(labelList)-1
 	for i in reversed(totalDafnyCode.split("\n\n")[:-1]):
 		fout.write("\n\n" + i)
@@ -205,8 +206,9 @@ def parseLLVM(in_filename,out_filename,module_name):
 	fout.close()
 
 def handleModuleHeader(module):
+	importReminder = "//make sure to add proper paths for the following..\n//include ../../LLVM/llvmNEW.i.dfy\n//include ../../LLVM/types.s.dfy\n\n"
 	header = "module " + str(module) +"\n{\n\timport opened LLVM_def_NEW\n\timport opened types\n\n"
-	return header
+	return importReminder+header
 
 def handleConfig(fout,lv):
 	fout.write("function allVariablesConfig():Configuration\n{")
@@ -218,6 +220,14 @@ def handleConfig(fout,lv):
 		fout.write("\n\t\t \"" + (lvNames[i]) + "\" := " + (lvNames[i]) + ",")
 	fout.write("\n\t\t \"" + str(lvNames[len(lvNames[:-1])]) + "\" := " + str(lvNames[len(lvNames[:-1])]))
 	fout.write("])\n}")
+
+def handleValidConfigPredicate(fout,lv):
+	fout.write("\npredicate validConfig(s:State)\n\trequires ValidState(s)\n{")
+	fout.write("\n\tvar c := allVariablesConfig(); \n\t&& (forall op :: op in c.ops ==> \n\t\t&& c.ops[op].LV? \n\t\t&& c.ops[op].l in s.lvs\n\t\t&& ValidOperand(s,c.ops[op]))")
+	lvNames = list(lv.keys())
+	for lvs in lvNames:
+		fout.write("\n\t\t &&\"" + lvs + "\" in c.ops")
+	fout.write("\n\t\t//... add any additional state information\n}")
 
 def handleLV(ins,lvs):
 	for i in ins:

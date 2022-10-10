@@ -22,7 +22,7 @@ module challenge8Properties{
 
     lemma returnBlockNoStutter(s:State) returns (b:Behavior)
         requires ValidState(s);
-        requires validIntState(s);
+        // requires validIntState(s);
         requires validConfig(s);
     {
         var config := allVariablesConfig();
@@ -36,7 +36,7 @@ module challenge8Properties{
 
     lemma ifThen19NoStutter(s:State) returns (b:Behavior)
         requires ValidState(s);
-        requires validIntState(s);
+        // requires validIntState(s);
         requires validConfig(s);
         ensures b == [s] + evalCodeFn(if_then19(),s);
         ensures |b| == 5;
@@ -58,8 +58,6 @@ module challenge8Properties{
 lemma patchIsSuccesful()
 {
     forall s:State,size:Operand | && ValidState(s)
-                                  && validIntState(s)
-                                  && validStartingState(s)
                                   && validConfig(s)
                                   && size.D?
                                   && size.d.Int?
@@ -74,7 +72,7 @@ lemma patchIsSuccesful()
 
 lemma patchBlockNoStutter1(s:State,size:Operand) returns (b:Behavior)
     requires ValidState(s);
-    requires validIntState(s);
+    // requires validIntState(s);
     // requires validStartingState(s);
 
     requires validConfig(s);
@@ -114,8 +112,8 @@ lemma patchBlockNoStutter1(s:State,size:Operand) returns (b:Behavior)
 
 lemma patchIsValidB(s:State,size:Operand) returns (b:Behavior)
     requires ValidState(s);
-    requires validIntState(s);
-    requires validStartingState(s);
+    // requires validIntState(s);
+    // requires validStartingState(s);
 
     requires validConfig(s);
     requires size.D?;
@@ -128,6 +126,12 @@ lemma patchIsValidB(s:State,size:Operand) returns (b:Behavior)
 {
      var config := allVariablesConfig();
      b := [s] + evalCodeFn(patch_block(size),s);
+     assert ValidOperand(s,config.ops["var_cmp17"]);
+     assert NextStep(b[0],b[1],evalInsStep((SDIV(config.ops["var_div"],size,D(Int(7,IntType(4,false)))))));
+     assert ValidState(b[1]);
+     assert ValidInstruction(b[1], (ICMP(config.ops["var_cmp17"],sgt,4,config.ops["var_num_packets"],config.ops["var_div"])));
+
+     assert NextStep(b[1],b[2],evalInsStep((ICMP(config.ops["var_cmp17"],sgt,4,config.ops["var_num_packets"],config.ops["var_div"]))));
      if dataToBool(OperandContents(b[2],config.ops["var_cmp17"])){
         // assert |b| == 7;
         assert size.d.val/Int(7,IntType(4,false)).val < (OperandContents(s,config.ops["var_num_packets"]).val);
@@ -156,7 +160,7 @@ lemma patchIsValidB(s:State,size:Operand) returns (b:Behavior)
         assert forall s :: |evalCodeFn(postfixCodeSimple(),s)| == 3;
         var config := allVariablesConfig();
        && ValidState(s)
-       && validStartingState(s)
+       && validConfig(s)
        && ValidBehavior(b)
        && |b| > 0
        && ValidOperand(last(b),allVariablesConfig().ops["var_26"])
@@ -167,266 +171,266 @@ lemma patchIsValidB(s:State,size:Operand) returns (b:Behavior)
 
 
 
-// Eval using Stutter Step // 
-        lemma vulnRefactor(s:State,c:seq<Code>) returns (preB:Behavior)
-        requires ValidState(s);
-        requires validStartingState(s);
-        requires c == challenge_8_transport_handler_create_conn_vuln_test();
-        ensures ValidBehavior(preB);
-        ensures |preB| == 8;
-        ensures forall i :: i >=0 && i < |preB| - 1 ==> NextStep(preB[i],preB[i+1],Step.stutterStep());
-        ensures preB == [s] + evalCodeSeqFn_Stutter(c,s);
-    {
-        //    [prefixCode(), Block([CNil]),postfixCode()]
+// // Eval using Stutter Step // 
+//     lemma vulnRefactor(s:State,c:seq<Code>) returns (preB:Behavior)
+//         requires ValidState(s);
+//         requires validStartingState(s);
+//         requires c == challenge_8_transport_handler_create_conn_vuln_test();
+//         ensures ValidBehavior(preB);
+//         ensures |preB| == 8;
+//         ensures forall i :: i >=0 && i < |preB| - 1 ==> NextStep(preB[i],preB[i+1],Step.stutterStep());
+//         ensures preB == [s] + evalCodeSeqFn_Stutter(c,s);
+//     {
+//         //    [prefixCode(), Block([CNil]),postfixCode()]
 
-        reveal_ValidBehavior();
-        var b:Behavior := [s] + evalCodeSeqFn_Stutter(c,s);
-        assert |b| == 8;
-        assert ValidBehavior(b);
-        forall i | i >=0 && i < |b| - 1
-            ensures  NextStep(b[i],b[i+1],Step.stutterStep());
-        {
-            // assert NextStep(b[i],b[i+1],Step.stutterStep());
-        }
+//         reveal_ValidBehavior();
+//         var b:Behavior := [s] + evalCodeSeqFn_Stutter(c,s);
+//         assert |b| == 8;
+//         assert ValidBehavior(b);
+//         forall i | i >=0 && i < |b| - 1
+//             ensures  NextStep(b[i],b[i+1],Step.stutterStep());
+//         {
+//             // assert NextStep(b[i],b[i+1],Step.stutterStep());
+//         }
 
-        var prefixB :=  [s] + evalCodeFn_Stutter(prefixCode(),s);
-        assert |prefixB| == 3;
-        assert prefixB == b[..3];
+//         var prefixB :=  [s] + evalCodeFn_Stutter(prefixCode(),s);
+//         assert |prefixB| == 3;
+//         assert prefixB == b[..3];
 
-        var midB :=  evalCodeFn_Stutter(Block([CNil]),last(prefixB));
-        assert |midB| == 2;
-        assert midB == b[3..5];
+//         var midB :=  evalCodeFn_Stutter(Block([CNil]),last(prefixB));
+//         assert |midB| == 2;
+//         assert midB == b[3..5];
 
-        var postfixB :=  evalCodeFn_Stutter(postfixCode(),last(midB));
-        assert |postfixB| == 2;
+//         var postfixB :=  evalCodeFn_Stutter(postfixCode(),last(midB));
+//         assert |postfixB| == 2;
 
-        assert b == prefixB + midB + postfixB + [last(postfixB)];
+//         assert b == prefixB + midB + postfixB + [last(postfixB)];
 
-        preB := b;
+//         preB := b;
 
-    }
+//     }
 
-    lemma behaviorIsSumOfParts(s:State,cseq:seq<Code>,b:Behavior)
-        requires b == [s] + evalCodeSeqFn_Stutter(cseq,s)
-        requires |cseq| > 1;
-    {
-        var smalB := b;
-        assert smalB[..1] == [s];
-        smalB := smalB[1..];
-        // var index := 1;
-        var i := 0;
-        var subB := evalCodeFn_Stutter(cseq[i],s);
-        assert smalB[..|subB|] == subB;
+//     lemma behaviorIsSumOfParts(s:State,cseq:seq<Code>,b:Behavior)
+//         requires b == [s] + evalCodeSeqFn_Stutter(cseq,s)
+//         requires |cseq| > 1;
+//     {
+//         var smalB := b;
+//         assert smalB[..1] == [s];
+//         smalB := smalB[1..];
+//         // var index := 1;
+//         var i := 0;
+//         var subB := evalCodeFn_Stutter(cseq[i],s);
+//         assert smalB[..|subB|] == subB;
         
-        smalB := smalB[|subB|..];
+//         smalB := smalB[|subB|..];
 
-        assert evalCodeSeqFn_Stutter(cseq,s) == evalCodeFn_Stutter(first(cseq),s) + evalCodeSeqFn_Stutter(all_but_first(cseq),last(evalCodeFn_Stutter(first(cseq),s)));
-        assert subB ==  evalCodeFn_Stutter(first(cseq),s);
-        // assert evalCodeSeqFn_Stutter(all_but_first(cseq),last(evalCodeFn_Stutter(first(cseq),s))) == evalCodeFn_Stutter(first(all_but_first(cseq)),last(evalCodeFn_Stutter(first(cseq),s)))
-        // index := 1+|subB|;
-        // i := i +1;
-        // subB := evalCodeFn_Stutter(cseq[i],last(subB));
-        // assert b[..|subB|] == subB;
-        // while i < |cseq|
-        // {
-        //     var subB := evalCodeFn_Stutter(cseq[i],b[index-1]);
-        //     assert b[index..index+|subB|] == subB;
-        //     index := index+|subB|;
-        //     i := i +1;
-        // }
-    //    forall i | i >= 0 && i < |cseq|
-    //    {
-    //      var subB := evalCodeFn_Stutter(prefixCode(),b[index-1]);
-    //      assert b[index..index+|subB|] == subB;
-    //      index := index+|subB|;
-    //    }
-    }
+//         assert evalCodeSeqFn_Stutter(cseq,s) == evalCodeFn_Stutter(first(cseq),s) + evalCodeSeqFn_Stutter(all_but_first(cseq),last(evalCodeFn_Stutter(first(cseq),s)));
+//         assert subB ==  evalCodeFn_Stutter(first(cseq),s);
+//         // assert evalCodeSeqFn_Stutter(all_but_first(cseq),last(evalCodeFn_Stutter(first(cseq),s))) == evalCodeFn_Stutter(first(all_but_first(cseq)),last(evalCodeFn_Stutter(first(cseq),s)))
+//         // index := 1+|subB|;
+//         // i := i +1;
+//         // subB := evalCodeFn_Stutter(cseq[i],last(subB));
+//         // assert b[..|subB|] == subB;
+//         // while i < |cseq|
+//         // {
+//         //     var subB := evalCodeFn_Stutter(cseq[i],b[index-1]);
+//         //     assert b[index..index+|subB|] == subB;
+//         //     index := index+|subB|;
+//         //     i := i +1;
+//         // }
+//     //    forall i | i >= 0 && i < |cseq|
+//     //    {
+//     //      var subB := evalCodeFn_Stutter(prefixCode(),b[index-1]);
+//     //      assert b[index..index+|subB|] == subB;
+//     //      index := index+|subB|;
+//     //    }
+//     }
 
 
-    lemma fullPatch(s:State,size:Operand)returns (b:Behavior)
-        requires ValidState(s);
-        requires validStartingState(s);
-        requires size.D?;
-        requires size.d.Int?;
-        requires size.d.itype == IntType(4,false);
-        requires ValidOperand(s,size)
-        requires validConfig(s);
-        ensures b ==  [s] + evalCodeSeqFn_Stutter(challenge_8_transport_handler_create_conn_patch(size),s);
-    {
-        var config := allVariablesConfig();    
-        b := [s] + evalCodeSeqFn_Stutter(challenge_8_transport_handler_create_conn_patch(size),s);   
-        var prefixB :=  [s] + evalCodeFn_Stutter(prefixCode(),s);
-        var mid := evalCodeFn_Stutter(patch_block(size),last(prefixB));
-        // var post := evalCodeFn_Stutter(postfixCode(),last(mid));
+//     lemma fullPatch(s:State,size:Operand)returns (b:Behavior)
+//         requires ValidState(s);
+//         requires validStartingState(s);
+//         requires size.D?;
+//         requires size.d.Int?;
+//         requires size.d.itype == IntType(4,false);
+//         requires ValidOperand(s,size)
+//         requires validConfig(s);
+//         ensures b ==  [s] + evalCodeSeqFn_Stutter(challenge_8_transport_handler_create_conn_patch(size),s);
+//     {
+//         var config := allVariablesConfig();    
+//         b := [s] + evalCodeSeqFn_Stutter(challenge_8_transport_handler_create_conn_patch(size),s);   
+//         var prefixB :=  [s] + evalCodeFn_Stutter(prefixCode(),s);
+//         var mid := evalCodeFn_Stutter(patch_block(size),last(prefixB));
+//         // var post := evalCodeFn_Stutter(postfixCode(),last(mid));
 
-        assert NextStep(b[0],b[1],Step.stutterStep());
-        assert NextStep(b[1],b[2],Step.stutterStep());
-        assert last(prefixB) == b[2];
-        // assert b == prefixB + mid + post + [last(post)];
-        assert b == prefixB + mid  + [last(mid)];
+//         assert NextStep(b[0],b[1],Step.stutterStep());
+//         assert NextStep(b[1],b[2],Step.stutterStep());
+//         assert last(prefixB) == b[2];
+//         // assert b == prefixB + mid + post + [last(post)];
+//         assert b == prefixB + mid  + [last(mid)];
 
-        // var x := patchBlock(b[2],size);
-        // assert mid == all_but_first(x);
+//         // var x := patchBlock(b[2],size);
+//         // assert mid == all_but_first(x);
 
-        // assert |post| == 2;
-        // assert forall i :: i>= |b|-3 && i < |b| ==> b[i] == last(mid);
-        // assert NextStep(b[3],b[4],evalInsStep((ICMP(config.ops["var_cmp17"],sgt,4,config.ops["var_num_packets"],config.ops["var_div"]))));
-        // assert size.d.val/7 < (OperandContents(b[4],config.ops["var_num_packets"]).val) ==> !dataToBool(OperandContents(b[4],config.ops["var_cmp17"]));
+//         // assert |post| == 2;
+//         // assert forall i :: i>= |b|-3 && i < |b| ==> b[i] == last(mid);
+//         // assert NextStep(b[3],b[4],evalInsStep((ICMP(config.ops["var_cmp17"],sgt,4,config.ops["var_num_packets"],config.ops["var_div"]))));
+//         // assert size.d.val/7 < (OperandContents(b[4],config.ops["var_num_packets"]).val) ==> !dataToBool(OperandContents(b[4],config.ops["var_cmp17"]));
 
-    }
+//     }
 
-    predicate miniSpec(s:State,b:Behavior,size:Operand)
-        requires size.D?;
-        requires size.d.Int?;
-        requires size.d.itype == IntType(4,false);
-    {
-       assert forall s :: |evalCodeFn_Stutter(postfixCodeSimple(),s)| == 4;
-        var config := allVariablesConfig();
+//     predicate miniSpec(s:State,b:Behavior,size:Operand)
+//         requires size.D?;
+//         requires size.d.Int?;
+//         requires size.d.itype == IntType(4,false);
+//     {
+//        assert forall s :: |evalCodeFn_Stutter(postfixCodeSimple(),s)| == 4;
+//         var config := allVariablesConfig();
 
-    //    && b == [s] + evalCodeFn_Stutter(patch_block(size),s)
-        // && ValidBehavior(b)
-       && ValidState(s)
-       && validStartingState(s)
-       && |b| >= 8
-       && b[|b|-5..] == evalCodeFn_Stutter(postfixCodeSimple(),b[|b|-6]) + [last(b)]
-       && FromTwosComp(UInt32(size.d.val/Int(7,IntType(4,false)).val % 0x8000_0000)).val < (OperandContents(s,config.ops["var_num_packets"]).val)
-    }
+//     //    && b == [s] + evalCodeFn_Stutter(patch_block(size),s)
+//         // && ValidBehavior(b)
+//        && ValidState(s)
+//        && validStartingState(s)
+//        && |b| >= 8
+//        && b[|b|-5..] == evalCodeFn_Stutter(postfixCodeSimple(),b[|b|-6]) + [last(b)]
+//        && FromTwosComp(UInt32(size.d.val/Int(7,IntType(4,false)).val % 0x8000_0000)).val < (OperandContents(s,config.ops["var_num_packets"]).val)
+//     }
 
-    lemma vulnPostfixSimple(s:State,size:Operand) returns (b:Behavior)
-        requires ValidState(s);
-        requires validStartingState(s);
-        requires size.D?;
-        requires size.d.Int?;
-        requires size.d.itype == IntType(4,false);
-        requires ValidOperand(s,size)
-        requires validConfig(s);
-    {
-        var config := allVariablesConfig();
-        b := [s] + evalCodeSeqFn_Stutter(challenge_8_transport_handler_create_conn_vuln_postfix_simple(size),s);
+//     lemma vulnPostfixSimple(s:State,size:Operand) returns (b:Behavior)
+//         requires ValidState(s);
+//         requires validStartingState(s);
+//         requires size.D?;
+//         requires size.d.Int?;
+//         requires size.d.itype == IntType(4,false);
+//         requires ValidOperand(s,size)
+//         requires validConfig(s);
+//     {
+//         var config := allVariablesConfig();
+//         b := [s] + evalCodeSeqFn_Stutter(challenge_8_transport_handler_create_conn_vuln_postfix_simple(size),s);
 
-    }
-    lemma patchBlock(s:State,size:Operand) returns (b:Behavior)
-        requires ValidState(s);
-        requires validStartingState(s);
-        requires size.D?;
-        requires size.d.Int?;
-        requires size.d.itype == IntType(4,false);
-        requires ValidOperand(s,size)
-        requires validConfig(s);
-        ensures b ==  [s] + evalCodeFn_Stutter(patch_block(size),s);
-        ensures |b| >= 8;
-        ensures !miniSpec(s,b,size);
-        // ensures ValidBehavior(b);
-    {
-        var config := allVariablesConfig();
-        b := [s] + evalCodeFn_Stutter(patch_block(size),s);
+//     }
+//     lemma patchBlock(s:State,size:Operand) returns (b:Behavior)
+//         requires ValidState(s);
+//         requires validStartingState(s);
+//         requires size.D?;
+//         requires size.d.Int?;
+//         requires size.d.itype == IntType(4,false);
+//         requires ValidOperand(s,size)
+//         requires validConfig(s);
+//         ensures b ==  [s] + evalCodeFn_Stutter(patch_block(size),s);
+//         ensures |b| >= 8;
+//         ensures !miniSpec(s,b,size);
+//         // ensures ValidBehavior(b);
+//     {
+//         var config := allVariablesConfig();
+//         b := [s] + evalCodeFn_Stutter(patch_block(size),s);
 
-        assert NextStep(b[0],b[1],evalInsStep((SDIV(config.ops["var_div"],size,D(Int(7,IntType(4,false)))))));
-        // assert ValidState(b[1]);
-            assert  4 == OperandContents(b[1],config.ops["var_num_packets"]).itype.size;
+//         assert NextStep(b[0],b[1],evalInsStep((SDIV(config.ops["var_div"],size,D(Int(7,IntType(4,false)))))));
+//         // assert ValidState(b[1]);
+//             assert  4 == OperandContents(b[1],config.ops["var_num_packets"]).itype.size;
 
-            assert ValidInstruction(b[1],(ICMP(config.ops["var_cmp17"],sgt,4,config.ops["var_num_packets"],config.ops["var_div"])));
+//             assert ValidInstruction(b[1],(ICMP(config.ops["var_cmp17"],sgt,4,config.ops["var_num_packets"],config.ops["var_div"])));
 
-        assert NextStep(b[1],b[2],evalInsStep((ICMP(config.ops["var_cmp17"],sgt,4,config.ops["var_num_packets"],config.ops["var_div"]))));
-        if dataToBool(OperandContents(b[2],config.ops["var_cmp17"])){
-            // assert evalCodeFn_Stutter(c.ifTrue,s);
-            assert patch_block(size).block[2].IfElse?;
-            var ifElseB := evalCodeFn_Stutter(patch_block(size).block[2].ifTrue,b[2]);
-            assert b == [s] + [b[1]] + [b[2]] + ifElseB + [last(ifElseB)];
-            var ifThen19:Behavior := ifThen19(b[2]);
-            assert [b[2]] + evalCodeFn_Stutter(patch_block(size).block[2].ifTrue,b[2]) == ifThen19; 
-            // assert b == [s] + [b[1]] + ifThen19 + [last(ifThen19)];
-            // assert b[2..2+|ifThen19|] == ifThen19;
-            // assert b[2..] == ifThen19 + [last(ifThen19)];
-            assert NextStep(b[2],b[3],evalInsStep((CALL(D(Void),delete_connection()))));
-            assert NextStep(b[3],b[4],evalInsStep((STORE(D(Int(0,IntType(1,false))),allVariablesConfig().ops["var_retval"]))));
-            assert NextStep(b[4],b[5],evalInsStep((LOAD(allVariablesConfig().ops["var_26"],1,allVariablesConfig().ops["var_retval"]))));
-            assert NextStep(b[5],b[6],evalInsStep((RET(allVariablesConfig().ops["var_26"]))));
-            assert NextStep(b[6],b[7],Step.stutterStep());
-            assert NextStep(b[7],b[8],Step.stutterStep());
+//         assert NextStep(b[1],b[2],evalInsStep((ICMP(config.ops["var_cmp17"],sgt,4,config.ops["var_num_packets"],config.ops["var_div"]))));
+//         if dataToBool(OperandContents(b[2],config.ops["var_cmp17"])){
+//             // assert evalCodeFn_Stutter(c.ifTrue,s);
+//             assert patch_block(size).block[2].IfElse?;
+//             var ifElseB := evalCodeFn_Stutter(patch_block(size).block[2].ifTrue,b[2]);
+//             assert b == [s] + [b[1]] + [b[2]] + ifElseB + [last(ifElseB)];
+//             var ifThen19:Behavior := ifThen19(b[2]);
+//             assert [b[2]] + evalCodeFn_Stutter(patch_block(size).block[2].ifTrue,b[2]) == ifThen19; 
+//             // assert b == [s] + [b[1]] + ifThen19 + [last(ifThen19)];
+//             // assert b[2..2+|ifThen19|] == ifThen19;
+//             // assert b[2..] == ifThen19 + [last(ifThen19)];
+//             assert NextStep(b[2],b[3],evalInsStep((CALL(D(Void),delete_connection()))));
+//             assert NextStep(b[3],b[4],evalInsStep((STORE(D(Int(0,IntType(1,false))),allVariablesConfig().ops["var_retval"]))));
+//             assert NextStep(b[4],b[5],evalInsStep((LOAD(allVariablesConfig().ops["var_26"],1,allVariablesConfig().ops["var_retval"]))));
+//             assert NextStep(b[5],b[6],evalInsStep((RET(allVariablesConfig().ops["var_26"]))));
+//             assert NextStep(b[6],b[7],Step.stutterStep());
+//             assert NextStep(b[7],b[8],Step.stutterStep());
 
-            assert NextStep(b[8],b[9],Step.stutterStep());
-            // assert OperandContents(b[9],allVariablesConfig().ops["var_26"]).val == 0;
-            assert |b| == 10;
-            assert !miniSpec(s,b,size);
-        }else{
-            assert NextStep(b[2],b[3],evalInsStep((STORE(D(Int(1,IntType(1,false))),allVariablesConfig().ops["var_retval"]))));
-            assert NextStep(b[3],b[4],evalInsStep((LOAD(allVariablesConfig().ops["var_26"],1,allVariablesConfig().ops["var_retval"]))));
-            assert NextStep(b[4],b[5],evalInsStep((RET(allVariablesConfig().ops["var_26"]))));
+//             assert NextStep(b[8],b[9],Step.stutterStep());
+//             // assert OperandContents(b[9],allVariablesConfig().ops["var_26"]).val == 0;
+//             assert |b| == 10;
+//             assert !miniSpec(s,b,size);
+//         }else{
+//             assert NextStep(b[2],b[3],evalInsStep((STORE(D(Int(1,IntType(1,false))),allVariablesConfig().ops["var_retval"]))));
+//             assert NextStep(b[3],b[4],evalInsStep((LOAD(allVariablesConfig().ops["var_26"],1,allVariablesConfig().ops["var_retval"]))));
+//             assert NextStep(b[4],b[5],evalInsStep((RET(allVariablesConfig().ops["var_26"]))));
            
-            assert NextStep(b[5],b[6],Step.stutterStep());
-            assert NextStep(b[6],b[7],Step.stutterStep());
-            // assert NextStep(b[4],b[5],Step.stutterStep());
-            assert |b| == 8;
-            assert !miniSpec(s,b,size);
-        }
-        // assert (OperandContents(b[2],config.ops["var_num_packets"]).val) > (OperandContents(b[2],config.ops["var_div"]).val) ==> dataToBool(OperandContents(b[2],config.ops["var_cmp17"]));
-        // assert OperandContents(b[1],config.ops["var_div"]).val == FromTwosComp(UInt32(size.d.val/Int(7,IntType(4,false)).val % 0x8000_0000)).val;
-        // assert OperandContents(b[1],config.ops["var_div"]).val > (OperandContents(b[1],config.ops["var_num_packets"]).val) ==> OperandContents(b[2],config.ops["var_cmp17"]).val == 0;
-        // assert OperandContents(b[1],config.ops["var_div"]).val > (OperandContents(b[1],config.ops["var_num_packets"]).val) ==>!dataToBool(OperandContents(b[2],config.ops["var_cmp17"]));
-        // assert FromTwosComp(UInt32(size.d.val/Int(7,IntType(4,false)).val % 0x8000_0000)).val > (OperandContents(b[1],config.ops["var_num_packets"]).val) ==> |b| == 8;
-        // assert FromTwosComp(UInt32(size.d.val/Int(7,IntType(4,false)).val % 0x8000_0000)).val < (OperandContents(b[2],config.ops["var_num_packets"]).val) ==> !dataToBool(OperandContents(b[2],config.ops["var_cmp17"]));
-    }
+//             assert NextStep(b[5],b[6],Step.stutterStep());
+//             assert NextStep(b[6],b[7],Step.stutterStep());
+//             // assert NextStep(b[4],b[5],Step.stutterStep());
+//             assert |b| == 8;
+//             assert !miniSpec(s,b,size);
+//         }
+//         // assert (OperandContents(b[2],config.ops["var_num_packets"]).val) > (OperandContents(b[2],config.ops["var_div"]).val) ==> dataToBool(OperandContents(b[2],config.ops["var_cmp17"]));
+//         // assert OperandContents(b[1],config.ops["var_div"]).val == FromTwosComp(UInt32(size.d.val/Int(7,IntType(4,false)).val % 0x8000_0000)).val;
+//         // assert OperandContents(b[1],config.ops["var_div"]).val > (OperandContents(b[1],config.ops["var_num_packets"]).val) ==> OperandContents(b[2],config.ops["var_cmp17"]).val == 0;
+//         // assert OperandContents(b[1],config.ops["var_div"]).val > (OperandContents(b[1],config.ops["var_num_packets"]).val) ==>!dataToBool(OperandContents(b[2],config.ops["var_cmp17"]));
+//         // assert FromTwosComp(UInt32(size.d.val/Int(7,IntType(4,false)).val % 0x8000_0000)).val > (OperandContents(b[1],config.ops["var_num_packets"]).val) ==> |b| == 8;
+//         // assert FromTwosComp(UInt32(size.d.val/Int(7,IntType(4,false)).val % 0x8000_0000)).val < (OperandContents(b[2],config.ops["var_num_packets"]).val) ==> !dataToBool(OperandContents(b[2],config.ops["var_cmp17"]));
+//     }
 
-    lemma returnBlock(s:State) returns (b:Behavior)
-        requires ValidState(s);
-        requires validIntState(s);
-        requires validConfig(s);
-        ensures b == [s] + evalCodeFn_Stutter(return_(),s);
-        ensures |b| == 4;
-        ensures NextStep(b[0],b[1],evalInsStep((LOAD(allVariablesConfig().ops["var_26"],1,allVariablesConfig().ops["var_retval"]))));
-        ensures NextStep(b[1],b[2],evalInsStep((RET(allVariablesConfig().ops["var_26"]))));
-        ensures NextStep(b[2],b[3],Step.stutterStep());
-    {
-    var config := allVariablesConfig();
+//     lemma returnBlock(s:State) returns (b:Behavior)
+//         requires ValidState(s);
+//         // requires validIntState(s);
+//         requires validConfig(s);
+//         ensures b == [s] + evalCodeFn_Stutter(return_(),s);
+//         ensures |b| == 4;
+//         ensures NextStep(b[0],b[1],evalInsStep((LOAD(allVariablesConfig().ops["var_26"],1,allVariablesConfig().ops["var_retval"]))));
+//         ensures NextStep(b[1],b[2],evalInsStep((RET(allVariablesConfig().ops["var_26"]))));
+//         ensures NextStep(b[2],b[3],Step.stutterStep());
+//     {
+//     var config := allVariablesConfig();
 
-    b := [s] + evalCodeFn_Stutter(return_(),s);
-    assert StateNext(b[0],b[1]);
-    assert ValidState(b[1]);
-    assert ValidState(b[2]);
-    assert ValidState(b[3]);
-    assert |b| == 4;
-    assert NextStep(b[0],b[1],evalInsStep((LOAD(config.ops["var_26"],1,config.ops["var_retval"]))));
-    assert NextStep(b[1],b[2],evalInsStep((RET(config.ops["var_26"]))));
-    assert NextStep(b[2],b[3],Step.stutterStep());
-}
+//     b := [s] + evalCodeFn_Stutter(return_(),s);
+//     assert StateNext(b[0],b[1]);
+//     assert ValidState(b[1]);
+//     assert ValidState(b[2]);
+//     assert ValidState(b[3]);
+//     assert |b| == 4;
+//     assert NextStep(b[0],b[1],evalInsStep((LOAD(config.ops["var_26"],1,config.ops["var_retval"]))));
+//     assert NextStep(b[1],b[2],evalInsStep((RET(config.ops["var_26"]))));
+//     assert NextStep(b[2],b[3],Step.stutterStep());
+// }
 
-lemma ifThen19(s:State) returns (b:Behavior)
-    requires ValidState(s);
-    requires validIntState(s);
-    requires validConfig(s);
-    ensures b == [s] + evalCodeFn_Stutter(if_then19(),s);
-    ensures |b| == 7;
-    ensures NextStep(b[0],b[1],evalInsStep((CALL(D(Void),delete_connection()))));
-    ensures NextStep(b[1],b[2],evalInsStep((STORE(D(Int(0,IntType(1,false))),allVariablesConfig().ops["var_retval"]))));
-    ensures NextStep(b[2],b[3],evalInsStep((LOAD(allVariablesConfig().ops["var_26"],1,allVariablesConfig().ops["var_retval"]))));
-    ensures NextStep(b[3],b[4],evalInsStep((RET(allVariablesConfig().ops["var_26"]))));
-    ensures NextStep(b[4],b[5],Step.stutterStep());
-    ensures NextStep(b[5],b[6],Step.stutterStep());
+// lemma ifThen19(s:State) returns (b:Behavior)
+//     requires ValidState(s);
+//     // requires validIntState(s);
+//     requires validConfig(s);
+//     ensures b == [s] + evalCodeFn_Stutter(if_then19(),s);
+//     ensures |b| == 7;
+//     ensures NextStep(b[0],b[1],evalInsStep((CALL(D(Void),delete_connection()))));
+//     ensures NextStep(b[1],b[2],evalInsStep((STORE(D(Int(0,IntType(1,false))),allVariablesConfig().ops["var_retval"]))));
+//     ensures NextStep(b[2],b[3],evalInsStep((LOAD(allVariablesConfig().ops["var_26"],1,allVariablesConfig().ops["var_retval"]))));
+//     ensures NextStep(b[3],b[4],evalInsStep((RET(allVariablesConfig().ops["var_26"]))));
+//     ensures NextStep(b[4],b[5],Step.stutterStep());
+//     ensures NextStep(b[5],b[6],Step.stutterStep());
 
-{
-    var config := allVariablesConfig();
+// {
+//     var config := allVariablesConfig();
 
-    b := [s] + evalCodeFn_Stutter(if_then19(),s);
-    assert |b| == 7;
-    assert NextStep(b[0],b[1],evalInsStep((CALL(D(Void),delete_connection()))));
-    // assert  ValidState(b[1]);
-    // assert ValidInstruction(b[1], (CALL(D(Void),delete_connection())));
-    // assert if_then19().block[1].Ins?;
-    // assert MemValid(b[2].m);
-    // assert if_then19().block[1].ins == (STORE(D(Int(0,IntType(1,false))),config.ops["var_retval"]));
-    // assert NextStep(b[1],b[2],Step.stutterStep());
-    assert NextStep(b[1],b[2],evalInsStep((STORE(D(Int(0,IntType(1,false))),config.ops["var_retval"]))));
-    // assert if_then19().block[2].Block?;
-    // assert if_then19().block[2] == return_();
-    // assert [b[0],b[1],b[2]] == b[..3];
-    // assert NextStep(b[2],b[3],evalInsStep((LOAD(config.ops["var_26"],1,config.ops["var_retval"]))));
-    // assert NextStep(b[3],b[4],evalInsStep((RET(config.ops["var_26"]))));
-    // assert NextStep(b[4],b[5],Step.stutterStep());
-    // assert NextStep(b[5],b[6],Step.stutterStep());
-    var rB := returnBlock(b[2]);
-    assert NextStep(b[5],b[6],Step.stutterStep());
-}
+//     b := [s] + evalCodeFn_Stutter(if_then19(),s);
+//     assert |b| == 7;
+//     assert NextStep(b[0],b[1],evalInsStep((CALL(D(Void),delete_connection()))));
+//     // assert  ValidState(b[1]);
+//     // assert ValidInstruction(b[1], (CALL(D(Void),delete_connection())));
+//     // assert if_then19().block[1].Ins?;
+//     // assert MemValid(b[2].m);
+//     // assert if_then19().block[1].ins == (STORE(D(Int(0,IntType(1,false))),config.ops["var_retval"]));
+//     // assert NextStep(b[1],b[2],Step.stutterStep());
+//     assert NextStep(b[1],b[2],evalInsStep((STORE(D(Int(0,IntType(1,false))),config.ops["var_retval"]))));
+//     // assert if_then19().block[2].Block?;
+//     // assert if_then19().block[2] == return_();
+//     // assert [b[0],b[1],b[2]] == b[..3];
+//     // assert NextStep(b[2],b[3],evalInsStep((LOAD(config.ops["var_26"],1,config.ops["var_retval"]))));
+//     // assert NextStep(b[3],b[4],evalInsStep((RET(config.ops["var_26"]))));
+//     // assert NextStep(b[4],b[5],Step.stutterStep());
+//     // assert NextStep(b[5],b[6],Step.stutterStep());
+//     var rB := returnBlock(b[2]);
+//     assert NextStep(b[5],b[6],Step.stutterStep());
+// }
 
 /// VV OLD  VV /// 
 
