@@ -21,3 +21,9 @@ To genereate the included `.ll` file the following commands were run:
 * `llvm-dis transport.bc`
 
 * `opt -reg2mem -S transport.ll`
+
+---
+
+There is a very simplified version of the `.ll` patch in `tools/examples/challenge9.ll` that can be used with the `convertToDafny.py` script to get started.
+
+

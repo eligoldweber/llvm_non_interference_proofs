@@ -160,8 +160,6 @@ function challenge_8_transport_handler_create_conn_patch(size:Operand):seq<Code>
     requires size.d.itype == IntType(4,false);
     {
 
-    // var num_packets := LV(" num_packets ");
-    // var size := LV(" size ");
         //     ; Function Attrs: noinline nounwind optnone uwtable
         // define internal zeroext i8 @create_conn(i16 zeroext %size) #0 {
         // entry:
