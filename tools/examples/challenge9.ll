@@ -1,7 +1,4 @@
 entry:
-  %retval = alloca i8, align 1
-  %size.addr = alloca i16, align 2
-  store i16 %size, i16* %size.addr, align 2
   %0 = load i8, i8* @num_connections, align 1
   %conv = zext i8 %0 to i32
   %cmp = icmp sge i32 %conv, 255

@@ -227,11 +227,15 @@ lemma TwosCompIdentity(data:Data)
 //Unsigned Byte extension to size dst
 function ExtendZeroBytes(src:Bytes,dst:nat) : (bytes:Bytes)
     requires dst >= |src|
+    // requires validBitWidth(|src|)
+    // requires validBitWidth(dst)
     ensures |bytes| == dst
-    ensures bytes ==  src + zeroArray(dst - |src|) 
+    ensures bytes ==   zeroArray(dst - |src|) + src
+    // ensures IntFromBytes(src,IntType(|src|, false)) == IntFromBytes(bytes,IntType(dst, false))
     decreases dst
 {
-    src + zeroArray(dst - |src|) 
+   
+    zeroArray(dst - |src|) + src 
 }
 
 // outputs Byte seq of length s with all values eqaul to 0

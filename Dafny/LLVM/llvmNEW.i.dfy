@@ -606,6 +606,7 @@ function  evalCodeSeqFn(block:seq<Code>, s:State) : (b:Behavior)
                                             && isInt(OperandContents(s,dst))
             case ZEXT(dst,t,src,dstSize) => (dst.LV? || dst.GV?) && ValidOperand(s,dst) && ValidOperand(s,src) && isInt(OperandContents(s,src))
                                             && OperandContents(s,src).itype.size < dstSize
+                                            && !OperandContents(s,src).itype.signed
             case AND(dst,src1,src2) =>      (dst.LV? || dst.GV?) && ValidOperand(s,dst) && ValidOperand(s,src1) && ValidOperand(s,src2)
                                             && isInt(OperandContents(s,dst)) && isInt(OperandContents(s,src1)) && isInt(OperandContents(s,src2))
                                             && typesMatch(OperandContents(s,src1),OperandContents(s,src2))

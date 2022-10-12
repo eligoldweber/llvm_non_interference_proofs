@@ -99,6 +99,7 @@ def parseLLVM(in_filename,out_filename,module_name):
 					size = findSize(args[3])
 					arg1 = args[4].replace(',',"")
 					arg1 = handleArg(arg1,size)
+					parsedList.append(str(size))
 					parsedList.append(arg1)
 					parsedList.append(str(findSize(args[6])))
 				

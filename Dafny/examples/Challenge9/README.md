@@ -14,7 +14,7 @@ static uint8_t create_conn(uint16_t size){
     ...
 ```
 
-To genereate the included `.ll` file the following commands were run:
+To genereate the included `.ll` file the following commands were run starting from the source code:
 
 * `clang  -O0 -emit-llvm transport.c -c -Xclang -disable-O0-optnone`
 
@@ -26,4 +26,17 @@ To genereate the included `.ll` file the following commands were run:
 
 There is a very simplified version of the `.ll` patch in `tools/examples/challenge9.ll` that can be used with the `convertToDafny.py` script to get started.
 
+the following was added to the predicate `validConfig` in the generated `.dfy` file 
 
+```
+ && s.lvs["var_28"].Int?
+&& s.lvs["var_0"].Int?
+&& s.lvs["var_num_connections"].Ptr?
+&& s.lvs["var_retval"].Ptr?
+&& s.m.mem[OperandContents(s,c.ops["var_retval"]).bid][OperandContents(s,c.ops["var_retval"]).offset].mb? 
+&& s.m.mem[OperandContents(s,c.ops["var_retval"]).bid][OperandContents(s,c.ops["var_retval"]).offset].size == 1
+&& s.m.mem[OperandContents(s,c.ops["var_num_connections"]).bid][OperandContents(s,c.ops["var_num_connections"]).offset].mb? 
+&& s.m.mem[OperandContents(s,c.ops["var_num_connections"]).bid][OperandContents(s,c.ops["var_num_connections"]).offset].size == 1
+&& s.m.mem[OperandContents(s,c.ops["var_num_connections"]).bid][OperandContents(s,c.ops["var_num_connections"]).offset].data >= 0
+
+```

@@ -22,17 +22,24 @@ module conversion_operations_i {
 
     function evalZEXT(src:Data,dstSize:bitWidth): (out:Data)
         requires isInt(src)
+        requires !src.itype.signed
+        requires IntFits(src.val,src.itype);
         requires src.itype.size < dstSize;
         ensures out.Int?;
         ensures out.itype.size == dstSize && !out.itype.signed;
+        ensures src.val == out.val
     {
         
 
-        var bytes := IntToBytes(src);
-        var extendedBytes := ExtendZeroBytes(bytes,dstSize);
-        assert |extendedBytes| == |bytes| + (dstSize - |bytes|);
-        IntFromBytes(extendedBytes,IntType(dstSize, false))
-
+        // var bytes := IntToBytes(src);
+        // var extendedBytes := ExtendZeroBytes(bytes,dstSize);
+        // assert |extendedBytes| == |bytes| + (dstSize - |bytes|);
+        // var o:= IntFromBytes(extendedBytes,IntType(dstSize, false));
+        // // assert src.val == o.val;
+        // o
+        assert IntFits(src.val,IntType(src.itype.size , false));
+        var o:Data := Int(src.val,IntType(dstSize, false));
+        o
     }
    
     function evalSEXT(src:Data,dstSize:bitWidth): (out:Data)
