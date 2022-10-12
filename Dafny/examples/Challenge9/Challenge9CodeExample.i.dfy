@@ -98,4 +98,12 @@ function entrySimple():Code{
 	entry
 }
 
+function entrySimplVuln():Code{
+	var config := allVariablesConfig();
+	var entry := Block([Ins(LOAD(config.ops["var_0"],1,config.ops["var_num_connections"])),
+	Ins(ZEXT(config.ops["var_conv"],1,config.ops["var_0"],4)),
+	if_end()]);
+	entry
+}
+
 }

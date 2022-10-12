@@ -11,7 +11,9 @@ module challenge9PropertiesExample{
 
 
 lemma isPatchIsSuccesful()
-    ensures forall s,b :: && ValidState(s) && validConfig(s) && b == [s] + evalCodeFn(entrySimple(),s) ==> !miniSpec(s,b)
+    ensures forall s,b :: && ValidState(s) 
+                          && validConfig(s) 
+                          && b == [s] + evalCodeFn(entrySimple(),s) ==> !miniSpec(s,b)
 {
     forall s:State,b | && ValidState(s) && validConfig(s) && b == [s] + evalCodeFn(entrySimple(),s)
         ensures !miniSpec(s,b);
