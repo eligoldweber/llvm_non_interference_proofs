@@ -9,9 +9,23 @@ module challenge9PropertiesExample{
     import opened types
     import opened Collections__Seqs_s
 
-    lemma patch(s:State) returns (b:Behavior)
+
+lemma isPatchIsSuccesful()
+    ensures forall s,b :: && ValidState(s) && validConfig(s) && b == [s] + evalCodeFn(entrySimple(),s) ==> !miniSpec(s,b)
+{
+    forall s:State,b | && ValidState(s) && validConfig(s) && b == [s] + evalCodeFn(entrySimple(),s)
+        ensures !miniSpec(s,b);
+     {
+        var b := unwrapPatch(s);
+        assert !miniSpec(s,b);
+     }
+}
+
+
+    lemma unwrapPatch(s:State) returns (b:Behavior)
         requires ValidState(s);
         requires validConfig(s);
+        ensures b == [s] + evalCodeFn(entrySimple(),s);
         ensures !miniSpec(s,b);
     {
         var config := allVariablesConfig();
