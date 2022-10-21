@@ -175,7 +175,9 @@ def parseLLVM(in_filename,out_filename,module_name):
 					parsedList.append("D(Void)")
 				else:
 					# parsedList.append("config.ops[\""+args[2]+"\"]")
-					parsedList.append(args[2])
+					arg1Size = findSize(args[1])
+					arg1 = handleArg(args[2],arg1Size)
+					parsedList.append(arg1)
 		
 			if(args[0] == "call"): #void call
 				parsedList.append(args[0])
@@ -219,7 +221,8 @@ def handleConfig(fout,lv):
 	lvNames = list(lv.keys())
 	for i in range(len(lvNames[:-1])):
 		fout.write("\n\t\t \"" + (lvNames[i]) + "\" := " + (lvNames[i]) + ",")
-	fout.write("\n\t\t \"" + str(lvNames[len(lvNames[:-1])]) + "\" := " + str(lvNames[len(lvNames[:-1])]))
+	if (len(lvNames) > 0):
+		fout.write("\n\t\t \"" + str(lvNames[len(lvNames[:-1])]) + "\" := " + str(lvNames[len(lvNames[:-1])]))
 	fout.write("])\n}")
 
 def handleValidConfigPredicate(fout,lv):

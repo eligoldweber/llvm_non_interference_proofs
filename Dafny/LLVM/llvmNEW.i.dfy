@@ -252,7 +252,7 @@ predicate validCode(c:Code)
     || (c.IfElse? && validCode(c.ifTrue) && validCode(c.ifFalse))
 }
 //
-function evalCodeFn(c:Code,s:State) : (b:Behavior)
+function {:opaque} evalCodeFn(c:Code,s:State) : (b:Behavior)
     requires validCode(c)
     ensures  |b| > 0
     ensures (c.Ins?) ==> |b| == 1
@@ -790,8 +790,8 @@ function  evalCodeSeqFn(block:seq<Code>, s:State) : (b:Behavior)
     {
         match o
             case D(d) => ValidData(s,d)
-            case LV(l) => l in s.lvs && ValidData(s,s.lvs[l])
-            case GV(g) => g in s.gvs && ValidData(s,s.gvs[g])
+            case LV(l) => l in s.lvs.Keys && ValidData(s,s.lvs[l])
+            case GV(g) => g in s.gvs.Keys && ValidData(s,s.gvs[g])
     }
 
     function method OperandContents(s:State, o:Operand) : (out:Data)
@@ -843,239 +843,239 @@ function  evalCodeSeqFn(block:seq<Code>, s:State) : (b:Behavior)
     }
 //// OLD EVAL CODE FN/LEMMAs ?/////
 
-function {:opaque} evalCodeFn_Stutter(c:Code,s:State) : (b:Behavior)
-    ensures |b| > 0
-    ensures (c.Ins?) ==> |b| == 1
-    ensures b == [s] ==> NextStep(s,s, Step.stutterStep()) && StateNext(s,s);
-    ensures  StateNext(s,b[0])
-    ensures ValidSimpleBehavior([s] + b);
-    ensures (c.Ins?) ==> b == [evalInsRe(c.ins,s)];
-    ensures (c.Block?) ==> b == evalCodeSeqFn_Stutter(c.block,s); 
-    ensures (c.IfElse? && (validIfCond(s,c.ifCond)) && dataToBool(OperandContents(s,c.ifCond))) 
-            ==> b == evalCodeFn_Stutter(c.ifTrue,s); 
-    ensures (c.IfElse? && (validIfCond(s,c.ifCond)) && !dataToBool(OperandContents(s,c.ifCond))) 
-            ==> b == evalCodeFn_Stutter(c.ifFalse,s); 
-    ensures (c.IfElse? && (!validIfCond(s,c.ifCond))) 
-            ==> b == [s]
-    ensures (c.CNil?) ==> b == [s]
-    decreases c, 0
-{
-    reveal_ValidSimpleBehavior();
-    match c 
-        case Ins(ins) => 
-            var s' := evalInsRe(c.ins,s);
-            [s']
-        case Block(block) => 
-            var blockB := evalCodeSeqFn_Stutter(c.block,s); 
-            blockB
-        case IfElse(ifCond, ifT, ifF) => 
-            if (validIfCond(s,ifCond)) then
-                if dataToBool(OperandContents(s,ifCond)) then
-                    var blockB_true := evalCodeFn_Stutter(c.ifTrue,s); 
-                    blockB_true 
-                else 
-                    var blockB_false := evalCodeFn_Stutter(c.ifFalse,s); 
-                    blockB_false
-            else
-                [s]
-        case CNil => 
-            [s]
-}
-function {:opaque} evalCodeSeqFn_Stutter(block:seq<Code>, s:State) : (b:Behavior)
-    ensures |b| > 0;
-    ensures b == [s] ==> NextStep(s,s, Step.stutterStep()) && StateNext(s,s);
-    ensures StateNext(s,b[0]);
-    ensures ValidSimpleBehavior([s] + b);
-    ensures |block| == 0 ==> b == [s]
-    ensures |block| > 0 ==> b == evalCodeFn_Stutter(first(block),s) + evalCodeSeqFn_Stutter(all_but_first(block),last(evalCodeFn_Stutter(first(block),s)));
-    decreases block
-  {
-    reveal_ValidSimpleBehavior();
-    if |block| == 0 then
-        // [] change to include s in evalCodeFn_Stutter(c,s)
-        [s]
-    else
-        var first := first(block);
-        var remainder := all_but_first(block);
-        var firstStep := evalCodeFn_Stutter(first,s);
-        var restB := evalCodeSeqFn_Stutter(remainder,last(firstStep));
-        subValidBIsValid(firstStep,s);
-        subValidBIsValid(restB,last(firstStep));
-        var seqB := firstStep + restB;
-        assert seqB == evalCodeFn_Stutter(first,s) + evalCodeSeqFn_Stutter(all_but_first(block),last(evalCodeFn_Stutter(first,s)));
-        // validConcatIsValid(firstStep,restB);
-        seqB
+// function {:opaque} evalCodeFn_Stutter(c:Code,s:State) : (b:Behavior)
+//     ensures |b| > 0
+//     ensures (c.Ins?) ==> |b| == 1
+//     ensures b == [s] ==> NextStep(s,s, Step.stutterStep()) && StateNext(s,s);
+//     ensures  StateNext(s,b[0])
+//     ensures ValidSimpleBehavior([s] + b);
+//     ensures (c.Ins?) ==> b == [evalInsRe(c.ins,s)];
+//     ensures (c.Block?) ==> b == evalCodeSeqFn_Stutter(c.block,s); 
+//     ensures (c.IfElse? && (validIfCond(s,c.ifCond)) && dataToBool(OperandContents(s,c.ifCond))) 
+//             ==> b == evalCodeFn_Stutter(c.ifTrue,s); 
+//     ensures (c.IfElse? && (validIfCond(s,c.ifCond)) && !dataToBool(OperandContents(s,c.ifCond))) 
+//             ==> b == evalCodeFn_Stutter(c.ifFalse,s); 
+//     ensures (c.IfElse? && (!validIfCond(s,c.ifCond))) 
+//             ==> b == [s]
+//     ensures (c.CNil?) ==> b == [s]
+//     decreases c, 0
+// {
+//     reveal_ValidSimpleBehavior();
+//     match c 
+//         case Ins(ins) => 
+//             var s' := evalInsRe(c.ins,s);
+//             [s']
+//         case Block(block) => 
+//             var blockB := evalCodeSeqFn_Stutter(c.block,s); 
+//             blockB
+//         case IfElse(ifCond, ifT, ifF) => 
+//             if (validIfCond(s,ifCond)) then
+//                 if dataToBool(OperandContents(s,ifCond)) then
+//                     var blockB_true := evalCodeFn_Stutter(c.ifTrue,s); 
+//                     blockB_true 
+//                 else 
+//                     var blockB_false := evalCodeFn_Stutter(c.ifFalse,s); 
+//                     blockB_false
+//             else
+//                 [s]
+//         case CNil => 
+//             [s]
+// }
+// function {:opaque} evalCodeSeqFn_Stutter(block:seq<Code>, s:State) : (b:Behavior)
+//     ensures |b| > 0;
+//     ensures b == [s] ==> NextStep(s,s, Step.stutterStep()) && StateNext(s,s);
+//     ensures StateNext(s,b[0]);
+//     ensures ValidSimpleBehavior([s] + b);
+//     ensures |block| == 0 ==> b == [s]
+//     ensures |block| > 0 ==> b == evalCodeFn_Stutter(first(block),s) + evalCodeSeqFn_Stutter(all_but_first(block),last(evalCodeFn_Stutter(first(block),s)));
+//     decreases block
+//   {
+//     reveal_ValidSimpleBehavior();
+//     if |block| == 0 then
+//         // [] change to include s in evalCodeFn_Stutter(c,s)
+//         [s]
+//     else
+//         var first := first(block);
+//         var remainder := all_but_first(block);
+//         var firstStep := evalCodeFn_Stutter(first,s);
+//         var restB := evalCodeSeqFn_Stutter(remainder,last(firstStep));
+//         subValidBIsValid(firstStep,s);
+//         subValidBIsValid(restB,last(firstStep));
+//         var seqB := firstStep + restB;
+//         assert seqB == evalCodeFn_Stutter(first,s) + evalCodeSeqFn_Stutter(all_but_first(block),last(evalCodeFn_Stutter(first,s)));
+//         // validConcatIsValid(firstStep,restB);
+//         seqB
     
-  }
+//   }
 
-///////
-    lemma evalCodeRE(c:Code, s:State) returns (b:Behavior)
-        ensures |b| > 0
-        ensures (c.Ins?) ==> |b| == 1
-        ensures  StateNext(s,b[0])
-        ensures ValidSimpleBehavior([s] + b);
-        // ensures c.Block? ==> |b| == |evalBlockRE(c.block, s)| //+1
-        // // ensures c.IfElse? ==> if c.ifCond then |b| == |evalBlockRE(c.ifTrue,s)| else |b| == |evalBlockRE(c.ifFalse,s)|
-        // ensures (c.Ins? && validEvalIns(c.ins,s,b[0]) && b[0].ok) ==> ValidBehavior([s] + b)
+// ///////
+//     lemma evalCodeRE(c:Code, s:State) returns (b:Behavior)
+//         ensures |b| > 0
+//         ensures (c.Ins?) ==> |b| == 1
+//         ensures  StateNext(s,b[0])
+//         ensures ValidSimpleBehavior([s] + b);
+//         // ensures c.Block? ==> |b| == |evalBlockRE(c.block, s)| //+1
+//         // // ensures c.IfElse? ==> if c.ifCond then |b| == |evalBlockRE(c.ifTrue,s)| else |b| == |evalBlockRE(c.ifFalse,s)|
+//         // ensures (c.Ins? && validEvalIns(c.ins,s,b[0]) && b[0].ok) ==> ValidBehavior([s] + b)
         
-        decreases c, 0
-    {
-        reveal_ValidSimpleBehavior();
-        if (c.Ins?){
-            var s' := evalInsRe(c.ins,s);
-            assert ValidSimpleBehavior([s] + [s']);
-            b := [s'];
-        }
-        else if(c.Block?){
-            var blockB := evalCodeSeq(c.block,s); 
-            assert ValidSimpleBehavior([s] + blockB);
-            b := blockB;
-        }else if(c.IfElse?){
-            if (validIfCond(s,c.ifCond)) {
-                if dataToBool(OperandContents(s,c.ifCond)){
-                    var blockB_true := evalCodeFn_Stutter(c.ifTrue,s); 
-                    assert ValidSimpleBehavior([s] + blockB_true);
-                    b := blockB_true;
-                }  else {
-                    var blockB_false := evalCodeFn_Stutter(c.ifFalse,s); 
-                    assert ValidSimpleBehavior([s] + blockB_false);
-                    b := blockB_false;
-                }
-            }else{
-                assert NextStep(s,s, Step.stutterStep());
-                assert StateNext(s,s);
-                b := [s];
-            }
-        }else{
-            assert c.CNil?;
-            assert NextStep(s,s, Step.stutterStep());
-        assert StateNext(s,s);
-            b := [s];
-        }
-    }
+//         decreases c, 0
+//     {
+//         reveal_ValidSimpleBehavior();
+//         if (c.Ins?){
+//             var s' := evalInsRe(c.ins,s);
+//             assert ValidSimpleBehavior([s] + [s']);
+//             b := [s'];
+//         }
+//         else if(c.Block?){
+//             var blockB := evalCodeSeq(c.block,s); 
+//             assert ValidSimpleBehavior([s] + blockB);
+//             b := blockB;
+//         }else if(c.IfElse?){
+//             if (validIfCond(s,c.ifCond)) {
+//                 if dataToBool(OperandContents(s,c.ifCond)){
+//                     var blockB_true := evalCodeFn_Stutter(c.ifTrue,s); 
+//                     assert ValidSimpleBehavior([s] + blockB_true);
+//                     b := blockB_true;
+//                 }  else {
+//                     var blockB_false := evalCodeFn_Stutter(c.ifFalse,s); 
+//                     assert ValidSimpleBehavior([s] + blockB_false);
+//                     b := blockB_false;
+//                 }
+//             }else{
+//                 assert NextStep(s,s, Step.stutterStep());
+//                 assert StateNext(s,s);
+//                 b := [s];
+//             }
+//         }else{
+//             assert c.CNil?;
+//             assert NextStep(s,s, Step.stutterStep());
+//         assert StateNext(s,s);
+//             b := [s];
+//         }
+//     }
 
 
-  lemma evalCodeSeq(block:seq<Code>, s:State) returns (b:Behavior)
-    ensures |b| > 0;
-    ensures StateNext(s,b[0]);
-    ensures ValidSimpleBehavior([s] + b);
-    decreases block,0
-  {
-    reveal_ValidSimpleBehavior();
-    if (|block| == 0) {
-        var stutter := [s];
-        assert NextStep(s,stutter[0], Step.stutterStep());
-        assert StateNext(s,stutter[0]);
-        assert ValidSimpleBehavior([s] + stutter);
-        assert |stutter| == 1;
-        b := stutter;
-        // remainder := [CNil];
-    }else{
-        var first := first(block);
-        var remainder := all_but_first(block);
+//   lemma evalCodeSeq(block:seq<Code>, s:State) returns (b:Behavior)
+//     ensures |b| > 0;
+//     ensures StateNext(s,b[0]);
+//     ensures ValidSimpleBehavior([s] + b);
+//     decreases block,0
+//   {
+//     reveal_ValidSimpleBehavior();
+//     if (|block| == 0) {
+//         var stutter := [s];
+//         assert NextStep(s,stutter[0], Step.stutterStep());
+//         assert StateNext(s,stutter[0]);
+//         assert ValidSimpleBehavior([s] + stutter);
+//         assert |stutter| == 1;
+//         b := stutter;
+//         // remainder := [CNil];
+//     }else{
+//         var first := first(block);
+//         var remainder := all_but_first(block);
 
-        var firstStep := evalCodeRE(first,s);
-        assert StateNext(s,firstStep[0]);
-        var restB := evalCodeSeq(remainder,last(firstStep));
+//         var firstStep := evalCodeRE(first,s);
+//         assert StateNext(s,firstStep[0]);
+//         var restB := evalCodeSeq(remainder,last(firstStep));
 
-        assert ValidSimpleBehavior([s] + firstStep);
-        subValidBIsValid(firstStep,s);
-        assert ValidSimpleBehavior(firstStep);
-        assert ValidSimpleBehavior([last(firstStep)] + restB);
-        subValidBIsValid(restB,last(firstStep));
-        assert ValidSimpleBehavior(restB);
-        var seqB := firstStep + restB;
-        validConcatIsValid(firstStep,restB);
-        assert ValidSimpleBehavior(seqB);
+//         assert ValidSimpleBehavior([s] + firstStep);
+//         subValidBIsValid(firstStep,s);
+//         assert ValidSimpleBehavior(firstStep);
+//         assert ValidSimpleBehavior([last(firstStep)] + restB);
+//         subValidBIsValid(restB,last(firstStep));
+//         assert ValidSimpleBehavior(restB);
+//         var seqB := firstStep + restB;
+//         validConcatIsValid(firstStep,restB);
+//         assert ValidSimpleBehavior(seqB);
 
-        b := seqB;
-    }
-  }
+//         b := seqB;
+//     }
+//   }
 
   
 
-    lemma unwrapCodeWitness(b:Behavior,c:seq<Code>,s:State) 
-            returns (step:Behavior,remainder:seq<Code>,subBehavior:Behavior)
-        requires b == evalCodeSeqFn_Stutter(c,s);
-        // requires b == evalCodeRE(c,s)
-        ensures |c| > 0 ==> step == evalCodeFn_Stutter(first(c),s);
-        ensures |c| > 0 ==> remainder == c[1..];
-        ensures |c| > 0 ==> subBehavior == evalCodeSeqFn_Stutter(c[1..],last(evalCodeFn_Stutter(first(c),s)));
+//     lemma unwrapCodeWitness(b:Behavior,c:seq<Code>,s:State) 
+//             returns (step:Behavior,remainder:seq<Code>,subBehavior:Behavior)
+//         requires b == evalCodeSeqFn_Stutter(c,s);
+//         // requires b == evalCodeRE(c,s)
+//         ensures |c| > 0 ==> step == evalCodeFn_Stutter(first(c),s);
+//         ensures |c| > 0 ==> remainder == c[1..];
+//         ensures |c| > 0 ==> subBehavior == evalCodeSeqFn_Stutter(c[1..],last(evalCodeFn_Stutter(first(c),s)));
 
-        // ensures (|c| > 0 ) ==> subBehavior == b[1..];
-        // ensures (|c| == 0 ) ==> subBehavior == evalBlockRE(remainder,step);
-    {
-        if(|c| == 0){
-            step := [s];
-            remainder := [];
-            subBehavior := [];
-            assert NextStep(s,step[0], Step.stutterStep());
-            assert subBehavior == b[1..];
-        }else{
-            assert |c| > 0;
-            var first := first(c);
-            if (first.CNil?) {
-                step := [s];
-                remainder := c[1..];
-                subBehavior := evalCodeSeqFn_Stutter(remainder,s);
-                assert NextStep(s,step[0], Step.stutterStep());
-                assert subBehavior == b[1..];
-            }else if(first.Ins?) {
-                    step := evalCodeFn_Stutter(first, s);
-                    assert |step| == 1;
-                    assert step[0].ok ==> NextStep(s,step[0],Step.evalInsStep(first.ins));
-                    assert StateNext(s,step[0]);
-                    remainder := c[1..];
-                    subBehavior := evalCodeSeqFn_Stutter(remainder,step[0]);
-                    assert subBehavior == b[1..];
-            } else if(first.Block?){
-                if(|first.block| == 0) { 
-                    step := [s];
-                    assert |step| == 1;
-                    remainder := c[1..];
-                    subBehavior := evalCodeSeqFn_Stutter(remainder,s);
-                    assert NextStep(s,step[0], Step.stutterStep());
-                    var firstStep := evalCodeFn_Stutter(first,s);
-                    var restB := evalCodeSeqFn_Stutter(remainder,last(firstStep));
-                    assert b == firstStep + restB;
-                    assert firstStep == evalCodeSeqFn_Stutter(first.block,s); 
-                    // assert firstStep == [s];
-                    assert subBehavior == b[1..];
-                }else{
-                //     assert |first.block| > 0;
-                    step := evalCodeFn_Stutter(first,s);
-                    remainder := c[1..];
-                    subBehavior := evalCodeSeqFn_Stutter(remainder,last(step));
-                //     assert StateNext(s,step);
-                //     remainder := all_but_first(first.block) + c[1..];
-                //     subBehavior := evalCodeSeqFn_Stutter(remainder,step);
+//         // ensures (|c| > 0 ) ==> subBehavior == b[1..];
+//         // ensures (|c| == 0 ) ==> subBehavior == evalBlockRE(remainder,step);
+//     {
+//         if(|c| == 0){
+//             step := [s];
+//             remainder := [];
+//             subBehavior := [];
+//             assert NextStep(s,step[0], Step.stutterStep());
+//             assert subBehavior == b[1..];
+//         }else{
+//             assert |c| > 0;
+//             var first := first(c);
+//             if (first.CNil?) {
+//                 step := [s];
+//                 remainder := c[1..];
+//                 subBehavior := evalCodeSeqFn_Stutter(remainder,s);
+//                 assert NextStep(s,step[0], Step.stutterStep());
+//                 assert subBehavior == b[1..];
+//             }else if(first.Ins?) {
+//                     step := evalCodeFn_Stutter(first, s);
+//                     assert |step| == 1;
+//                     assert step[0].ok ==> NextStep(s,step[0],Step.evalInsStep(first.ins));
+//                     assert StateNext(s,step[0]);
+//                     remainder := c[1..];
+//                     subBehavior := evalCodeSeqFn_Stutter(remainder,step[0]);
+//                     assert subBehavior == b[1..];
+//             } else if(first.Block?){
+//                 if(|first.block| == 0) { 
+//                     step := [s];
+//                     assert |step| == 1;
+//                     remainder := c[1..];
+//                     subBehavior := evalCodeSeqFn_Stutter(remainder,s);
+//                     assert NextStep(s,step[0], Step.stutterStep());
+//                     var firstStep := evalCodeFn_Stutter(first,s);
+//                     var restB := evalCodeSeqFn_Stutter(remainder,last(firstStep));
+//                     assert b == firstStep + restB;
+//                     assert firstStep == evalCodeSeqFn_Stutter(first.block,s); 
+//                     // assert firstStep == [s];
+//                     assert subBehavior == b[1..];
+//                 }else{
+//                 //     assert |first.block| > 0;
+//                     step := evalCodeFn_Stutter(first,s);
+//                     remainder := c[1..];
+//                     subBehavior := evalCodeSeqFn_Stutter(remainder,last(step));
+//                 //     assert StateNext(s,step);
+//                 //     remainder := all_but_first(first.block) + c[1..];
+//                 //     subBehavior := evalCodeSeqFn_Stutter(remainder,step);
                     
-                //     var firstStep := evalCodeFn_Stutter(first,s);
-                //     var restB := evalCodeSeqFn_Stutter(all_but_first(c),last(firstStep));
-                // assert restB == evalCodeSeqFn_Stutter(c[1..],last(firstStep));
-                // assert b == firstStep + restB;
+//                 //     var firstStep := evalCodeFn_Stutter(first,s);
+//                 //     var restB := evalCodeSeqFn_Stutter(all_but_first(c),last(firstStep));
+//                 // assert restB == evalCodeSeqFn_Stutter(c[1..],last(firstStep));
+//                 // assert b == firstStep + restB;
 
-                //     assert step == firstStep[0];
+//                 //     assert step == firstStep[0];
 
-                //     // assert last(firstStep) == last(evalCodeSeqFn_Stutter(all_but_first(first.block),step));
+//                 //     // assert last(firstStep) == last(evalCodeSeqFn_Stutter(all_but_first(first.block),step));
 
-                //     assert firstStep == evalCodeSeqFn_Stutter(first.block,s);
-                //     // assert firstStep[1..] == evalCodeSeqFn_Stutter(all_but_first(first.block),step);
-                //     var firstStep_firstStep := evalCodeFn_Stutter(first.block[0],s);
-                //     var restB_firstStep :=  evalCodeSeqFn_Stutter(all_but_first(first.block),last(firstStep_firstStep));
-                //     assert firstStep == firstStep_firstStep + restB_firstStep;
-                //     assert firstStep_firstStep[0] == step;
-                // assert |firstStep_firstStep| == 1;
-                // assert firstStep == [step] + evalCodeSeqFn_Stutter(all_but_first(first.block),step);
-                // assert subBehavior == b[1..];
-                }
-            }
-            step := evalCodeFn_Stutter(first,s);
-                    remainder := c[1..];
-                    subBehavior := evalCodeSeqFn_Stutter(remainder,last(step));
-        }
+//                 //     assert firstStep == evalCodeSeqFn_Stutter(first.block,s);
+//                 //     // assert firstStep[1..] == evalCodeSeqFn_Stutter(all_but_first(first.block),step);
+//                 //     var firstStep_firstStep := evalCodeFn_Stutter(first.block[0],s);
+//                 //     var restB_firstStep :=  evalCodeSeqFn_Stutter(all_but_first(first.block),last(firstStep_firstStep));
+//                 //     assert firstStep == firstStep_firstStep + restB_firstStep;
+//                 //     assert firstStep_firstStep[0] == step;
+//                 // assert |firstStep_firstStep| == 1;
+//                 // assert firstStep == [step] + evalCodeSeqFn_Stutter(all_but_first(first.block),step);
+//                 // assert subBehavior == b[1..];
+//                 }
+//             }
+//             step := evalCodeFn_Stutter(first,s);
+//                     remainder := c[1..];
+//                     subBehavior := evalCodeSeqFn_Stutter(remainder,last(step));
+//         }
         
-    }
+//     }
 
 
     /////////////// OLD
